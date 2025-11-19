@@ -208,7 +208,7 @@ __marimo__/
 # Ambientes virtuais
 venv/
 loggin_venv/
-#.env
+.env
 
 # Arquivos Python
 __pycache__/
