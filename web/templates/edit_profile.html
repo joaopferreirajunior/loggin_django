@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Editar Perfil</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        input[type="text"], input[type="email"], input[type="date"], input[type="tel"], select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        input[readonly] {
+            background-color: #f8f9fa;
+            color: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .btn {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+
+        .btn:hover {
+            background-color: #0056b3;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-secondary:hover {
+            background-color: #545b62;
+        }
+
+        .success {
+            color: #28a745;
+            text-align: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 4px;
+        }
+
+        .error {
+            color: #dc3545;
+            text-align: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 4px;
+        }
+
+        .loading {
+            text-align: center;
+            color: #666;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Editar Perfil</h1>
+
+        <div id="loading" class="loading" style="display: none;">Carregando dados...</div>
+        <div id="success-message" class="success" style="display: none;"></div>
+        <div id="error-message" class="error" style="display: none;"></div>
+
+        <form id="editProfileForm">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="username">Usuário:</label>
+                <input type="text" id="username" readonly>
+            </div>
+
+            <div class="form-group">
+                <label for="email">E-mail:</label>
+                <input type="email" id="email" readonly>
+            </div>
+
+            <div class="form-group">
+                <label for="cpf">CPF:</label>
+                <input type="text" id="cpf" name="cpf" placeholder="000.000.000-00" maxlength="14">
+            </div>
+
+            <div class="form-group">
+                <label for="birth">Data de Nascimento:</label>
+                <input type="date" id="birth" name="birth">
+            </div>
+
+            <div class="form-group">
+                <label for="phone">Telefone:</label>
+                <input type="tel" id="phone" name="phone" placeholder="+55 (11) 99999-9999" maxlength="20">
+            </div>
+
+            <div class="form-group">
+                <label for="user_role">Grupo do Usuário:</label>
+                <select id="user_role" name="user_role">
+                    <option value="">Selecione um grupo...</option>
+                    <option value="system_admin">Administrador do Sistema</option>
+                    <option value="office_admin">Administrador de Escritório</option>
+                    <option value="regular_user">Usuário Regular</option>
+                </select>
+            </div>
+
+            <hr style="margin: 30px 0; border: 1px solid #dee2e6;">
+            <h3 style="margin-bottom: 20px; color: #666;">Informações do Sistema (Somente Leitura)</h3>
+
+            <div class="form-group">
+                <label for="email_confirmed">Email Confirmado:</label>
+                <input type="text" id="email_confirmed" readonly>
+            </div>
+
+            <div class="form-group">
+                <label for="email_confirmed_at">Email Confirmado em:</label>
+                <input type="text" id="email_confirmed_at" readonly>
+            </div>
+
+            <div class="form-group">
+                <label for="invited_at">Convidado em:</label>
+                <input type="text" id="invited_at" readonly>
+            </div>
+
+            <div class="form-group">
+                <label for="confirmation_token">Token de Confirmação:</label>
+                <input type="text" id="confirmation_token" readonly>
+            </div>
+
+            <div class="form-group">
+                <label for="confirmation_sent_at">Confirmação Enviada em:</label>
+                <input type="text" id="confirmation_sent_at" readonly>
+            </div>
+
+            <div class="form-group">
+                <label for="recovery_token">Token de Recuperação:</label>
+                <input type="text" id="recovery_token" readonly>
+            </div>
+
+            <div class="form-group">
+                <label for="recovery_token_sent_at">Recuperação Enviada em:</label>
+                <input type="text" id="recovery_token_sent_at" readonly>
+            </div>
+
+            <div class="form-group">
+                <label for="clickhouse_id">ClickHouse ID:</label>
+                <input type="text" id="clickhouse_id" readonly>
+            </div>
+
+            <div style="text-align: center; margin-top: 30px;">
+                <button type="submit" class="btn">Salvar Alterações</button>
+                <a href="{% url 'home' %}" class="btn btn-secondary">Cancelar</a>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // Helper to read a cookie (for CSRF token)
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Função para mostrar mensagens
+        function showMessage(message, isError = false) {
+            const successDiv = document.getElementById('success-message');
+            const errorDiv = document.getElementById('error-message');
+            
+            if (isError) {
+                errorDiv.textContent = message;
+                errorDiv.style.display = 'block';
+                successDiv.style.display = 'none';
+            } else {
+                successDiv.textContent = message;
+                successDiv.style.display = 'block';
+                errorDiv.style.display = 'none';
+            }
+            
+            // Remove a mensagem após 5 segundos
+            setTimeout(() => {
+                successDiv.style.display = 'none';
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        // Função para carregar dados do usuário
+        async function loadUserData() {
+            const loadingDiv = document.getElementById('loading');
+            loadingDiv.style.display = 'block';
+
+            try {
+                // Busca dados básicos do usuário
+                const userResponse = await fetch('/api/v0/me/', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'same-origin'
+                });
+
+                if (!userResponse.ok) {
+                    throw new Error(`Erro ${userResponse.status}: ${userResponse.statusText}`);
+                }
+
+                const userData = await userResponse.json();
+
+                // Busca dados do perfil
+                const profileResponse = await fetch('/api/v0/me/profile/', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'same-origin'
+                });
+
+                if (!profileResponse.ok) {
+                    throw new Error(`Erro ${profileResponse.status}: ${profileResponse.statusText}`);
+                }
+
+                const profileData = await profileResponse.json();
+
+                // Busca dados de permissões e grupos
+                const permissionsResponse = await fetch('/api/v0/me/permissions/', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'same-origin'
+                });
+
+                let permissionsData = {};
+                if (permissionsResponse.ok) {
+                    permissionsData = await permissionsResponse.json();
+                }
+
+                // Preenche os campos do formulário
+                document.getElementById('username').value = userData.username || '';
+                document.getElementById('email').value = userData.email || '';
+                document.getElementById('cpf').value = profileData.cpf || '';
+                document.getElementById('birth').value = profileData.birth || '';
+                document.getElementById('phone').value = profileData.phone || '';
+                
+                // Preenche o grupo do usuário
+                const userRoleSelect = document.getElementById('user_role');
+                userRoleSelect.value = permissionsData.user_role || '';
+                
+                // Verifica se o usuário pode alterar grupos
+                if (!permissionsData.can_manage_users && !permissionsData.is_system_admin) {
+                    userRoleSelect.disabled = true;
+                    userRoleSelect.style.backgroundColor = '#f8f9fa';
+                    userRoleSelect.style.cursor = 'not-allowed';
+                    
+                    // Adiciona aviso
+                    const warningMsg = document.createElement('small');
+                    warningMsg.style.color = '#6c757d';
+                    warningMsg.textContent = 'Apenas administradores podem alterar grupos de usuário.';
+                    userRoleSelect.parentNode.appendChild(warningMsg);
+                }
+
+                // Preenche os novos campos readonly
+                document.getElementById('email_confirmed').value = profileData.email_confirmed ? 'Sim' : 'Não';
+                
+                // Formata as datas/timestamps
+                if (profileData.email_confirmed_at) {
+                    const confirmDate = new Date(profileData.email_confirmed_at);
+                    document.getElementById('email_confirmed_at').value = confirmDate.toLocaleString('pt-BR');
+                } else {
+                    document.getElementById('email_confirmed_at').value = 'Não informado';
+                }
+
+                if (profileData.invited_at) {
+                    const inviteDate = new Date(profileData.invited_at);
+                    document.getElementById('invited_at').value = inviteDate.toLocaleString('pt-BR');
+                } else {
+                    document.getElementById('invited_at').value = 'Não informado';
+                }
+
+                if (profileData.confirmation_sent_at) {
+                    const sentDate = new Date(profileData.confirmation_sent_at);
+                    document.getElementById('confirmation_sent_at').value = sentDate.toLocaleString('pt-BR');
+                } else {
+                    document.getElementById('confirmation_sent_at').value = 'Não informado';
+                }
+
+                if (profileData.recovery_token_sent_at) {
+                    const recoveryDate = new Date(profileData.recovery_token_sent_at);
+                    document.getElementById('recovery_token_sent_at').value = recoveryDate.toLocaleString('pt-BR');
+                } else {
+                    document.getElementById('recovery_token_sent_at').value = 'Não informado';
+                }
+
+                // Tokens e IDs (mascarar parcialmente por segurança)
+                if (profileData.confirmation_token) {
+                    const token = profileData.confirmation_token;
+                    const maskedToken = token.length > 10 ? token.substring(0, 10) + '***' : token;
+                    document.getElementById('confirmation_token').value = maskedToken;
+                } else {
+                    document.getElementById('confirmation_token').value = 'Não informado';
+                }
+
+                if (profileData.recovery_token) {
+                    const token = profileData.recovery_token;
+                    const maskedToken = token.length > 10 ? token.substring(0, 10) + '***' : token;
+                    document.getElementById('recovery_token').value = maskedToken;
+                } else {
+                    document.getElementById('recovery_token').value = 'Não informado';
+                }
+
+                document.getElementById('clickhouse_id').value = profileData.clickhouse_id || 'Não informado';
+
+            } catch (error) {
+                console.error('Erro ao carregar dados do usuário:', error);
+                showMessage('Erro ao carregar dados do usuário: ' + error.message, true);
+            } finally {
+                loadingDiv.style.display = 'none';
+            }
+        }
+
+        // Inicialização quando a página carrega
+        document.addEventListener('DOMContentLoaded', function() {
+            loadUserData();
+
+            // Handler do formulário
+            document.getElementById('editProfileForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                const formData = {
+                    cpf: document.getElementById('cpf').value.trim(),
+                    birth: document.getElementById('birth').value,
+                    phone: document.getElementById('phone').value.trim()
+                };
+
+                // Remove campos vazios para evitar sobrescrever com strings vazias
+                Object.keys(formData).forEach(key => {
+                    if (formData[key] === '') {
+                        delete formData[key];
+                    }
+                });
+
+                const newRole = document.getElementById('user_role').value;
+                
+                // Se houver mudança de papel, faz duas operações: atualizar perfil e alterar papel
+                updateProfile(formData, newRole);
+            });
+        });
+
+        // Função para atualizar perfil e papel
+        async function updateProfile(formData, newRole) {
+            const loadingDiv = document.getElementById('loading');
+            loadingDiv.style.display = 'block';
+
+            try {
+                // 1. Atualizar dados do perfil
+                const csrftoken = getCookie('csrftoken');
+                const profileResponse = await fetch('/api/v0/me/profile/', {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify(formData)
+                });
+
+                if (!profileResponse.ok) {
+                    const errorData = await profileResponse.json();
+                    let errorMessage = 'Erro ao atualizar perfil.';
+                    
+                    // Tenta extrair mensagens de erro específicas
+                    if (errorData.cpf) {
+                        errorMessage = Array.isArray(errorData.cpf) ? errorData.cpf[0] : errorData.cpf;
+                    } else if (errorData.birth) {
+                        errorMessage = Array.isArray(errorData.birth) ? errorData.birth[0] : errorData.birth;
+                    } else if (errorData.phone) {
+                        errorMessage = Array.isArray(errorData.phone) ? errorData.phone[0] : errorData.phone;
+                    } else if (errorData.detail) {
+                        errorMessage = errorData.detail;
+                    }
+                    
+                    throw new Error(errorMessage);
+                }
+
+                let successMessage = 'Perfil atualizado com sucesso!';
+
+                // 2. Atualizar papel se necessário
+                if (newRole) {
+                    try {
+                        // Buscar dados atuais do usuário para obter user_id
+                        const userResponse = await fetch('/api/v0/me/', {
+                            method: 'GET',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            credentials: 'same-origin'
+                        });
+
+                        if (userResponse.ok) {
+                            const userData = await userResponse.json();
+                            
+                            const roleResponse = await fetch('/api/v0/assign-role/', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRFToken': csrftoken
+                                },
+                                credentials: 'same-origin',
+                                body: JSON.stringify({
+                                    user_id: userData.id,
+                                    role: newRole
+                                })
+                            });
+
+                            if (roleResponse.ok) {
+                                successMessage += ' Grupo alterado com sucesso!';
+                            } else {
+                                const roleError = await roleResponse.json();
+                                successMessage += ` Aviso: ${roleError.detail || 'Erro ao alterar grupo.'}`;
+                            }
+                        }
+                    } catch (roleError) {
+                        console.error('Erro ao alterar papel:', roleError);
+                        successMessage += ' Aviso: Não foi possível alterar o grupo.';
+                    }
+                }
+
+                showMessage(successMessage);
+                
+                // Opcional: redirecionar para home após 3 segundos
+                setTimeout(() => {
+                    window.location.href = '{% url "home" %}';
+                }, 3000);
+
+            } catch (error) {
+                console.error('Erro ao atualizar perfil:', error);
+                showMessage(error.message, true);
+            } finally {
+                loadingDiv.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
