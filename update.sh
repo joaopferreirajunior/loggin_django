@@ -20,11 +20,9 @@ cd "$PROJECT_DIR" || {
 # Configura FRONTEND_URL com IP público da própria EC2
 log "Configurando FRONTEND_URL com IP público da instância..."
 if [ -f ".env" ]; then
-    # Obtém token do IMDSv2
     TOKEN=$(curl -sX PUT "http://169.254.169.254/latest/api/token" \
       -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
 
-    # Obtém IP público
     PUBLIC_IP=$(curl -s "http://169.254.169.254/latest/meta-data/public-ipv4" \
       -H "X-aws-ec2-metadata-token: $TOKEN")
 
@@ -75,37 +73,34 @@ NEW_HASH=$(git rev-parse "origin/$BRANCH")
 log "Hash atual:  $OLD_HASH"
 log "Hash remoto: $NEW_HASH"
 
-# Se houver atualização
+# Se houver atualização, sincroniza com o remoto
 if [ "$OLD_HASH" != "$NEW_HASH" ]; then
-    log "🚀 Atualização detectada — iniciando deploy..."
+    log "🚀 Atualização remota detectada — sincronizando código..."
 
-    # Garante limpeza total do repositório local
     git reset --hard HEAD >> "$LOG_FILE" 2>&1
     git clean -fd >> "$LOG_FILE" 2>&1
     git fetch origin "$BRANCH" >> "$LOG_FILE" 2>&1
     git reset --hard "origin/$BRANCH" >> "$LOG_FILE" 2>&1
 
-    # Reaplica permissão do próprio script (caso o reset remova)
     chmod +x "$PROJECT_DIR/update.sh"
 
-    log "✅ Código atualizado. Recriando containers..."
-
-    # Derruba e sobe containers (Django vai usar RDS via .env)
-    $DC down >> "$LOG_FILE" 2>&1
-    $DC up --build -d >> "$LOG_FILE" 2>&1
-
-    # Executa migrações automáticas do banco (agora apontando pro RDS)
-    log "🔄 Aplicando migrações do banco no RDS..."
-    $DC exec "$DJANGO_SERVICE" bash -c "python manage.py migrate --noinput" >> "$LOG_FILE" 2>&1
-
-    if [ $? -eq 0 ]; then
-        log "✅ Migrações aplicadas com sucesso."
-        log "✅ Build concluído e servidor reiniciado com sucesso."
-    else
-        log "⚠️ ERRO ao aplicar migrações. Verifique o log acima."
-    fi
+    log "✅ Código sincronizado com o remoto."
 else
-    log "Nenhuma atualização detectada."
+    log "Nenhuma atualização remota. Usando código local atual (inclui modificações locais)."
+fi
+
+log "✅ Recriando containers..."
+$DC down >> "$LOG_FILE" 2>&1
+$DC up --build -d >> "$LOG_FILE" 2>&1
+
+log "🔄 Aplicando migrações do banco no RDS..."
+$DC exec "$DJANGO_SERVICE" bash -c "python manage.py migrate --noinput" >> "$LOG_FILE" 2>&1
+
+if [ $? -eq 0 ]; then
+    log "✅ Migrações aplicadas com sucesso."
+    log "✅ Build concluído e servidor reiniciado com sucesso."
+else
+    log "⚠️ ERRO ao aplicar migrações. Verifique o log acima."
 fi
 
 log "==== Fim da execução ===="
