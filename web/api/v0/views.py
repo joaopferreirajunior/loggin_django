@@ -7,6 +7,8 @@ from rest_framework.views import APIView
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User, Group, Permission
 from django.views.decorators.csrf import csrf_exempt
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from .serializers import UserRegisterSerializer, UserSerializer, ProfileSerializer
 from users.models import Profile
 
@@ -19,7 +21,17 @@ def register(request):
         if serializer.is_valid():
             user = serializer.save()
             print(f"DEBUG: Usuário {user.username} criado com sucesso")
-            return Response({"detail": "Conta criada com sucesso!"}, status=status.HTTP_201_CREATED)
+            
+            # Gera tokens JWT para o novo usuário
+            refresh = RefreshToken.for_user(user)
+            user_serializer = UserSerializer(user)
+            
+            return Response({
+                "detail": "Conta criada com sucesso!",
+                "user": user_serializer.data,
+                "refresh": str(refresh),
+                "access": str(refresh.access_token),
+            }, status=status.HTTP_201_CREATED)
         else:
             print(f"DEBUG: Erros de validação no registro: {serializer.errors}")
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -64,9 +76,16 @@ def login_view(request):
         login(request, user)
         print(f"DEBUG: Login realizado com sucesso para usuário: {user.username}")
         
-        # Retorna os dados completos do usuário, igual ao endpoint /me/
+        # Gera tokens JWT
+        refresh = RefreshToken.for_user(user)
+        
+        # Retorna os dados completos do usuário com tokens
         serializer = UserSerializer(user)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response({
+            "user": serializer.data,
+            "refresh": str(refresh),
+            "access": str(refresh.access_token),
+        }, status=status.HTTP_200_OK)
     else:
         print(f"DEBUG: Falha na autenticação para username: '{username}'")
         return Response({"detail": "Credenciais inválidas"}, status=status.HTTP_401_UNAUTHORIZED)
@@ -80,6 +99,7 @@ def logout_view(request):
 
 #Retorna os dados completos do próprio usuário logado
 class MeProfileView(APIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [permissions.IsAuthenticated]
 
     def patch(self, request):
@@ -118,6 +138,7 @@ class MeProfileView(APIView):
     
 #Retorna os dados de auth_user do próprio usuário logado
 class MeView(APIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
@@ -132,6 +153,7 @@ class MeView(APIView):
 
 #View para gerenciar permissões e grupos de usuário
 class UserPermissionsView(APIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [permissions.IsAuthenticated]
     
     def get(self, request):
@@ -160,6 +182,7 @@ class UserPermissionsView(APIView):
             return Response({"detail": f"Erro ao buscar permissões: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class AssignUserRoleView(APIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [permissions.IsAuthenticated]
     
     def post(self, request):

@@ -192,7 +192,13 @@
         {% endif %}
     </main>
     
+    <script src="/static/js/auth.js"></script>
     <script>
+        // Verifica se o usuário está logado com token
+        if (isAuthenticated()) {
+            console.log('Usuário logado com token:', getUserData());
+        }
+        
         // Helper to read a cookie (for CSRF token)
         function getCookie(name) {
             let cookieValue = null;

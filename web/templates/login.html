@@ -67,6 +67,7 @@
             text-decoration: underline;
         }
     </style>
+    <script src="/static/js/auth.js"></script>
 </head>
 <body>
     <div class="login-container">
@@ -105,10 +106,9 @@
                 const data = await response.json();
 
                 if (response.status === 200) {
-                    // ✅ Login bem-sucedido → armazena dados do usuário e redireciona
-                    console.log("Dados do usuário:", data);
-                    // Opcional: armazenar dados do usuário no sessionStorage
-                    sessionStorage.setItem('user', JSON.stringify(data));
+                    // ✅ Login bem-sucedido → armazena dados e tokens usando função auxiliar
+                    console.log("Login bem-sucedido:", data);
+                    storeAuthTokens(data.access, data.refresh, data.user);
                     window.location.href = "/";
                 } else {
                     // ❌ Exibe mensagem de erro
