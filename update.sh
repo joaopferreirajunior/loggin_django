@@ -54,16 +54,37 @@ NEW_HASH=$(git rev-parse "origin/$BRANCH")
 log "Hash atual:  $OLD_HASH"
 log "Hash remoto: $NEW_HASH"
 
-# Se houver atualização, sincroniza com o remoto
+# Se houver atualização
 if [ "$OLD_HASH" != "$NEW_HASH" ]; then
-    log "🚀 Atualização remota detectada — sincronizando código..."
+    log "🚀 Atualização detectada — iniciando deploy..."
 
+    # Garante limpeza total do repositório local
     git reset --hard HEAD >> "$LOG_FILE" 2>&1
     git clean -fd >> "$LOG_FILE" 2>&1
     git fetch origin "$BRANCH" >> "$LOG_FILE" 2>&1
     git reset --hard "origin/$BRANCH" >> "$LOG_FILE" 2>&1
 
     # Reaplica permissão do próprio script (caso o reset remova)
-    chmod +x "$PROJECT_DIR/update_aws.sh"
+    chmod +x "$PROJECT_DIR/update.sh"
 
-    log
+    log "✅ Código atualizado. Recriando containers..."
+
+    # Derruba e sobe containers (Django vai usar RDS via .env)
+    $DC down >> "$LOG_FILE" 2>&1
+    $DC up --build -d >> "$LOG_FILE" 2>&1
+
+    # Executa migrações automáticas do banco (agora apontando pro RDS)
+    log "🔄 Aplicando migrações do banco no RDS..."
+    $DC exec "$DJANGO_SERVICE" bash -c "python manage.py migrate --noinput" >> "$LOG_FILE" 2>&1
+
+    if [ $? -eq 0 ]; then
+        log "✅ Migrações aplicadas com sucesso."
+        log "✅ Build concluído e servidor reiniciado com sucesso."
+    else
+        log "⚠️ ERRO ao aplicar migrações. Verifique o log acima."
+    fi
+else
+    log "Nenhuma atualização detectada."
+fi
+
+log "==== Fim da execução ===="
