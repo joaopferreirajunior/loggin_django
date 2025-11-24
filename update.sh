@@ -1,11 +1,11 @@
 #!/bin/bash
 # ============================
-# update.sh - Auto Deploy Django + Docker (branch local-server)
+# update.sh - Auto Deploy Django + Docker (branch dev)
 # ============================
 
-PROJECT_DIR="/home/medicalsan/loggin_django"
-LOG_FILE="$PROJECT_DIR/update.log"
-BRANCH="local-server"
+PROJECT_DIR="/home/ubuntu/loggin_django"
+LOG_FILE="$PROJECT_DIR/update_aws.log"
+BRANCH="dev"
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
