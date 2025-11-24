@@ -36,6 +36,10 @@ curl -X POST http://localhost:8000/api/v0/app/register/ \
   -H "Content-Type: application/json" \
   -d '{"username": "juanherrera", "email": "juan_herrera@tequila.com", "password": "@Senha123"}'
 
+curl -X POST http://3.236.36.55:8000/api/v0/login/ \
+  -H "Content-Type: application/json" \
+  -d '{"username": "weber@blepol.com", "password": "medical25"}'
+
 API
 Register:
 username, password(original, sera criptografado no backend), email.
