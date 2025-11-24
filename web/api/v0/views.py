@@ -7,8 +7,8 @@ from rest_framework.views import APIView
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User, Group, Permission
 from django.views.decorators.csrf import csrf_exempt
-from .serializers import UserRegisterSerializer, UserSerializer, ProfileSerializer
-from users.models import Profile
+from .serializers import UserRegisterSerializer, UserSerializer, UserProfileSerializer
+from users.models import UserProfile
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
@@ -63,7 +63,10 @@ def login_view(request):
     if user is not None:
         login(request, user)
         print(f"DEBUG: Login realizado com sucesso para usuário: {user.username}")
-        return Response({"detail": "Login bem-sucedido"}, status=status.HTTP_200_OK)
+        
+        # Retorna os dados completos do usuário, igual ao endpoint /me/
+        serializer = UserSerializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
     else:
         print(f"DEBUG: Falha na autenticação para username: '{username}'")
         return Response({"detail": "Credenciais inválidas"}, status=status.HTTP_401_UNAUTHORIZED)
@@ -87,11 +90,11 @@ class MeProfileView(APIView):
         """
         try:
             # Garante que o profile existe
-            profile, created = Profile.objects.get_or_create(user=request.user)
+            profile, created = UserProfile.objects.get_or_create(user=request.user)
             if created:
                 print(f"DEBUG: Profile criado para usuário: {request.user.username}")
                 
-            serializer = ProfileSerializer(profile, data=request.data, partial=True)
+            serializer = UserProfileSerializer(profile, data=request.data, partial=True)
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -103,11 +106,11 @@ class MeProfileView(APIView):
         """Retorna os dados do perfil do próprio usuário logado."""
         try:
             # Garante que o profile existe
-            profile, created = Profile.objects.get_or_create(user=request.user)
+            profile, created = UserProfile.objects.get_or_create(user=request.user)
             if created:
                 print(f"DEBUG: Profile criado para usuário: {request.user.username}")
             
-            serializer = ProfileSerializer(profile)
+            serializer = UserProfileSerializer(profile)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
             print(f"DEBUG: Erro em MeProfileView.get: {e}")
@@ -182,7 +185,7 @@ class AssignUserRoleView(APIView):
                 return Response({"detail": "Usuário não encontrado"}, status=status.HTTP_404_NOT_FOUND)
             
             # Atribuir o papel
-            success = Profile.assign_role(target_user, role)
+            success = UserProfile.assign_role(target_user, role)
             
             if success:
                 return Response({

@@ -105,7 +105,10 @@
                 const data = await response.json();
 
                 if (response.status === 200) {
-                    // ✅ Login bem-sucedido → redireciona para /home
+                    // ✅ Login bem-sucedido → armazena dados do usuário e redireciona
+                    console.log("Dados do usuário:", data);
+                    // Opcional: armazenar dados do usuário no sessionStorage
+                    sessionStorage.setItem('user', JSON.stringify(data));
                     window.location.href = "/";
                 } else {
                     // ❌ Exibe mensagem de erro
