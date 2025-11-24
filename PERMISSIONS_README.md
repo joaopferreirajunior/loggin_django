@@ -152,11 +152,11 @@ class AdminOnlyView(PermissionRequiredMixin, View):
 ## Atribuir Papel Programaticamente
 
 ```python
-from users.models import UserProfile
+from users.models import Profile
 
 # Atribuir papel a um usuário
 user = User.objects.get(username='joao')
-UserProfile.assign_role(user, 'office_admin')
+Profile.assign_role(user, 'office_admin')
 
 # Verificar papel
 profile = user.profile
@@ -171,5 +171,5 @@ print(profile.get_user_role())  # 'office_admin'
 ## Troubleshooting
 
 1. **Erro "Permission not found"**: Execute `python manage.py setup_user_groups`
-2. **Usuário sem papel**: Atribua papel usando `UserProfile.assign_role()`
+2. **Usuário sem papel**: Atribua papel usando `Profile.assign_role()`
 3. **Permissões não funcionam**: Verifique se o usuário está no grupo correto

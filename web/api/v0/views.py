@@ -7,8 +7,8 @@ from rest_framework.views import APIView
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User, Group, Permission
 from django.views.decorators.csrf import csrf_exempt
-from .serializers import UserRegisterSerializer, UserSerializer, UserProfileSerializer
-from users.models import UserProfile
+from .serializers import UserRegisterSerializer, UserSerializer, ProfileSerializer
+from users.models import Profile
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
@@ -87,11 +87,11 @@ class MeProfileView(APIView):
         """
         try:
             # Garante que o profile existe
-            profile, created = UserProfile.objects.get_or_create(user=request.user)
+            profile, created = Profile.objects.get_or_create(user=request.user)
             if created:
                 print(f"DEBUG: Profile criado para usuário: {request.user.username}")
                 
-            serializer = UserProfileSerializer(profile, data=request.data, partial=True)
+            serializer = ProfileSerializer(profile, data=request.data, partial=True)
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -103,11 +103,11 @@ class MeProfileView(APIView):
         """Retorna os dados do perfil do próprio usuário logado."""
         try:
             # Garante que o profile existe
-            profile, created = UserProfile.objects.get_or_create(user=request.user)
+            profile, created = Profile.objects.get_or_create(user=request.user)
             if created:
                 print(f"DEBUG: Profile criado para usuário: {request.user.username}")
             
-            serializer = UserProfileSerializer(profile)
+            serializer = ProfileSerializer(profile)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
             print(f"DEBUG: Erro em MeProfileView.get: {e}")
@@ -182,7 +182,7 @@ class AssignUserRoleView(APIView):
                 return Response({"detail": "Usuário não encontrado"}, status=status.HTTP_404_NOT_FOUND)
             
             # Atribuir o papel
-            success = UserProfile.assign_role(target_user, role)
+            success = Profile.assign_role(target_user, role)
             
             if success:
                 return Response({

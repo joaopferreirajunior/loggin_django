@@ -2,7 +2,7 @@ from django.conf import settings
 from django.db import models
 from app.utils import AuditModel
 
-#class UserProfile(models.Model):
+#class Profile(models.Model):
 #    user = models.OneToOneField(
 #        settings.AUTH_USER_MODEL,
 #        on_delete=models.CASCADE,
@@ -15,7 +15,7 @@ from app.utils import AuditModel
 #    def __str__(self):
 #        return f"Perfil de {self.user.get_username()}"
 
-class UserProfile(AuditModel):
+class Profile(AuditModel):
     # relação com o Django auth_user
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,

@@ -1,17 +1,17 @@
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import UserProfile
+from .models import Profile
 
 User = get_user_model()
 
-class UserProfileInline(admin.StackedInline):
-    model = UserProfile
+class ProfileInline(admin.StackedInline):
+    model = Profile
     can_delete = False
     fk_name = "user"
 
 class UserAdmin(BaseUserAdmin):
-    inlines = (UserProfileInline,)
+    inlines = (ProfileInline,)
 
 # troca o admin padrão para incluir o inline
 try:
@@ -21,7 +21,7 @@ except admin.sites.NotRegistered:
 
 admin.site.register(User, UserAdmin)
 
-@admin.register(UserProfile)
-class UserProfileAdmin(admin.ModelAdmin):
+@admin.register(Profile)
+class ProfileAdmin(admin.ModelAdmin):
     list_display = ("user", "cpf", "birth", "phone")
     search_fields = ("user__username", "user__email", "cpf", "phone")

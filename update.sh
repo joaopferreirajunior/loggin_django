@@ -6,7 +6,7 @@
 PROJECT_DIR="/home/ubuntu/loggin_django"
 LOG_FILE="$PROJECT_DIR/update_aws.log"
 BRANCH="dev"
-DJANGO_SERVICE="loggin_django"   # nome do serviço do Django no docker-compose.yml
+DJANGO_SERVICE="django"   # nome do serviço do Django no docker-compose.yml
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
@@ -54,11 +54,10 @@ NEW_HASH=$(git rev-parse "origin/$BRANCH")
 log "Hash atual:  $OLD_HASH"
 log "Hash remoto: $NEW_HASH"
 
-# Se houver atualização
+# Se houver atualização, sincroniza com o remoto
 if [ "$OLD_HASH" != "$NEW_HASH" ]; then
-    log "🚀 Atualização detectada — iniciando deploy..."
+    log "🚀 Atualização remota detectada — sincronizando código..."
 
-    # Garante limpeza total do repositório local
     git reset --hard HEAD >> "$LOG_FILE" 2>&1
     git clean -fd >> "$LOG_FILE" 2>&1
     git fetch origin "$BRANCH" >> "$LOG_FILE" 2>&1
@@ -67,24 +66,4 @@ if [ "$OLD_HASH" != "$NEW_HASH" ]; then
     # Reaplica permissão do próprio script (caso o reset remova)
     chmod +x "$PROJECT_DIR/update_aws.sh"
 
-    log "✅ Código atualizado. Recriando containers..."
-
-    # Derruba e sobe containers (Django vai usar RDS via .env)
-    $DC down >> "$LOG_FILE" 2>&1
-    $DC up --build -d >> "$LOG_FILE" 2>&1
-
-    # Executa migrações automáticas do banco (agora apontando pro RDS)
-    log "🔄 Aplicando migrações do banco no RDS..."
-    $DC exec "$DJANGO_SERVICE" bash -c "python manage.py migrate --noinput" >> "$LOG_FILE" 2>&1
-
-    if [ $? -eq 0 ]; then
-        log "✅ Migrações aplicadas com sucesso."
-        log "✅ Build concluído e servidor reiniciado com sucesso."
-    else
-        log "⚠️ ERRO ao aplicar migrações. Verifique o log acima."
-    fi
-else
-    log "Nenhuma atualização detectada."
-fi
-
-log "==== Fim da execução ===="
+    log

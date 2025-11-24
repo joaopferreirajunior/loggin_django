@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
-from users.models import UserProfile
+from users.models import Profile
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -14,7 +14,7 @@ class Command(BaseCommand):
         
         # Criar ou obter content types
         user_content_type = ContentType.objects.get_for_model(User)
-        userprofile_content_type = ContentType.objects.get_for_model(UserProfile)
+        userprofile_content_type = ContentType.objects.get_for_model(Profile)
         
         # Criar permissões customizadas
         permissions_data = [
