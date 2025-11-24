@@ -3,13 +3,13 @@ from rest_framework import serializers
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
-from users.models import Profile
+from users.models import UserProfile
 
 User = get_user_model()
 
-class ProfileSerializer(serializers.ModelSerializer):
+class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Profile
+        model = UserProfile
         fields = (
             "cpf", "birth", "phone", 
             "email_confirmed", "email_confirmed_at", "invited_at",
@@ -32,11 +32,11 @@ class UserSerializer(serializers.ModelSerializer):
     def get_profile(self, obj):
         """Retorna dados do perfil ou cria um vazio se não existir"""
         try:
-            return ProfileSerializer(obj.profile).data
-        except Profile.DoesNotExist:
+            return UserProfileSerializer(obj.profile).data
+        except UserProfile.DoesNotExist:
             # Cria um profile vazio se não existir
-            profile = Profile.objects.create(user=obj)
-            return ProfileSerializer(profile).data
+            profile = UserProfile.objects.create(user=obj)
+            return UserProfileSerializer(profile).data
 
 class UserRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8, max_length=128)
@@ -69,7 +69,7 @@ class UserRegisterSerializer(serializers.ModelSerializer):
     def validate_cpf(self, value):
         # validação simples: se informado, garante unicidade
         if value:
-            if Profile.objects.filter(cpf=value).exists():
+            if UserProfile.objects.filter(cpf=value).exists():
                 raise serializers.ValidationError("Este CPF já está em uso.")
         return value
 
@@ -84,7 +84,7 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         # aguarda o signal criar o profile, então atualiza com os dados extras
         try:
             # usa get_or_create para evitar conflitos com o signal
-            profile, created = Profile.objects.get_or_create(
+            profile, created = UserProfile.objects.get_or_create(
                 user=user,
                 defaults={
                     'cpf': cpf,
