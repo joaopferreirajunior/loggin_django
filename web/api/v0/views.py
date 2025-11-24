@@ -9,6 +9,16 @@ from django.contrib.auth.models import User, Group, Permission
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.authentication import SessionAuthentication
+from django.core.mail import send_mail
+from django.utils import timezone
+from django.conf import settings
+from django.contrib.auth.hashers import make_password
+from django.shortcuts import redirect
+from django.http import HttpResponseBadRequest
+from datetime import timedelta
+import secrets
+import string
 from .serializers import UserRegisterSerializer, UserSerializer, ProfileSerializer
 from users.models import Profile
 
@@ -96,10 +106,244 @@ def logout_view(request):
     logout(request)
     return Response({"detail": "Logout realizado com sucesso"}, status=status.HTTP_200_OK)
 
+@api_view(["POST"])
+@permission_classes([AllowAny])
+@csrf_exempt
+def recovery_password(request):
+    """
+    Endpoint para solicitar recuperação de senha via email.
+    Recebe email do usuário e envia token de recuperação.
+    """
+    email = request.data.get("email")
+    
+    if not email:
+        return Response(
+            {"detail": "Email é obrigatório"}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    print(f"DEBUG: Solicitação de recuperação de senha para: {email}")
+    
+    try:
+        # Busca o usuário pelo email
+        user = User.objects.get(email=email)
+        print(f"DEBUG: Usuário encontrado: {user.username}")
+        
+        # Garante que o profile existe
+        profile, created = Profile.objects.get_or_create(user=user)
+        if created:
+            print(f"DEBUG: Profile criado para usuário: {user.username}")
+        
+        # Gera token de recuperação (string aleatória segura)
+        recovery_token = generate_recovery_token()
+        print(f"DEBUG: Token gerado: {recovery_token[:10]}...")
+        
+        # Salva o token e timestamp no profile
+        profile.recovery_token = recovery_token
+        profile.recovery_token_sent_at = timezone.now()
+        profile.save()
+        
+        # Envia email de recuperação
+        try:
+            send_recovery_email(user, email, recovery_token)
+            print(f"DEBUG: Email de recuperação enviado para: {email}")
+        except Exception as email_error:
+            print(f"DEBUG: Erro ao enviar email: {email_error}")
+            # Mesmo se o email falhar, não revelamos isso ao usuário por segurança
+        
+        # Para fins de teste, retorna o link de validação
+        validation_link = f"{getattr(settings, 'FRONTEND_URL', 'http://localhost:8000')}/api/v0/validatetoken/?token={recovery_token}"
+        
+        return Response(
+            {
+                "detail": f"Se o email {email} estiver registrado, você receberá instruções para recuperação de senha.",
+                "test_link": validation_link,  # APENAS PARA DESENVOLVIMENTO
+                "test_token": recovery_token   # APENAS PARA DESENVOLVIMENTO
+            }, 
+            status=status.HTTP_200_OK
+        )
+        
+    except User.DoesNotExist:
+        print(f"DEBUG: Email não encontrado: {email}")
+        # Por segurança, sempre retorna a mesma mensagem
+        return Response(
+            {"detail": f"Se o email {email} estiver registrado, você receberá instruções para recuperação de senha."}, 
+            status=status.HTTP_200_OK
+        )
+    except Exception as e:
+        print(f"DEBUG: Erro interno na recuperação: {e}")
+        return Response(
+            {"detail": "Erro interno do servidor"}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+def generate_recovery_token():
+    """Gera token seguro de 32 caracteres para recuperação de senha"""
+    alphabet = string.ascii_letters + string.digits
+    return ''.join(secrets.choice(alphabet) for _ in range(32))
+
+def send_recovery_email(user, email, token):
+    """Envia email com link de recuperação de senha"""
+    subject = "Recuperação de Senha - Medical San"
+    
+    # URL para validar token (que redirecionará para reset se válido)
+    validate_url = f"{getattr(settings, 'FRONTEND_URL', 'http://localhost:8000')}/api/v0/validatetoken/?token={token}"
+    
+    message = f"""
+    Olá {user.username},
+
+    Você solicitou a recuperação da sua senha.
+
+    Clique no link abaixo para redefinir sua senha:
+    {validate_url}
+
+    Este link é válido por 24 horas.
+
+    Se você não solicitou esta recuperação, ignore este email.
+
+    Atenciosamente,
+    Equipe Medical San
+    """
+    
+    # Envia o email
+    send_mail(
+        subject=subject,
+        message=message,
+        from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@medicalsan.com'),
+        recipient_list=[email],
+        fail_silently=False,  # Para debug, depois pode mudar para True
+    )
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+@csrf_exempt
+def reset_password(request):
+    """
+    Endpoint para resetar senha usando token de recuperação.
+    Recebe token e nova senha, valida e atualiza a senha do usuário.
+    """
+    token = request.data.get("token")
+    new_password = request.data.get("password")
+    
+    if not token:
+        return Response(
+            {"detail": "Token é obrigatório"}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    if not new_password:
+        return Response(
+            {"detail": "Nova senha é obrigatória"}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    if len(new_password) < 8:
+        return Response(
+            {"detail": "A senha deve ter pelo menos 8 caracteres"}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    print(f"DEBUG: Tentativa de reset com token: {token[:10]}...")
+    
+    try:
+        # Busca o profile com o token
+        profile = Profile.objects.get(recovery_token=token)
+        user = profile.user
+        
+        print(f"DEBUG: Token encontrado para usuário: {user.username}")
+        
+        # Verifica se o token não expirou (24 horas)
+        if not is_token_valid(profile):
+            print(f"DEBUG: Token expirado para usuário: {user.username}")
+            return Response(
+                {"detail": "Token de recuperação expirado. Solicite uma nova recuperação de senha."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Atualiza a senha do usuário
+        user.set_password(new_password)
+        user.save()
+        
+        # Limpa o token de recuperação (uso único)
+        profile.recovery_token = None
+        profile.recovery_token_sent_at = None
+        profile.save()
+        
+        print(f"DEBUG: Senha alterada com sucesso para usuário: {user.username}")
+        
+        return Response(
+            {"detail": "Senha alterada com sucesso! Você pode fazer login com sua nova senha."}, 
+            status=status.HTTP_200_OK
+        )
+        
+    except Profile.DoesNotExist:
+        print(f"DEBUG: Token não encontrado: {token[:10]}...")
+        return Response(
+            {"detail": "Token de recuperação inválido ou expirado"}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    except Exception as e:
+        print(f"DEBUG: Erro interno no reset de senha: {e}")
+        return Response(
+            {"detail": "Erro interno do servidor"}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+def is_token_valid(profile):
+    """
+    Verifica se o token de recuperação ainda é válido (não expirou).
+    Token é válido por 24 horas após o envio.
+    """
+    if not profile.recovery_token or not profile.recovery_token_sent_at:
+        return False
+    
+    # Calcula a diferença de tempo
+    now = timezone.now()
+    token_age = now - profile.recovery_token_sent_at
+    
+    # Token válido por 24 horas
+    return token_age < timedelta(hours=24)
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def validate_token(request):
+    """
+    Endpoint para validar token de recuperação via GET.
+    GET /api/v0/validatetoken/?token=abc123token
+    
+    Se token válido: redireciona para /reset-password/?token=abc123token
+    Se token inválido: redireciona para /recovery-password/ com erro
+    """
+    token = request.GET.get("token")
+    
+    if not token:
+        # Redireciona para página de recuperação com erro
+        return redirect(f'/recovery-password/?error=token_missing')
+    
+    try:
+        profile = Profile.objects.get(recovery_token=token)
+        
+        if is_token_valid(profile):
+            # Token válido - redireciona para página de reset com token
+            print(f"DEBUG: Token válido para usuário: {profile.user.username}")
+            return redirect(f'/reset-password/?token={token}')
+        else:
+            # Token expirado
+            print(f"DEBUG: Token expirado para usuário: {profile.user.username}")
+            return redirect(f'/recovery-password/?error=token_expired')
+            
+    except Profile.DoesNotExist:
+        # Token não encontrado
+        print(f"DEBUG: Token não encontrado: {token[:10]}...")
+        return redirect(f'/recovery-password/?error=token_invalid')
+    except Exception as e:
+        print(f"DEBUG: Erro na validação do token: {e}")
+        return redirect(f'/recovery-password/?error=server_error')
+
 
 #Retorna os dados completos do próprio usuário logado
 class MeProfileView(APIView):
-    authentication_classes = [JWTAuthentication]
+    authentication_classes = [JWTAuthentication, SessionAuthentication]
     permission_classes = [permissions.IsAuthenticated]
 
     def patch(self, request):
@@ -138,7 +382,7 @@ class MeProfileView(APIView):
     
 #Retorna os dados de auth_user do próprio usuário logado
 class MeView(APIView):
-    authentication_classes = [JWTAuthentication]
+    authentication_classes = [JWTAuthentication, SessionAuthentication]
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
@@ -153,7 +397,7 @@ class MeView(APIView):
 
 #View para gerenciar permissões e grupos de usuário
 class UserPermissionsView(APIView):
-    authentication_classes = [JWTAuthentication]
+    authentication_classes = [JWTAuthentication, SessionAuthentication]
     permission_classes = [permissions.IsAuthenticated]
     
     def get(self, request):
@@ -182,7 +426,7 @@ class UserPermissionsView(APIView):
             return Response({"detail": f"Erro ao buscar permissões: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class AssignUserRoleView(APIView):
-    authentication_classes = [JWTAuthentication]
+    authentication_classes = [JWTAuthentication, SessionAuthentication]
     permission_classes = [permissions.IsAuthenticated]
     
     def post(self, request):

@@ -17,6 +17,27 @@ cd "$PROJECT_DIR" || {
     exit 1
 }
 
+# Configura FRONTEND_URL com IP público da própria EC2
+log "Configurando FRONTEND_URL com IP público da instância..."
+if [ -f ".env" ]; then
+    # Obtém token do IMDSv2
+    TOKEN=$(curl -sX PUT "http://169.254.169.254/latest/api/token" \
+      -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+
+    # Obtém IP público
+    PUBLIC_IP=$(curl -s "http://169.254.169.254/latest/meta-data/public-ipv4" \
+      -H "X-aws-ec2-metadata-token: $TOKEN")
+
+    if [ -n "$PUBLIC_IP" ]; then
+        sed -i "s|^FRONTEND_URL=.*|FRONTEND_URL=http://$PUBLIC_IP:8000|g" .env
+        log "✅ FRONTEND_URL configurado para http://$PUBLIC_IP:8000"
+    else
+        log "⚠️ Não foi possível obter o IP público da instância. FRONTEND_URL não foi alterado."
+    fi
+else
+    log "⚠️ Arquivo .env não encontrado"
+fi
+
 # Verifica dependências básicas
 if ! command -v git &> /dev/null; then
     log "ERRO: git não encontrado."

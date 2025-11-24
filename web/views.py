@@ -129,3 +129,11 @@ def logout_view(request):
 @login_required(login_url='login_page')
 def edit_profile_page(request):
     return render(request, "edit_profile.html")
+
+def recovery_password_page(request):
+    """Página para solicitar recuperação de senha"""
+    return render(request, "recovery_password.html")
+
+def reset_password_page(request):
+    """Página para redefinir senha com token"""
+    return render(request, "reset_password.html")
