@@ -9,4 +9,5 @@ REMOTE_SCRIPT="update_aws.sh"
 
 echo "Conectando em $EC2_USER@$EC2_HOST e executando $REMOTE_SCRIPT..."
 
-ssh -i "$SSH_KEY" "$EC2_USER@$EC2_HOST" "cd $REMOTE_PROJECT_DIR && ./\$REMOTE_SCRIPT"
+ssh -i "$SSH_KEY" "$EC2_USER@$EC2_HOST" "cd $REMOTE_PROJECT_DIR && ./update_aws.sh"
+echo "Deploy concluído."

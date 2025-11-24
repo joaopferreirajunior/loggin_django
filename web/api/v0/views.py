@@ -14,11 +14,23 @@ from users.models import UserProfile
 @permission_classes([AllowAny])
 @csrf_exempt
 def register(request):
-    serializer = UserRegisterSerializer(data=request.data)
-    if serializer.is_valid():
-        serializer.save()
-        return Response({"detail": "Conta criada com sucesso!"}, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        serializer = UserRegisterSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            print(f"DEBUG: Usuário {user.username} criado com sucesso")
+            return Response({"detail": "Conta criada com sucesso!"}, status=status.HTTP_201_CREATED)
+        else:
+            print(f"DEBUG: Erros de validação no registro: {serializer.errors}")
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        print(f"DEBUG: Erro interno no registro: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return Response(
+            {"detail": f"Erro interno do servidor: {str(e)}"}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 @api_view(["POST"])
 @permission_classes([AllowAny])

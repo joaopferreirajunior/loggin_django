@@ -80,11 +80,18 @@ def register_page(request):
             if phone:
                 payload["phone"] = phone
 
+            print(f"DEBUG: Enviando payload para registro: {payload}")
+            print(f"DEBUG: URL da API: {api_url}")
+
             resp = requests.post(
                 api_url,
                 json=payload,
                 timeout=8,
             )
+            
+            print(f"DEBUG: Status da resposta: {resp.status_code}")
+            print(f"DEBUG: Headers da resposta: {resp.headers}")
+            print(f"DEBUG: Conteúdo da resposta: {resp.text}")
             # parse seguro do JSON
             data = {}
             if resp.headers.get("content-type", "").startswith("application/json"):
