@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 from users.models import Profile
 
+
 User = get_user_model()
 
 class ProfileSerializer(serializers.ModelSerializer):
@@ -23,20 +24,12 @@ class ProfileSerializer(serializers.ModelSerializer):
         )
 
 class UserSerializer(serializers.ModelSerializer):
-    profile = serializers.SerializerMethodField()
+    profile = ProfileSerializer(read_only=True)
     
     class Meta:
         model = User
         fields = ("id", "username", "email", "profile")
     
-    def get_profile(self, obj):
-        """Retorna dados do perfil ou cria um vazio se não existir"""
-        try:
-            return ProfileSerializer(obj.profile).data
-        except Profile.DoesNotExist:
-            # Cria um profile vazio se não existir
-            profile = Profile.objects.create(user=obj)
-            return ProfileSerializer(profile).data
 
 class UserRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8, max_length=128)
@@ -107,3 +100,87 @@ class UserRegisterSerializer(serializers.ModelSerializer):
             # se falhar, o usuário ainda existe, só não terá o perfil completo
 
         return user
+
+# --- Schemas genéricos de mensagens/erros ---
+
+
+class DetailSerializer(serializers.Serializer):
+    """Usado para mensagens simples: {"detail": "..."}"""
+    detail = serializers.CharField()
+
+
+# --- Auth / Registro / Login ---
+
+
+class RegisterResponseSerializer(serializers.Serializer):
+    detail = serializers.CharField()
+    user = UserSerializer()
+    refresh = serializers.CharField()
+    access = serializers.CharField()
+
+
+class LoginRequestSerializer(serializers.Serializer):
+    username = serializers.CharField(
+        help_text="Pode ser username ou email"
+    )
+    password = serializers.CharField()
+
+
+class LoginResponseSerializer(serializers.Serializer):
+    user = UserSerializer()
+    refresh = serializers.CharField()
+    access = serializers.CharField()
+
+
+# --- Recuperação de senha ---
+
+
+class RecoveryPasswordRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class RecoveryPasswordResponseSerializer(serializers.Serializer):
+    detail = serializers.CharField()
+    test_link = serializers.CharField()
+    test_token = serializers.CharField()
+
+
+class ResetPasswordRequestSerializer(serializers.Serializer):
+    token = serializers.CharField()
+    password = serializers.CharField()
+
+
+class ResetPasswordSuccessSerializer(serializers.Serializer):
+    detail = serializers.CharField()
+
+
+# --- Permissões / papéis de usuário ---
+
+
+class UserPermissionsSerializer(serializers.Serializer):
+    user_role = serializers.CharField()
+    is_system_admin = serializers.BooleanField()
+    is_office_admin = serializers.BooleanField()
+    is_regular_user = serializers.BooleanField()
+    groups = serializers.ListField(
+        child=serializers.CharField()
+    )
+    permissions = serializers.ListField(
+        child=serializers.CharField()
+    )
+    can_manage_users = serializers.BooleanField()
+    can_view_all_users = serializers.BooleanField()
+    can_access_admin = serializers.BooleanField()
+
+
+class AssignUserRoleRequestSerializer(serializers.Serializer):
+    user_id = serializers.IntegerField()
+    role = serializers.ChoiceField(
+        choices=["system_admin", "office_admin", "regular_user"]
+    )
+
+
+class AssignUserRoleResponseSerializer(serializers.Serializer):
+    detail = serializers.CharField()
+    user = serializers.CharField()
+    role = serializers.CharField()

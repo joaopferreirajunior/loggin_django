@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "web",
     "users.apps.UsersConfig",
+    'drf_spectacular',
 ]
 
 REST_FRAMEWORK = {
@@ -41,6 +42,37 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',  # para web
         'rest_framework_simplejwt.authentication.JWTAuthentication',  # para app
+    ],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Medical San Logging API",
+    "DESCRIPTION": "API Web e Mobile do sistema Medical San Logging",
+    "VERSION": "1.0.0",
+
+    "SERVE_INCLUDE_SCHEMA": False,
+
+    "COMPONENT_SPLIT_REQUEST": True,
+
+    "SECURITY_SCHEMES": {
+        "bearerAuth": {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
+        },
+        # Se quiser documentar autenticação por cookie/sessão
+        # "cookieAuth": {
+        #     "type": "apiKey",
+        #     "in": "cookie",
+        #     "name": "sessionid",
+        # },
+    },
+
+    "SECURITY": [
+        {"bearerAuth": []},
+        # {"cookieAuth": []},
     ],
 }
 

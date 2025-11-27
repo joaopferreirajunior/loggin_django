@@ -19,9 +19,40 @@ from django.http import HttpResponseBadRequest
 from datetime import timedelta
 import secrets
 import string
-from .serializers import UserRegisterSerializer, UserSerializer, ProfileSerializer
+from .serializers import  (   
+    UserRegisterSerializer,
+    UserSerializer,
+    ProfileSerializer,
+    DetailSerializer,
+    RegisterResponseSerializer,
+    LoginRequestSerializer,
+    LoginResponseSerializer,
+    RecoveryPasswordRequestSerializer,
+    RecoveryPasswordResponseSerializer,
+    ResetPasswordRequestSerializer,
+    ResetPasswordSuccessSerializer,
+    UserPermissionsSerializer,
+    AssignUserRoleRequestSerializer,
+    AssignUserRoleResponseSerializer,
+)
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResponse
 from users.models import Profile
 
+@extend_schema(
+    tags=["Auth"],
+    request=UserRegisterSerializer,
+    responses={
+        201: RegisterResponseSerializer,
+        400: OpenApiResponse(
+            response=DetailSerializer,
+            description="Erros de validação do cadastro",
+        ),
+        500: OpenApiResponse(
+            response=DetailSerializer,
+            description="Erro interno do servidor",
+        ),
+    },
+)
 @api_view(["POST"])
 @permission_classes([AllowAny])
 @csrf_exempt
@@ -53,7 +84,19 @@ def register(request):
             {"detail": f"Erro interno do servidor: {str(e)}"}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+    
 
+@extend_schema(
+    tags=["Auth"],
+    request=LoginRequestSerializer,
+    responses={
+        200: LoginResponseSerializer,
+        401: OpenApiResponse(
+            response=DetailSerializer,
+            description="Credenciais inválidas ou email não encontrado",
+        ),
+    },
+)
 @api_view(["POST"])
 @permission_classes([AllowAny])
 @csrf_exempt
@@ -100,12 +143,40 @@ def login_view(request):
         print(f"DEBUG: Falha na autenticação para username: '{username}'")
         return Response({"detail": "Credenciais inválidas"}, status=status.HTTP_401_UNAUTHORIZED)
 
+@extend_schema(
+    tags=["Auth"],
+    request=None,  # <-- isso é o que faltava
+    responses={
+        200: DetailSerializer,
+    },
+)
 @api_view(["POST"])
 @csrf_exempt
 def logout_view(request):
     logout(request)
     return Response({"detail": "Logout realizado com sucesso"}, status=status.HTTP_200_OK)
 
+@extend_schema(
+    tags=["Auth"],
+    request=RecoveryPasswordRequestSerializer,
+    responses={
+        200: OpenApiResponse(
+            response=RecoveryPasswordResponseSerializer,
+            description=(
+                "Mensagem genérica de sucesso. "
+                "Em ambiente de desenvolvimento pode retornar test_link e test_token."
+            ),
+        ),
+        400: OpenApiResponse(
+            response=DetailSerializer,
+            description="Email é obrigatório",
+        ),
+        500: OpenApiResponse(
+            response=DetailSerializer,
+            description="Erro interno do servidor",
+        ),
+    },
+)
 @api_view(["POST"])
 @permission_classes([AllowAny])
 @csrf_exempt
@@ -214,6 +285,25 @@ def send_recovery_email(user, email, token):
         fail_silently=False,  # Para debug, depois pode mudar para True
     )
 
+
+@extend_schema(
+    tags=["Auth"],
+    request=ResetPasswordRequestSerializer,
+    responses={
+        200: ResetPasswordSuccessSerializer,
+        400: OpenApiResponse(
+            response=DetailSerializer,
+            description=(
+                "Token inválido/expirado ou problemas como senha curta, "
+                "token ausente, etc."
+            ),
+        ),
+        500: OpenApiResponse(
+            response=DetailSerializer,
+            description="Erro interno do servidor",
+        ),
+    },
+)
 @api_view(["POST"])
 @permission_classes([AllowAny])
 @csrf_exempt
@@ -304,6 +394,7 @@ def is_token_valid(profile):
     # Token válido por 24 horas
     return token_age < timedelta(hours=24)
 
+@extend_schema(exclude=True)
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def validate_token(request):
@@ -342,9 +433,21 @@ def validate_token(request):
 
 
 #Retorna os dados completos do próprio usuário logado
+@extend_schema_view(
+    get=extend_schema(
+        tags=["User"],
+        responses={200: ProfileSerializer, 500: DetailSerializer},
+    ),
+    patch=extend_schema(
+        tags=["User"],
+        request=ProfileSerializer,
+        responses={200: ProfileSerializer, 500: DetailSerializer},
+    ),
+)
 class MeProfileView(APIView):
     authentication_classes = [JWTAuthentication, SessionAuthentication]
     permission_classes = [permissions.IsAuthenticated]
+    serializer_class = ProfileSerializer  # ajuda o drf-spectacular
 
     def patch(self, request):
         """
@@ -381,6 +484,12 @@ class MeProfileView(APIView):
             return Response({"detail": f"Erro ao buscar perfil do usuário: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
 #Retorna os dados de auth_user do próprio usuário logado
+@extend_schema_view(
+    get=extend_schema(
+        tags=["User"],
+        responses={200: UserSerializer, 500: DetailSerializer},
+    ),
+)
 class MeView(APIView):
     authentication_classes = [JWTAuthentication, SessionAuthentication]
     permission_classes = [permissions.IsAuthenticated]
@@ -396,6 +505,12 @@ class MeView(APIView):
 
 
 #View para gerenciar permissões e grupos de usuário
+@extend_schema_view(
+    get=extend_schema(
+        tags=["User"],
+        responses={200: UserPermissionsSerializer, 500: DetailSerializer},
+    ),
+)
 class UserPermissionsView(APIView):
     authentication_classes = [JWTAuthentication, SessionAuthentication]
     permission_classes = [permissions.IsAuthenticated]
@@ -425,6 +540,19 @@ class UserPermissionsView(APIView):
             print(f"DEBUG: Erro em UserPermissionsView.get: {e}")
             return Response({"detail": f"Erro ao buscar permissões: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+@extend_schema_view(
+    post=extend_schema(
+        tags=["User"],
+        request=AssignUserRoleRequestSerializer,
+        responses={
+            200: AssignUserRoleResponseSerializer,
+            400: DetailSerializer,
+            403: DetailSerializer,
+            404: DetailSerializer,
+            500: DetailSerializer,
+        },
+    ),
+)
 class AssignUserRoleView(APIView):
     authentication_classes = [JWTAuthentication, SessionAuthentication]
     permission_classes = [permissions.IsAuthenticated]

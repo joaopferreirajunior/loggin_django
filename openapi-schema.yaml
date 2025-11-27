@@ -1,0 +1,1266 @@
+openapi: 3.0.3
+info:
+  title: Medical San Logging API
+  version: 1.0.0
+  description: API Web e Mobile do sistema Medical San Logging
+paths:
+  /api/v0/assign-role/:
+    post:
+      operationId: api_v0_assign_role_create
+      description: Atribui um papel a um usuário (apenas system_admin pode fazer isso)
+      tags:
+      - User
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignUserRoleRequestRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssignUserRoleResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detail'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detail'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detail'
+          description: ''
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detail'
+          description: ''
+  /api/v0/login/:
+    post:
+      operationId: api_v0_login_create
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detail'
+          description: Credenciais inválidas ou email não encontrado
+  /api/v0/logout/:
+    post:
+      operationId: api_v0_logout_create
+      tags:
+      - Auth
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detail'
+          description: ''
+  /api/v0/me/:
+    get:
+      operationId: api_v0_me_retrieve
+      description: Retorna os dados do próprio usuário logado.
+      tags:
+      - User
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detail'
+          description: ''
+  /api/v0/me/permissions/:
+    get:
+      operationId: api_v0_me_permissions_retrieve
+      description: Retorna as permissões e grupo do usuário atual
+      tags:
+      - User
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPermissions'
+          description: ''
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detail'
+          description: ''
+  /api/v0/me/profile/:
+    get:
+      operationId: api_v0_me_profile_retrieve
+      description: Retorna os dados do perfil do próprio usuário logado.
+      tags:
+      - User
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+          description: ''
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detail'
+          description: ''
+    patch:
+      operationId: api_v0_me_profile_partial_update
+      description: |-
+        Atualiza parcialmente os campos do perfil do próprio usuário (cpf, birth, phone).
+        Exemplo JSON:
+        { "cpf": "123.456.789-10", "phone": "+55 16 99999-0000" }
+      tags:
+      - User
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedProfileRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+          description: ''
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detail'
+          description: ''
+  /api/v0/recoverypassword/:
+    post:
+      operationId: api_v0_recoverypassword_create
+      description: |-
+        Endpoint para solicitar recuperação de senha via email.
+        Recebe email do usuário e envia token de recuperação.
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecoveryPasswordRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecoveryPasswordResponse'
+          description: Mensagem genérica de sucesso. Em ambiente de desenvolvimento
+            pode retornar test_link e test_token.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detail'
+          description: Email é obrigatório
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detail'
+          description: Erro interno do servidor
+  /api/v0/register/:
+    post:
+      operationId: api_v0_register_create
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegisterRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detail'
+          description: Erros de validação do cadastro
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detail'
+          description: Erro interno do servidor
+  /api/v0/resetpassword/:
+    post:
+      operationId: api_v0_resetpassword_create
+      description: |-
+        Endpoint para resetar senha usando token de recuperação.
+        Recebe token e nova senha, valida e atualiza a senha do usuário.
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResetPasswordSuccess'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detail'
+          description: Token inválido/expirado ou problemas como senha curta, token
+            ausente, etc.
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detail'
+          description: Erro interno do servidor
+  /api/v0/token/refresh/:
+    post:
+      operationId: api_v0_token_refresh_create
+      description: |-
+        Takes a refresh type JSON web token and returns an access type JSON web
+        token if the refresh token is valid.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+        required: true
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefresh'
+          description: ''
+  /mobile/api/v0/assign-role/:
+    post:
+      operationId: mobile_api_v0_assign_role_create
+      description: Atribui um papel a um usuário (apenas system_admin pode fazer isso)
+      tags:
+      - User
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MobileAssignUserRoleRequestRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileAssignUserRoleResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileDetail'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileDetail'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileDetail'
+          description: ''
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileDetail'
+          description: ''
+  /mobile/api/v0/login/:
+    post:
+      operationId: mobile_api_v0_login_create
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MobileLoginRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileLoginResponse'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileDetail'
+          description: Credenciais inválidas ou email não encontrado
+  /mobile/api/v0/logout/:
+    post:
+      operationId: mobile_api_v0_logout_create
+      tags:
+      - Auth
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileDetail'
+          description: ''
+  /mobile/api/v0/me/:
+    get:
+      operationId: mobile_api_v0_me_retrieve
+      description: Retorna os dados do próprio usuário logado.
+      tags:
+      - User
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileUser'
+          description: ''
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileDetail'
+          description: ''
+  /mobile/api/v0/me/permissions/:
+    get:
+      operationId: mobile_api_v0_me_permissions_retrieve
+      description: Retorna as permissões e grupo do usuário atual
+      tags:
+      - User
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileUserPermissions'
+          description: ''
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileDetail'
+          description: ''
+  /mobile/api/v0/me/profile/:
+    get:
+      operationId: mobile_api_v0_me_profile_retrieve
+      description: Retorna os dados do perfil do próprio usuário logado.
+      tags:
+      - User
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileProfile'
+          description: ''
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileDetail'
+          description: ''
+    patch:
+      operationId: mobile_api_v0_me_profile_partial_update
+      description: |-
+        Atualiza parcialmente os campos do perfil do próprio usuário (cpf, birth, phone).
+        Exemplo JSON:
+        { "cpf": "123.456.789-10", "phone": "+55 16 99999-0000" }
+      tags:
+      - User
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedMobileProfileRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileProfile'
+          description: ''
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileDetail'
+          description: ''
+  /mobile/api/v0/recoverypassword/:
+    post:
+      operationId: mobile_api_v0_recoverypassword_create
+      description: |-
+        Endpoint para solicitar recuperação de senha via email.
+        Recebe email do usuário e envia token de recuperação.
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MobileRecoveryPasswordRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileRecoveryPasswordResponse'
+          description: Mensagem genérica de sucesso. Em ambiente de desenvolvimento
+            pode retornar test_link e test_token.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileDetail'
+          description: Email é obrigatório
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileDetail'
+          description: Erro interno do servidor
+  /mobile/api/v0/register/:
+    post:
+      operationId: mobile_api_v0_register_create
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MobileUserRegisterRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileRegisterResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileDetail'
+          description: Erros de validação do cadastro
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileDetail'
+          description: Erro interno do servidor
+  /mobile/api/v0/resetpassword/:
+    post:
+      operationId: mobile_api_v0_resetpassword_create
+      description: |-
+        Endpoint para resetar senha usando token de recuperação.
+        Recebe token e nova senha, valida e atualiza a senha do usuário.
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MobileResetPasswordRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileResetPasswordSuccess'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileDetail'
+          description: Token inválido/expirado ou problemas como senha curta, token
+            ausente, etc.
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileDetail'
+          description: Erro interno do servidor
+  /mobile/api/v0/token/refresh/:
+    post:
+      operationId: mobile_api_v0_token_refresh_create
+      description: |-
+        Takes a refresh type JSON web token and returns an access type JSON web
+        token if the refresh token is valid.
+      tags:
+      - mobile
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+        required: true
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefresh'
+          description: ''
+components:
+  schemas:
+    AssignUserRoleRequestRequest:
+      type: object
+      properties:
+        user_id:
+          type: integer
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+      required:
+      - role
+      - user_id
+    AssignUserRoleResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+        user:
+          type: string
+        role:
+          type: string
+      required:
+      - detail
+      - role
+      - user
+    Detail:
+      type: object
+      description: 'Usado para mensagens simples: {"detail": "..."}'
+      properties:
+        detail:
+          type: string
+      required:
+      - detail
+    LoginRequestRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+          description: Pode ser username ou email
+        password:
+          type: string
+          minLength: 1
+      required:
+      - password
+      - username
+    LoginResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        refresh:
+          type: string
+        access:
+          type: string
+      required:
+      - access
+      - refresh
+      - user
+    MobileAssignUserRoleRequestRequest:
+      type: object
+      properties:
+        user_id:
+          type: integer
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+      required:
+      - role
+      - user_id
+    MobileAssignUserRoleResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+        user:
+          type: string
+        role:
+          type: string
+      required:
+      - detail
+      - role
+      - user
+    MobileDetail:
+      type: object
+      description: 'Usado para mensagens simples: {"detail": "..."}'
+      properties:
+        detail:
+          type: string
+      required:
+      - detail
+    MobileLoginRequestRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+          description: Pode ser username ou email
+        password:
+          type: string
+          minLength: 1
+      required:
+      - password
+      - username
+    MobileLoginResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/MobileUser'
+        refresh:
+          type: string
+        access:
+          type: string
+      required:
+      - access
+      - refresh
+      - user
+    MobileProfile:
+      type: object
+      properties:
+        cpf:
+          type: string
+          nullable: true
+          maxLength: 14
+        birth:
+          type: string
+          format: date
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+          maxLength: 20
+        email_confirmed:
+          type: boolean
+          readOnly: true
+        email_confirmed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        invited_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        confirmation_token:
+          type: string
+          readOnly: true
+          nullable: true
+        confirmation_sent_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        recovery_token:
+          type: string
+          readOnly: true
+          nullable: true
+        recovery_token_sent_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        clickhouse_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+          description: UUID do usuário no ClickHouse
+      required:
+      - clickhouse_id
+      - confirmation_sent_at
+      - confirmation_token
+      - email_confirmed
+      - email_confirmed_at
+      - invited_at
+      - recovery_token
+      - recovery_token_sent_at
+    MobileRecoveryPasswordRequestRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+      required:
+      - email
+    MobileRecoveryPasswordResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+        test_link:
+          type: string
+        test_token:
+          type: string
+      required:
+      - detail
+      - test_link
+      - test_token
+    MobileRegisterResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+        user:
+          $ref: '#/components/schemas/MobileUser'
+        refresh:
+          type: string
+        access:
+          type: string
+      required:
+      - access
+      - detail
+      - refresh
+      - user
+    MobileResetPasswordRequestRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+      required:
+      - password
+      - token
+    MobileResetPasswordSuccess:
+      type: object
+      properties:
+        detail:
+          type: string
+      required:
+      - detail
+    MobileUser:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          title: Email address
+          maxLength: 254
+        profile:
+          allOf:
+          - $ref: '#/components/schemas/MobileProfile'
+          readOnly: true
+      required:
+      - id
+      - profile
+      - username
+    MobileUserPermissions:
+      type: object
+      properties:
+        user_role:
+          type: string
+        is_system_admin:
+          type: boolean
+        is_office_admin:
+          type: boolean
+        is_regular_user:
+          type: boolean
+        groups:
+          type: array
+          items:
+            type: string
+        permissions:
+          type: array
+          items:
+            type: string
+        can_manage_users:
+          type: boolean
+        can_view_all_users:
+          type: boolean
+        can_access_admin:
+          type: boolean
+      required:
+      - can_access_admin
+      - can_manage_users
+      - can_view_all_users
+      - groups
+      - is_office_admin
+      - is_regular_user
+      - is_system_admin
+      - permissions
+      - user_role
+    MobileUserRegisterRequestRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          minLength: 1
+        password:
+          type: string
+          writeOnly: true
+          minLength: 8
+          maxLength: 128
+        cpf:
+          type: string
+          nullable: true
+        birth:
+          type: string
+          format: date
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+      required:
+      - email
+      - password
+      - username
+    PatchedMobileProfileRequest:
+      type: object
+      properties:
+        cpf:
+          type: string
+          nullable: true
+          maxLength: 14
+        birth:
+          type: string
+          format: date
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+          maxLength: 20
+    PatchedProfileRequest:
+      type: object
+      properties:
+        cpf:
+          type: string
+          nullable: true
+          maxLength: 14
+        birth:
+          type: string
+          format: date
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+          maxLength: 20
+    Profile:
+      type: object
+      properties:
+        cpf:
+          type: string
+          nullable: true
+          maxLength: 14
+        birth:
+          type: string
+          format: date
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+          maxLength: 20
+        email_confirmed:
+          type: boolean
+          readOnly: true
+        email_confirmed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        invited_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        confirmation_token:
+          type: string
+          readOnly: true
+          nullable: true
+        confirmation_sent_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        recovery_token:
+          type: string
+          readOnly: true
+          nullable: true
+        recovery_token_sent_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        clickhouse_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+          description: UUID do usuário no ClickHouse
+      required:
+      - clickhouse_id
+      - confirmation_sent_at
+      - confirmation_token
+      - email_confirmed
+      - email_confirmed_at
+      - invited_at
+      - recovery_token
+      - recovery_token_sent_at
+    RecoveryPasswordRequestRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+      required:
+      - email
+    RecoveryPasswordResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+        test_link:
+          type: string
+        test_token:
+          type: string
+      required:
+      - detail
+      - test_link
+      - test_token
+    RegisterResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+        refresh:
+          type: string
+        access:
+          type: string
+      required:
+      - access
+      - detail
+      - refresh
+      - user
+    ResetPasswordRequestRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+      required:
+      - password
+      - token
+    ResetPasswordSuccess:
+      type: object
+      properties:
+        detail:
+          type: string
+      required:
+      - detail
+    RoleEnum:
+      enum:
+      - system_admin
+      - office_admin
+      - regular_user
+      type: string
+      description: |-
+        * `system_admin` - system_admin
+        * `office_admin` - office_admin
+        * `regular_user` - regular_user
+    TokenRefresh:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+      required:
+      - access
+    TokenRefreshRequest:
+      type: object
+      properties:
+        refresh:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - refresh
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          title: Email address
+          maxLength: 254
+        profile:
+          allOf:
+          - $ref: '#/components/schemas/Profile'
+          readOnly: true
+      required:
+      - id
+      - profile
+      - username
+    UserPermissions:
+      type: object
+      properties:
+        user_role:
+          type: string
+        is_system_admin:
+          type: boolean
+        is_office_admin:
+          type: boolean
+        is_regular_user:
+          type: boolean
+        groups:
+          type: array
+          items:
+            type: string
+        permissions:
+          type: array
+          items:
+            type: string
+        can_manage_users:
+          type: boolean
+        can_view_all_users:
+          type: boolean
+        can_access_admin:
+          type: boolean
+      required:
+      - can_access_admin
+      - can_manage_users
+      - can_view_all_users
+      - groups
+      - is_office_admin
+      - is_regular_user
+      - is_system_admin
+      - permissions
+      - user_role
+    UserRegisterRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          minLength: 1
+        password:
+          type: string
+          writeOnly: true
+          minLength: 8
+          maxLength: 128
+        cpf:
+          type: string
+          nullable: true
+        birth:
+          type: string
+          format: date
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+      required:
+      - email
+      - password
+      - username
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
