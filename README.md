@@ -108,9 +108,9 @@ curl -X POST http://localhost:8000/api/v0/resetpassword/ \
 5. Usuário define nova senha na página de reset
 6. Token é invalidado após uso bem-sucedido
 
-API
-Register:
-username, password(original, sera criptografado no backend), email.
+## API
+Atualizar openapi-schema.yaml - python manage.py spectacular --format openapi --file openapi-schema.yaml
+Visualizar com extensão Swagger Viewer - Clica com o direito em cima de openapi-schema.yaml e seleciona Preview Swagger
 
 
 DEPLOY:

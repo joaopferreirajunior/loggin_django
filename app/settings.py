@@ -48,8 +48,8 @@ REST_FRAMEWORK = {
 }
 
 SPECTACULAR_SETTINGS = {
-    "TITLE": "Medical San Logging API",
-    "DESCRIPTION": "API Web e Mobile do sistema Medical San Logging",
+    "TITLE": "Loggin API",
+    "DESCRIPTION": "API Web e Mobile do sistema Loggin",
     "VERSION": "1.0.0",
 
     "SERVE_INCLUDE_SCHEMA": False,
