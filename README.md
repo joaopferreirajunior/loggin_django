@@ -1,12 +1,18 @@
-# loggin_django
-backend loggin django version
+# Medical San Logging Django
 
-Virtual env
+Sistema backend loggin desenvolvido em Django.
+
+## 🚀 Início Rápido
+
+### Ambiente Virtual
+```bash
 source loggin_venv/bin/activate
+(Simula o ambiente da EC2 para testes locais)
+```
 
-## Configuração de Ambiente
+### Configuração de Ambiente EC2
 
-Configure a URL do frontend no arquivo `.env`:
+Configure as variáveis de ambiente no arquivo `.env`:
 
 **Desenvolvimento (padrão):**
 ```bash
@@ -15,15 +21,11 @@ FRONTEND_URL=http://localhost:8000
 
 **Produção:**
 ```bash
-FRONTEND_URL=http://3.236.36.55:8000
+FRONTEND_URL=http://3.236.36.55:8000 
+(Trocar IP para o domínio quando tiver um)
 ```
 
-Esta variável é usada para:
-- Links de recuperação de senha em emails
-- Redirecionamentos de validação de token
-- Configurações de CORS
-
-**Script para alternar ambiente:**
+**Scripts de alternância de ambiente:**
 ```bash
 # Desenvolvimento
 ./switch_env.sh dev
@@ -31,106 +33,194 @@ Esta variável é usada para:
 # Produção  
 ./switch_env.sh prod
 ```
+Rodar na EC2 ou no ambiente local antes do build
 
-Build do container:
+## 🐳 Docker
+
+### Comandos Básicos
+
+**Build inicial do container:**
+```bash
 docker compose up --build -d
+```
 
-Se precisar apenas atualizar o container com mudanças em views ou templates (sem migrations, mudanças em requiriments.txt, docker-compose...)
+**Restart simples (mudanças em views/templates):**
+```bash
 docker-compose restart django
+```
 
-Se precisar derrubar o container antigo para subir o novo
+**Rebuild com alterações:**
+```bash
 docker compose down && docker compose up --build -d
+```
 
-Se precisar forçar um rebuild completo (alterações no requirements.txt por exemplo)
+**Rebuild completo (alterações no requirements.txt):**
+```bash
 docker compose build --no-cache && docker compose up -d
+```
 
+### Gerenciamento de Containers
 
-Se precisar destruir o container manualmente
+**Destruir containers manualmente:**
+```bash
 docker kill loggin_django
 docker rm loggin_django
+
 docker kill loggin_postgres
 docker rm loggin_postgres
+```
 
-logs de erros do build
+**Visualizar logs:**
+```bash
+# Logs do build
 docker compose logs --tail=50
 
-logs de erros do container
+# Logs dos containers
 docker logs loggin_django
 docker logs loggin_postgres
+```
 
+## 🔗 API Endpoints
 
-Teste api (exemplo: criação de usuário):
-# Substitua localhost por 3.236.36.55 para produção
+### Autenticação
+
+**Registro de usuário:**
+```bash
+# Desenvolvimento
 curl -X POST http://localhost:8000/api/v0/register/ \
   -H "Content-Type: application/json" \
   -d '{"username": "juanherrera", "email": "juan_herrera@tequila.com", "password": "@Senha123"}'
+```
 
-curl -X POST http://3.236.36.55:8000/api/v0/login/ \
-  -H "Content-Type: application/json" \
-  -d '{"username": "weber@blepol.com", "password": "medical25"}'
-
-# Login com token JWT (retorna access + refresh tokens)
+**Login (JWT):**
+```bash
+# Desenvolvimento
 curl -X POST http://localhost:8000/api/v0/login/ \
   -H "Content-Type: application/json" \
   -d '{"username": "usuario", "password": "@Senha123"}'
 
-# Requisição autenticada com token
+# Produção
+curl -X POST http://3.236.36.55:8000/api/v0/login/ \
+  -H "Content-Type: application/json" \
+  -d '{"username": "weber@blepol.com", "password": "medical25"}'
+```
+
+**Requisição autenticada:**
+```bash
 curl -X GET http://localhost:8000/api/v0/me/ \
   -H "Authorization: Bearer SEU_ACCESS_TOKEN_AQUI"
+```
 
-# Recuperação de senha
+### Recuperação de Senha
+
+**Solicitar recuperação:**
+```bash
 curl -X POST http://localhost:8000/api/v0/recoverypassword/ \
   -H "Content-Type: application/json" \
   -d '{"email": "usuario@email.com"}'
+```
 
-# Resposta (com links para teste em desenvolvimento):
-# {
-#   "detail": "Se o email usuario@email.com estiver registrado, você receberá instruções para recuperação de senha.",
-#   "test_link": "http://localhost:8000/api/v0/validatetoken/?token=abc123token",
-#   "test_token": "abc123token"
-# }
+**Resposta (desenvolvimento com tokens de teste):**
+```json
+{
+  "detail": "Se o email usuario@email.com estiver registrado, você receberá instruções para recuperação de senha.",
+  "test_link": "http://localhost:8000/api/v0/validatetoken/?token=abc123token",
+  "test_token": "abc123token"
+}
+```
 
-# Validar token de recuperação (GET com query parameter)
+**Validar token:**
+```bash
 curl -X GET "http://localhost:8000/api/v0/validatetoken/?token=abc123token"
+```
 
-# Reset de senha com token
+**Reset de senha:**
+```bash
 curl -X POST http://localhost:8000/api/v0/resetpassword/ \
   -H "Content-Type: application/json" \
   -d '{"token": "abc123token", "password": "novaSenha123"}'
+```
 
-## Fluxo de Recuperação de Senha:
-1. Usuário solicita recuperação em: /recovery-password/
-2. Sistema envia email com link: /api/v0/validatetoken/?token=abc123
-3. Usuário clica no link do email
-4. Backend valida token automaticamente:
-   - Se válido: redireciona para /reset-password/?token=abc123
-   - Se inválido: redireciona para /recovery-password/?error=token_invalid
-5. Usuário define nova senha na página de reset
-6. Token é invalidado após uso bem-sucedido
+### 🔄 Fluxo de Recuperação de Senha
 
-## API
-Atualizar openapi-schema.yaml - python manage.py spectacular --format openapi --file openapi-schema.yaml
-Visualizar com extensão Swagger Viewer - Clica com o direito em cima de openapi-schema.yaml e seleciona Preview Swagger
+1. **Solicitação**: Usuário acessa `/recovery-password/` e informa email
+2. **Email**: Sistema envia link: `/api/v0/validatetoken/?token=abc123`
+3. **Validação**: Usuário clica no link do email
+4. **Redirecionamento automático**:
+   - Token válido → `/reset-password/?token=abc123`
+   - Token inválido → `/recovery-password/?error=token_invalid`
+5. **Nova senha**: Usuário define nova senha na página de reset
+6. **Finalização**: Token é invalidado após uso bem-sucedido
 
+## 📚 Documentação da API
 
-DEPLOY:
-O deploy é feito sempre com o código disponível no repositório github. Se alterou, suba para o github.
-Verifique o branch que será consultado pelo script em update.sh na maquina aws (EX: BRANCH="dev").
+**Gerar schema OpenAPI:**
+```bash
+python manage.py spectacular --format openapi --file openapi-schema.yaml
+```
 
-Antes de executar o deploy, faça todas as migrations!
-Ative o ambiente virtual dentro do wsl: 
+**Visualizar documentação:**
+- Clique com botão direito em `openapi-schema.yaml`
+- Selecione "Preview Swagger"
+
+**URLs da documentação (após configuração):**
+- Swagger UI: `/api/docs/`
+- ReDoc: `/api/redoc/`
+- Schema JSON: `/api/schema/`
+
+## 🚀 Deploy AWS EC2
+
+### ⚠️ Pré-requisitos
+
+1. **Código no GitHub**: Sempre faça push das alterações antes do deploy
+2. **Branch**: Verifique o branch configurado em `update.sh` (ex: `BRANCH="dev"`)
+
+### Preparação local antes do deploy
+
+**1. Ativar ambiente virtual (WSL):**
+```bash
 source loggin_venv/bin/activate
+```
 
-Garanta que o ambiente virtual esteja atualizado:
+**2. Atualizar dependências:**
+```bash
 pip install -r requirements.txt
-(Isso só precisa ser feito uma vez no ambiente virtual)
+```
 
-Faça todas as migrations:
+**3. Fazer migrações:**
+```bash
 python manage.py makemigrations
+```
 
-Para fazer o deploy através da maquina local rode ./deploy_aws.sh. Isso rodará o script ./update.sh dentro da maquina aws.
-ou
-Rode diretamente na maquina aws:
-Entre na maquina aws EC2 via ssh: ssh -i ~/.ssh/loggin-key.pem ubuntu@ec2-3-236-36-55.compute-1.amazonaws.com
-(editar o caminho para loggin-key.pem dentro do wsl. O caminho de loggin-key.pem no windows não é o mesmo que no wsl. É necessário copiar a chave para dentro da maquina virtual wsl)
-dentro da maquina aws rode: ./update.sh
+### Execução do Deploy
+
+**Opção 1: Deploy a partir da máquina local (recomendado):**
+```bash
+./deploy_aws.sh
+```
+
+**Opção 2: Puxar deploy direto na AWS:**
+```bash
+# Conectar via SSH
+ssh -i ~/.ssh/loggin-key.pem ubuntu@ec2-3-236-36-55.compute-1.amazonaws.com
+
+# Executar update
+./update.sh
+```
+
+> **Nota**: Para WSL, copie a chave SSH para dentro da máquina virtual, pois os caminhos Windows não são compatíveis.
+
+## 🔧 Estrutura do Projeto
+
+```
+loggin_django/
+├── app/                 # Configurações principais
+├── web/                 # Interface web e APIs
+├── users/               # Gerenciamento de usuários, paciêntes e outras entidades humanas
+├── mobile/              # APIs para mobile
+├── devices/             # APIs para dados de equipamentos
+├── projects/            # APIs para projetos
+├── docker-compose.yml   # Configuração Docker
+├── requirements.txt     # Dependências Python
+└── update.sh           # Script de deploy automático
+```
