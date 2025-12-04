@@ -25,12 +25,39 @@ class S3ImageService:
         # O boto3 detecta automaticamente as credenciais da IAM Role quando roda na EC2
         self.s3_client = boto3.client(
             's3',
-            region_name=getattr(settings, 'AWS_S3_REGION_NAME', 'us-east-1')
+            region_name=getattr(settings, 'AWS_S3_REGION_NAME', 'us-east-1'),
+            config=boto3.session.Config(signature_version='s3v4')
         )
         self.bucket_name = getattr(settings, 'AWS_STORAGE_BUCKET_NAME', 'loggin-media')
         self.max_size = getattr(settings, 'PROFILE_IMAGE_MAX_SIZE', (800, 800))  # pixels
         self.quality = getattr(settings, 'PROFILE_IMAGE_QUALITY', 85)  # qualidade JPEG
         self.max_file_size = getattr(settings, 'PROFILE_IMAGE_MAX_FILE_SIZE', 5 * 1024 * 1024)  # 5MB
+        self.presigned_url_expiration = getattr(settings, 'S3_PRESIGNED_URL_EXPIRATION', 3600)  # 1 hora
+    
+    def generate_presigned_url(self, s3_key: str, expiration: int = None) -> str:
+        """
+        Gera uma URL assinada temporária para acesso a um objeto privado no S3
+        
+        Args:
+            s3_key: Chave do objeto no S3
+            expiration: Tempo de expiração em segundos (padrão: configurado em settings)
+            
+        Returns:
+            str: URL assinada temporária
+        """
+        try:
+            if expiration is None:
+                expiration = self.presigned_url_expiration
+                
+            response = self.s3_client.generate_presigned_url(
+                'get_object',
+                Params={'Bucket': self.bucket_name, 'Key': s3_key},
+                ExpiresIn=expiration
+            )
+            return response
+        except Exception as e:
+            print(f"Erro ao gerar presigned URL para {s3_key}: {e}")
+            return None
     
     def test_s3_connection(self) -> Tuple[bool, str]:
         """

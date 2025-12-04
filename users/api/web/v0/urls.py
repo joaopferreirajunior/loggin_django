@@ -21,4 +21,5 @@ urlpatterns = [
     
     # Profile image management  
     path("profile/image/", views.manage_profile_image, name="api_web_profile_image"),  # POST/DELETE - gerenciar imagem
+    path("profile/image/<int:user_id>/", views.serve_profile_image, name="api_web_serve_profile_image"),  # GET - servir imagem como proxy
 ]

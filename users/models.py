@@ -51,12 +51,16 @@ class Profile(AuditModel):
         return f"Perfil de {self.user.get_username()}"
     
     def get_profile_image_url(self):
-        """Retorna URL completa da imagem de perfil do S3"""
+        """Retorna URL assinada temporária da imagem de perfil do S3"""
         if self.profile_image:
-            from django.conf import settings
-            bucket_name = getattr(settings, 'AWS_STORAGE_BUCKET_NAME', 'loggin-media')
-            region = getattr(settings, 'AWS_S3_REGION_NAME', 'us-east-1')
-            return f"https://{bucket_name}.s3.{region}.amazonaws.com/{self.profile_image}"
+            try:
+                from users.services import S3ImageService
+                s3_service = S3ImageService()
+                presigned_url = s3_service.generate_presigned_url(self.profile_image)
+                return presigned_url
+            except Exception as e:
+                print(f"Erro ao gerar presigned URL: {e}")
+                return None
         return None
     
     def delete_profile_image(self):

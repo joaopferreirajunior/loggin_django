@@ -217,6 +217,15 @@ AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME', 'medicalsan-uploa
 AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME', 'us-east-1')
 AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com'
 
+# Configurações para bucket privado com presigned URLs
+AWS_QUERYSTRING_AUTH = True  # Habilita presigned URLs
+AWS_S3_SIGNATURE_VERSION = 's3v4'  # Versão de assinatura recomendada
+AWS_S3_ADDRESSING_STYLE = 'virtual'  # Estilo de endereçamento virtual
+AWS_DEFAULT_ACL = None  # Bucket privado - sem ACL pública
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=86400',  # Cache de 24 horas
+}
+
 # Configurações de upload de imagens de perfil
 PROFILE_IMAGE_MAX_SIZE = (800, 800)  # pixels (largura, altura)
 PROFILE_IMAGE_QUALITY = 85  # qualidade JPEG (0-100)
@@ -224,4 +233,6 @@ PROFILE_IMAGE_MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB em bytes
 
 # Configurações opcionais do S3
 AWS_S3_FILE_OVERWRITE = False  # Não sobrescrever arquivos com mesmo nome
-AWS_DEFAULT_ACL = 'public-read'  # Imagens de perfil são públicas por padrão
+
+# Tempo de expiração das presigned URLs (em segundos)
+S3_PRESIGNED_URL_EXPIRATION = int(os.getenv('S3_PRESIGNED_URL_EXPIRATION', 3600))  # 1 hora por padrão

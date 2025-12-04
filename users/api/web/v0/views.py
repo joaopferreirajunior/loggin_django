@@ -437,3 +437,85 @@ def validate_token(request):
         
     except Profile.DoesNotExist:
         return Response({"valid": False}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@extend_schema(
+    operation_id="serve_profile_image",
+    summary="Servir imagem de perfil",
+    description="Serve a imagem de perfil como proxy do S3 (alternativa a presigned URLs)",
+    tags=["User Management"],
+    parameters=[
+        OpenApiParameter(
+            name="user_id",
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.PATH,
+            description="ID do usuário"
+        )
+    ],
+    responses={
+        200: {
+            'description': 'Imagem servida com sucesso',
+            'content': {
+                'image/jpeg': {},
+                'image/png': {},
+                'image/webp': {}
+            }
+        },
+        404: {'description': 'Imagem não encontrada'}
+    }
+)
+@api_view(["GET"])
+@permission_classes([permissions.IsAuthenticated])  # Ou AllowAny se quiser imagens públicas
+def serve_profile_image(request, user_id):
+    """
+    Serve imagem de perfil como proxy do S3
+    Alternativa às presigned URLs para maior controle de acesso
+    """
+    try:
+        from django.http import HttpResponse
+        from users.services import S3ImageService
+        import mimetypes
+        
+        # Buscar profile do usuário
+        profile = Profile.objects.get(user_id=user_id)
+        
+        if not profile.profile_image:
+            return Response(
+                {"detail": "Usuário não possui imagem de perfil"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Baixar imagem do S3
+        s3_service = S3ImageService()
+        
+        try:
+            response = s3_service.s3_client.get_object(
+                Bucket=s3_service.bucket_name,
+                Key=profile.profile_image
+            )
+            
+            # Determinar content type baseado na extensão
+            content_type, _ = mimetypes.guess_type(profile.profile_image)
+            if not content_type:
+                content_type = 'image/jpeg'  # fallback
+            
+            # Retornar imagem como resposta HTTP
+            image_data = response['Body'].read()
+            
+            http_response = HttpResponse(image_data, content_type=content_type)
+            http_response['Cache-Control'] = 'public, max-age=3600'  # Cache de 1 hora
+            http_response['Content-Length'] = len(image_data)
+            
+            return http_response
+            
+        except Exception as e:
+            return Response(
+                {"detail": f"Erro ao buscar imagem no S3: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+    except Profile.DoesNotExist:
+        return Response(
+            {"detail": "Usuário não encontrado"},
+            status=status.HTTP_404_NOT_FOUND
+        )
