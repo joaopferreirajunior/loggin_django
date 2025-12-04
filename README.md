@@ -153,7 +153,7 @@ curl -X GET http://localhost:8000/users/api/web/v0/profile/image/123/ \
 # Exemplo: https://medicalsan-uploads.s3.us-east-1.amazonaws.com/profiles/user_1/avatar.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=...
 ```
 
-### Dicas Importantes
+### Upload de imagem
 
 1. **Token JWT**: Certifique-se de que o token está válido e não expirou
 2. **Tamanho**: Backend aceita máximo 5MB, valide localmente primeiro
@@ -182,12 +182,6 @@ CachedNetworkImage(
   },
 )
 ```
-
-**Configurações S3 importantes:**
-- `AWS_QUERYSTRING_AUTH = True`: Habilita presigned URLs
-- `AWS_DEFAULT_ACL = None`: Bucket privado (sem ACL pública)
-- `S3_PRESIGNED_URL_EXPIRATION = 3600`: URLs expiram em 1 hora
-- IAM Role da EC2 deve ter permissões: `s3:GetObject`, `s3:PutObject`, `s3:DeleteObject`
 
 ### Recuperação de Senha
 

@@ -6,6 +6,7 @@ from rest_framework.permissions import AllowAny
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.views.decorators.csrf import csrf_exempt
+from drf_spectacular.utils import extend_schema, inline_serializer
 
 # DRF Spectacular imports
 from drf_spectacular.utils import extend_schema, OpenApiParameter
@@ -40,14 +41,14 @@ User = get_user_model()
         }
     },
     responses={
-        200: {
-            'type': 'object',
-            'properties': {
-                'detail': {'type': 'string', 'example': 'Imagem de perfil atualizada/removida com sucesso'},
-                'profile_image_url': {'type': 'string', 'example': 'https://bucket.s3.region.amazonaws.com/profiles/user_1/avatar.jpg'},
-                'user': UserWithImageSerializer
-            }
-        },
+        200: inline_serializer(
+            name="ManageProfileImageResponse",
+            fields={
+                "detail": serializers.CharField(),
+                "profile_image_url": serializers.URLField(allow_null=True, required=False),
+                "user": UserWithImageSerializer(),
+            },
+        ),
         400: {
             'type': 'object',
             'properties': {
