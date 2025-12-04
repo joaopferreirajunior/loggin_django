@@ -75,6 +75,7 @@
             object-fit: cover;
             border: 3px solid #ddd;
             margin-bottom: 10px;
+            object-position: center;
         }
 
         .profile-image-placeholder {
@@ -453,6 +454,22 @@
             }
         }
 
+        // Função para mostrar preview da imagem
+        function showImagePreview(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = document.getElementById('profileImage');
+                const placeholder = document.getElementById('profileImagePlaceholder');
+                const deleteBtn = document.getElementById('deleteImageBtn');
+                
+                img.src = e.target.result;
+                img.style.display = 'block';
+                placeholder.style.display = 'none';
+                deleteBtn.style.display = 'inline-block';
+            };
+            reader.readAsDataURL(file);
+        }
+
         // Função para fazer upload de imagem de perfil
         async function uploadProfileImage(file) {
             const loadingDiv = document.getElementById('loading');
@@ -544,6 +561,10 @@
                         return;
                     }
                     
+                    // Mostrar preview da imagem imediatamente
+                    showImagePreview(file);
+                    
+                    // Fazer upload da imagem
                     uploadProfileImage(file);
                 }
             });
