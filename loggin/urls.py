@@ -12,5 +12,6 @@ urlpatterns = [
     path("edit-profile/", views.edit_profile_page, name="edit_profile_page"),
 
     #API
-    path("api/v0/", include("web.api.v0.urls")), # APIs do app web
+    path("api/web/v0/", include("users.api.web.v0.urls")), # APIs web
+    path("api/mobile/v0/", include("users.api.mobile.v0.urls")), # APIs mobile
 ]

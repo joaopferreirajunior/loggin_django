@@ -7,9 +7,8 @@ from drf_spectacular.views import (
 )
 
 urlpatterns = [
-    path("", include("web.urls")),                 # páginas HTML e APIs do web
+    path("", include("loggin.urls")),                 # páginas HTML e APIs do loggin
     path("admin/", admin.site.urls),                # admin
-    path("mobile/", include("mobile.urls")),   # APIs do app mobile  
     path("users/", include("users.urls")), # APIs do app users
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"), #  Endpoint que fornece o schema OpenAPI (JSON/YAML)
     path(

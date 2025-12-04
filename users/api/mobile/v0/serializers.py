@@ -1,36 +1,50 @@
-from django.contrib.auth.models import User
+# users/api/mobile/v0/serializers.py
+
+from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
-from django.contrib.auth import get_user_model
 from users.models import Profile
-
+from drf_spectacular.utils import extend_schema_serializer
 
 User = get_user_model()
 
+
+@extend_schema_serializer(component_name="MobileProfile")
 class ProfileSerializer(serializers.ModelSerializer):
+    profile_image_url = serializers.SerializerMethodField()
+    
     class Meta:
         model = Profile
         fields = (
             "cpf", "birth", "phone", 
             "email_confirmed", "email_confirmed_at", "invited_at",
             "confirmation_token", "confirmation_sent_at", 
-            "recovery_token", "recovery_token_sent_at", "clickhouse_id"
+            "recovery_token", "recovery_token_sent_at", "clickhouse_id",
+            "profile_image_url"
         )
         read_only_fields = (
             "email_confirmed", "email_confirmed_at", "invited_at",
             "confirmation_token", "confirmation_sent_at", 
-            "recovery_token", "recovery_token_sent_at", "clickhouse_id"
+            "recovery_token", "recovery_token_sent_at", "clickhouse_id",
+            "profile_image_url"
         )
+    
+    def get_profile_image_url(self, obj):
+        """Retorna URL completa da imagem de perfil do S3"""
+        return obj.get_profile_image_url()
 
+
+@extend_schema_serializer(component_name="MobileUser")
 class UserSerializer(serializers.ModelSerializer):
     profile = ProfileSerializer(read_only=True)
-    
+
     class Meta:
         model = User
         fields = ("id", "username", "email", "profile")
-    
 
+
+@extend_schema_serializer(component_name="MobileUserRegisterRequest")
 class UserRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8, max_length=128)
     email = serializers.EmailField(required=True)
@@ -41,11 +55,13 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'password', 'cpf', 'birth', 'phone']
+        fields = ["username", "email", "password", "cpf", "birth", "phone"]
 
     def validate_username(self, value):
         if not value.isalnum():
-            raise serializers.ValidationError("O nome de usuário só pode conter letras e números.")
+            raise serializers.ValidationError(
+                "O nome de usuário só pode conter letras e números."
+            )
         if User.objects.filter(username=value).exists():
             raise serializers.ValidationError("Este nome de usuário já está em uso.")
         return value
@@ -68,9 +84,9 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         # extrai campos do perfil se existirem
-        cpf = validated_data.pop('cpf', None)
-        birth = validated_data.pop('birth', None)
-        phone = validated_data.pop('phone', None)
+        cpf = validated_data.pop("cpf", None)
+        birth = validated_data.pop("birth", None)
+        phone = validated_data.pop("phone", None)
 
         user = User.objects.create_user(**validated_data)
 
@@ -80,10 +96,10 @@ class UserRegisterSerializer(serializers.ModelSerializer):
             profile, created = Profile.objects.get_or_create(
                 user=user,
                 defaults={
-                    'cpf': cpf,
-                    'birth': birth,
-                    'phone': phone
-                }
+                    "cpf": cpf,
+                    "birth": birth,
+                    "phone": phone,
+                },
             )
             # se o profile já existia (criado pelo signal), atualiza os campos
             if not created:
@@ -101,17 +117,21 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 
         return user
 
+
 # --- Schemas genéricos de mensagens/erros ---
 
 
+@extend_schema_serializer(component_name="MobileDetail")
 class DetailSerializer(serializers.Serializer):
     """Usado para mensagens simples: {"detail": "..."}"""
+
     detail = serializers.CharField()
 
 
 # --- Auth / Registro / Login ---
 
 
+@extend_schema_serializer(component_name="MobileRegisterResponse")
 class RegisterResponseSerializer(serializers.Serializer):
     detail = serializers.CharField()
     user = UserSerializer()
@@ -119,13 +139,15 @@ class RegisterResponseSerializer(serializers.Serializer):
     access = serializers.CharField()
 
 
+@extend_schema_serializer(component_name="MobileLoginRequest")
 class LoginRequestSerializer(serializers.Serializer):
     username = serializers.CharField(
-        help_text="Pode ser username ou email"
+        help_text="Pode ser username ou email",
     )
     password = serializers.CharField()
 
 
+@extend_schema_serializer(component_name="MobileLoginResponse")
 class LoginResponseSerializer(serializers.Serializer):
     user = UserSerializer()
     refresh = serializers.CharField()
@@ -135,21 +157,25 @@ class LoginResponseSerializer(serializers.Serializer):
 # --- Recuperação de senha ---
 
 
+@extend_schema_serializer(component_name="MobileRecoveryPasswordRequest")
 class RecoveryPasswordRequestSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
 
+@extend_schema_serializer(component_name="MobileRecoveryPasswordResponse")
 class RecoveryPasswordResponseSerializer(serializers.Serializer):
     detail = serializers.CharField()
     test_link = serializers.CharField()
     test_token = serializers.CharField()
 
 
+@extend_schema_serializer(component_name="MobileResetPasswordRequest")
 class ResetPasswordRequestSerializer(serializers.Serializer):
     token = serializers.CharField()
     password = serializers.CharField()
 
 
+@extend_schema_serializer(component_name="MobileResetPasswordSuccess")
 class ResetPasswordSuccessSerializer(serializers.Serializer):
     detail = serializers.CharField()
 
@@ -157,29 +183,28 @@ class ResetPasswordSuccessSerializer(serializers.Serializer):
 # --- Permissões / papéis de usuário ---
 
 
+@extend_schema_serializer(component_name="MobileUserPermissions")
 class UserPermissionsSerializer(serializers.Serializer):
     user_role = serializers.CharField()
     is_system_admin = serializers.BooleanField()
     is_office_admin = serializers.BooleanField()
     is_regular_user = serializers.BooleanField()
-    groups = serializers.ListField(
-        child=serializers.CharField()
-    )
-    permissions = serializers.ListField(
-        child=serializers.CharField()
-    )
+    groups = serializers.ListField(child=serializers.CharField())
+    permissions = serializers.ListField(child=serializers.CharField())
     can_manage_users = serializers.BooleanField()
     can_view_all_users = serializers.BooleanField()
     can_access_admin = serializers.BooleanField()
 
 
+@extend_schema_serializer(component_name="MobileAssignUserRoleRequest")
 class AssignUserRoleRequestSerializer(serializers.Serializer):
     user_id = serializers.IntegerField()
     role = serializers.ChoiceField(
-        choices=["system_admin", "office_admin", "regular_user"]
+        choices=["system_admin", "office_admin", "regular_user"],
     )
 
 
+@extend_schema_serializer(component_name="MobileAssignUserRoleResponse")
 class AssignUserRoleResponseSerializer(serializers.Serializer):
     detail = serializers.CharField()
     user = serializers.CharField()

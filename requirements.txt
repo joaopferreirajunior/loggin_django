@@ -7,3 +7,6 @@ requests==2.32.3
 djangorestframework-simplejwt
 django-cors-headers
 drf-spectacular
+boto3
+django-storages
+Pillow

@@ -39,7 +39,7 @@ from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResp
 from users.models import Profile
 
 @extend_schema(
-    tags=["Auth"],
+    tags=["Web - Auth"],
     request=UserRegisterSerializer,
     responses={
         201: RegisterResponseSerializer,
@@ -87,7 +87,7 @@ def register(request):
     
 
 @extend_schema(
-    tags=["Auth"],
+    tags=["Web - Auth"],
     request=LoginRequestSerializer,
     responses={
         200: LoginResponseSerializer,
@@ -144,7 +144,7 @@ def login_view(request):
         return Response({"detail": "Credenciais inválidas"}, status=status.HTTP_401_UNAUTHORIZED)
 
 @extend_schema(
-    tags=["Auth"],
+    tags=["Web - Auth"],
     request=None,  # <-- isso é o que faltava
     responses={
         200: DetailSerializer,
@@ -157,7 +157,7 @@ def logout_view(request):
     return Response({"detail": "Logout realizado com sucesso"}, status=status.HTTP_200_OK)
 
 @extend_schema(
-    tags=["Auth"],
+    tags=["Web - Auth"],
     request=RecoveryPasswordRequestSerializer,
     responses={
         200: OpenApiResponse(
@@ -223,7 +223,7 @@ def recovery_password(request):
             # Mesmo se o email falhar, não revelamos isso ao usuário por segurança
         
         # Para fins de teste, retorna o link de validação
-        validation_link = f"{getattr(settings, 'FRONTEND_URL', 'http://localhost:8000')}/api/v0/validatetoken/?token={recovery_token}"
+        validation_link = f"{getattr(settings, 'FRONTEND_URL', 'http://localhost:8000')}/api/web/v0/validatetoken/?token={recovery_token}"
         
         return Response(
             {
@@ -258,7 +258,7 @@ def send_recovery_email(user, email, token):
     subject = "Recuperação de Senha - Medical San"
     
     # URL para validar token (que redirecionará para reset se válido)
-    validate_url = f"{getattr(settings, 'FRONTEND_URL', 'http://localhost:8000')}/api/v0/validatetoken/?token={token}"
+    validate_url = f"{getattr(settings, 'FRONTEND_URL', 'http://localhost:8000')}/api/web/v0/validatetoken/?token={token}"
     
     message = f"""
     Olá {user.username},
@@ -287,7 +287,7 @@ def send_recovery_email(user, email, token):
 
 
 @extend_schema(
-    tags=["Auth"],
+    tags=["Web - Auth"],
     request=ResetPasswordRequestSerializer,
     responses={
         200: ResetPasswordSuccessSerializer,
@@ -400,7 +400,7 @@ def is_token_valid(profile):
 def validate_token(request):
     """
     Endpoint para validar token de recuperação via GET.
-    GET /api/v0/validatetoken/?token=abc123token
+    GET /api/web/v0/validatetoken/?token=abc123token
     
     Se token válido: redireciona para /reset-password/?token=abc123token
     Se token inválido: redireciona para /recovery-password/ com erro
@@ -435,11 +435,11 @@ def validate_token(request):
 #Retorna os dados completos do próprio usuário logado
 @extend_schema_view(
     get=extend_schema(
-        tags=["User"],
+        tags=["Web - User"],
         responses={200: ProfileSerializer, 500: DetailSerializer},
     ),
     patch=extend_schema(
-        tags=["User"],
+        tags=["Web - User"],
         request=ProfileSerializer,
         responses={200: ProfileSerializer, 500: DetailSerializer},
     ),
@@ -486,7 +486,7 @@ class MeProfileView(APIView):
 #Retorna os dados de auth_user do próprio usuário logado
 @extend_schema_view(
     get=extend_schema(
-        tags=["User"],
+        tags=["Web - User"],
         responses={200: UserSerializer, 500: DetailSerializer},
     ),
 )
@@ -507,7 +507,7 @@ class MeView(APIView):
 #View para gerenciar permissões e grupos de usuário
 @extend_schema_view(
     get=extend_schema(
-        tags=["User"],
+        tags=["Web - User"],
         responses={200: UserPermissionsSerializer, 500: DetailSerializer},
     ),
 )
@@ -542,7 +542,7 @@ class UserPermissionsView(APIView):
 
 @extend_schema_view(
     post=extend_schema(
-        tags=["User"],
+        tags=["Web - User"],
         request=AssignUserRoleRequestSerializer,
         responses={
             200: AssignUserRoleResponseSerializer,

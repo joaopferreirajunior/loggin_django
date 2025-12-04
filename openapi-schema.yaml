@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
-  title: Medical San Logging API
+  title: Medical San Loggin API
   version: 1.0.0
-  description: API Web e Mobile do sistema Medical San Logging
+  description: API Web e Mobile do sistema Medical San Loggin
 paths:
   /api/v0/assign-role/:
     post:

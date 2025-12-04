@@ -31,8 +31,10 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "web",
+    "loggin",
     "users.apps.UsersConfig",
+    "devices",
+    "projects",
     'drf_spectacular',
 ]
 
@@ -48,14 +50,51 @@ REST_FRAMEWORK = {
 }
 
 SPECTACULAR_SETTINGS = {
-    "TITLE": "Loggin API",
-    "DESCRIPTION": "API Web e Mobile do sistema Loggin",
+    "TITLE": "Medical San Loggin API",
+    "DESCRIPTION": "API Web e Mobile do sistema Loggin com endpoints organizados por plataforma",
     "VERSION": "1.0.0",
-
     "SERVE_INCLUDE_SCHEMA": False,
-
     "COMPONENT_SPLIT_REQUEST": True,
-
+    "SCHEMA_PATH_PREFIX": "/api/",
+    "CONTACT": {
+        "name": "Medical San Support",
+        "email": "support@medicalsan.com",
+    },
+    "LICENSE": {
+        "name": "Private License",
+    },
+    "SERVERS": [
+        {
+            "url": "http://localhost:8000",
+            "description": "Development Server",
+        },
+        {
+            "url": "http://3.236.36.55:8000",
+            "description": "Production Server (AWS)",
+        },
+    ],
+    "TAGS": [
+        {
+            "name": "Web - Auth",
+            "description": "Endpoints de autenticação para aplicação web (login, registro, recuperação de senha)",
+        },
+        {
+            "name": "Web - User",
+            "description": "Endpoints de gerenciamento de usuários para aplicação web",
+        },
+        {
+            "name": "Mobile - Auth",
+            "description": "Endpoints de autenticação para aplicação mobile (login, registro, recuperação de senha)",
+        },
+        {
+            "name": "Mobile - User",
+            "description": "Endpoints de gerenciamento de usuários para aplicação mobile",
+        },
+        {
+            "name": "User Management",
+            "description": "Endpoints gerais para gerenciamento de perfis e upload de imagens",
+        },
+    ],
     "SECURITY_SCHEMES": {
         "bearerAuth": {
             "type": "http",
@@ -69,7 +108,6 @@ SPECTACULAR_SETTINGS = {
         #     "name": "sessionid",
         # },
     },
-
     "SECURITY": [
         {"bearerAuth": []},
         # {"cookieAuth": []},
@@ -91,7 +129,7 @@ ROOT_URLCONF = "app.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "web" / "templates"],
+        "DIRS": [BASE_DIR / "loggin" / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {"context_processors": [
             "django.template.context_processors.debug",
@@ -169,3 +207,21 @@ DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@medicalsan.com')
 
 # URL do frontend para links de recuperação
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:8000')
+
+# ============================
+# AWS S3 Configuration for File Uploads
+# ============================
+AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME', 'medicalsan-uploads')
+AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME', 'us-east-1')
+AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com'
+
+# Configurações de upload de imagens de perfil
+PROFILE_IMAGE_MAX_SIZE = (800, 800)  # pixels (largura, altura)
+PROFILE_IMAGE_QUALITY = 85  # qualidade JPEG (0-100)
+PROFILE_IMAGE_MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB em bytes
+
+# Configurações opcionais do S3
+AWS_S3_FILE_OVERWRITE = False  # Não sobrescrever arquivos com mesmo nome
+AWS_DEFAULT_ACL = 'public-read'  # Imagens de perfil são públicas por padrão

@@ -35,11 +35,53 @@ class Profile(AuditModel):
     recovery_token         = models.TextField(null=True, blank=True)
     recovery_token_sent_at = models.DateTimeField(null=True, blank=True)
     clickhouse_id = models.UUIDField(null=True, blank=True, db_index=True, help_text="UUID do usuário no ClickHouse")
+    
+    # Imagem de perfil - armazena apenas o path/key do S3
+    profile_image = models.CharField(
+        max_length=500, 
+        null=True, 
+        blank=True,
+        help_text="Path da imagem de perfil no bucket S3 (ex: profiles/user_123/avatar.jpg)"
+    )
+    
     scratchpad = models.JSONField(default=dict, blank=True)
 
 
     def __str__(self):
         return f"Perfil de {self.user.get_username()}"
+    
+    def get_profile_image_url(self):
+        """Retorna URL completa da imagem de perfil do S3"""
+        if self.profile_image:
+            from django.conf import settings
+            bucket_name = getattr(settings, 'AWS_STORAGE_BUCKET_NAME', 'loggin-media')
+            region = getattr(settings, 'AWS_S3_REGION_NAME', 'us-east-1')
+            return f"https://{bucket_name}.s3.{region}.amazonaws.com/{self.profile_image}"
+        return None
+    
+    def delete_profile_image(self):
+        """Remove a imagem do S3 e limpa o campo no banco"""
+        if self.profile_image:
+            try:
+                import boto3
+                from django.conf import settings
+                
+                # Usa IAM Role da instância EC2 automaticamente
+                s3_client = boto3.client(
+                    's3',
+                    region_name=getattr(settings, 'AWS_S3_REGION_NAME', 'us-east-1')
+                )
+                
+                bucket_name = getattr(settings, 'AWS_STORAGE_BUCKET_NAME', 'loggin-media')
+                s3_client.delete_object(Bucket=bucket_name, Key=self.profile_image)
+                
+                self.profile_image = None
+                self.save()
+                return True
+            except Exception as e:
+                print(f"Erro ao deletar imagem do S3: {e}")
+                return False
+        return True
     
     def get_user_role(self):
         """Retorna o papel/grupo principal do usuário"""

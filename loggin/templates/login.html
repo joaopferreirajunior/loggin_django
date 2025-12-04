@@ -95,7 +95,7 @@
             const errorBox = document.getElementById("errorBox");
 
             try {
-                const response = await fetch("/api/v0/login/", {
+                const response = await fetch("/api/web/v0/login/", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -107,12 +107,12 @@
                 const data = await response.json();
 
                 if (response.status === 200) {
-                    // ✅ Login bem-sucedido → armazena dados e tokens usando função auxiliar
+                    // Login bem-sucedido → armazena dados e tokens usando função auxiliar
                     console.log("Login bem-sucedido:", data);
                     storeAuthTokens(data.access, data.refresh, data.user);
                     window.location.href = "/";
                 } else {
-                    // ❌ Exibe mensagem de erro
+                    // Exibe mensagem de erro
                     errorBox.style.display = "block";
                     errorBox.textContent = data.detail || "Erro desconhecido ao tentar fazer login.";
                 }

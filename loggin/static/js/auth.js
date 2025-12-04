@@ -65,7 +65,7 @@ async function refreshAccessToken() {
     }
     
     try {
-        const response = await fetch('/api/v0/token/refresh/', {
+        const response = await fetch('/api/web/v0/token/refresh/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -92,7 +92,7 @@ async function refreshAccessToken() {
 async function logout() {
     try {
         // Tenta fazer logout no servidor
-        await fetch('/api/v0/logout/', {
+        await fetch('/api/web/v0/logout/', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${getAccessToken()}`

@@ -22,7 +22,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copia o projeto inteiro
 COPY . .
 
-# 🔥 Remove bytecodes antigos (garante build limpo)
+# Remove bytecodes antigos (garante build limpo)
 RUN find . -name "*.pyc" -delete && find . -name "__pycache__" -type d -exec rm -rf {} +
 
 # Expõe a porta do Django

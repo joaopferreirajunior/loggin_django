@@ -56,7 +56,7 @@ log "Hash remoto: $NEW_HASH"
 
 # Se houver atualização, sincroniza com o remoto
 if [ "$OLD_HASH" != "$NEW_HASH" ]; then
-    log "🚀 Atualização remota detectada — sincronizando código..."
+    log "Atualização remota detectada — sincronizando código..."
 
     git reset --hard HEAD >> "$LOG_FILE" 2>&1
     git clean -fd >> "$LOG_FILE" 2>&1
@@ -65,7 +65,7 @@ if [ "$OLD_HASH" != "$NEW_HASH" ]; then
 
     chmod +x "$PROJECT_DIR/update.sh"
 
-    log "✅ Código sincronizado com o remoto."
+    log "Código sincronizado com o remoto."
 else
     log "Nenhuma atualização remota. Usando código local atual (inclui modificações locais)."
 fi
@@ -90,30 +90,30 @@ if [ -f ".env" ]; then
     if [ -n "$PUBLIC_IP" ]; then
         if grep -q '^FRONTEND_URL=' .env; then
             sed -i "s|^FRONTEND_URL=.*|FRONTEND_URL=http://$PUBLIC_IP:8000|g" .env
-            log "✅ FRONTEND_URL atualizado para http://$PUBLIC_IP:8000"
+            log "FRONTEND_URL atualizado para http://$PUBLIC_IP:8000"
         else
             echo "FRONTEND_URL=http://$PUBLIC_IP:8000" >> .env
-            log "✅ FRONTEND_URL adicionado como http://$PUBLIC_IP:8000"
+            log "FRONTEND_URL adicionado como http://$PUBLIC_IP:8000"
         fi
     else
-        log "⚠️ Não foi possível obter o IP público da instância. FRONTEND_URL não foi alterado."
+        log "Não foi possível obter o IP público da instância. FRONTEND_URL não foi alterado."
     fi
 else
-    log "⚠️ Arquivo .env não encontrado"
+    log "Arquivo .env não encontrado"
 fi
 
-log "✅ Recriando containers..."
+log "Recriando containers..."
 $DC down >> "$LOG_FILE" 2>&1
 $DC up --build -d >> "$LOG_FILE" 2>&1
 
-log "🔄 Aplicando migrações do banco no RDS..."
+log "Aplicando migrações do banco no RDS..."
 $DC exec "$DJANGO_SERVICE" bash -c "python manage.py migrate --noinput" >> "$LOG_FILE" 2>&1
 
 if [ $? -eq 0 ]; then
-    log "✅ Migrações aplicadas com sucesso."
-    log "✅ Build concluído e servidor reiniciado com sucesso."
+    log "Migrações aplicadas com sucesso."
+    log "Build concluído e servidor reiniciado com sucesso."
 else
-    log "⚠️ ERRO ao aplicar migrações. Verifique o log acima."
+    log "ERRO ao aplicar migrações. Verifique o log acima."
 fi
 
 log "==== Fim da execução ===="
