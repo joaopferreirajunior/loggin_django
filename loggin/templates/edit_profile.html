@@ -63,6 +63,55 @@
             margin-right: 10px;
         }
 
+        .profile-image-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .profile-image {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #ddd;
+            margin-bottom: 10px;
+        }
+
+        .profile-image-placeholder {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background-color: #f0f0f0;
+            border: 3px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 10px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .image-upload-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+        .btn-small {
+            padding: 8px 15px;
+            font-size: 14px;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+        }
+
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+
         .btn:hover {
             background-color: #0056b3;
         }
@@ -139,6 +188,25 @@
             <div class="form-group">
                 <label for="phone">Telefone:</label>
                 <input type="tel" id="phone" name="phone" placeholder="+55 (11) 99999-9999" maxlength="20">
+            </div>
+
+            <div class="form-group">
+                <label>Foto de Perfil:</label>
+                <div class="profile-image-container">
+                    <img id="profileImage" class="profile-image" style="display: none;" alt="Foto de perfil">
+                    <div id="profileImagePlaceholder" class="profile-image-placeholder">
+                        Sem foto
+                    </div>
+                    <div class="image-upload-group">
+                        <input type="file" id="profileImageInput" accept="image/*" style="display: none;">
+                        <button type="button" class="btn btn-small" onclick="document.getElementById('profileImageInput').click()">
+                            Escolher Foto
+                        </button>
+                        <button type="button" id="deleteImageBtn" class="btn btn-danger btn-small" style="display: none;">
+                            Remover Foto
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <div class="form-group">
@@ -297,6 +365,18 @@
                 document.getElementById('birth').value = profileData.birth || '';
                 document.getElementById('phone').value = profileData.phone || '';
                 
+                // Exibe a imagem de perfil se existir
+                if (profileData.profile_image_url) {
+                    document.getElementById('profileImage').src = profileData.profile_image_url;
+                    document.getElementById('profileImage').style.display = 'block';
+                    document.getElementById('profileImagePlaceholder').style.display = 'none';
+                    document.getElementById('deleteImageBtn').style.display = 'inline-block';
+                } else {
+                    document.getElementById('profileImage').style.display = 'none';
+                    document.getElementById('profileImagePlaceholder').style.display = 'flex';
+                    document.getElementById('deleteImageBtn').style.display = 'none';
+                }
+                
                 // Preenche o grupo do usuário
                 const userRoleSelect = document.getElementById('user_role');
                 userRoleSelect.value = permissionsData.user_role || '';
@@ -373,9 +453,103 @@
             }
         }
 
+        // Função para fazer upload de imagem de perfil
+        async function uploadProfileImage(file) {
+            const loadingDiv = document.getElementById('loading');
+            loadingDiv.style.display = 'block';
+
+            try {
+                const formData = new FormData();
+                formData.append('profile_image', file);
+
+                const response = await fetch('/users/api/v0/profile/image/', {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'same-origin'
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    // Atualiza a imagem na tela
+                    document.getElementById('profileImage').src = result.profile_image_url;
+                    document.getElementById('profileImage').style.display = 'block';
+                    document.getElementById('profileImagePlaceholder').style.display = 'none';
+                    document.getElementById('deleteImageBtn').style.display = 'inline-block';
+                    
+                    showMessage('Imagem de perfil atualizada com sucesso!', 'success');
+                } else {
+                    const error = await response.json();
+                    showMessage(error.detail || 'Erro ao fazer upload da imagem', 'error');
+                }
+            } catch (error) {
+                console.error('Erro no upload:', error);
+                showMessage('Erro ao fazer upload da imagem', 'error');
+            } finally {
+                loadingDiv.style.display = 'none';
+            }
+        }
+
+        // Função para remover imagem de perfil
+        async function deleteProfileImage() {
+            if (!confirm('Tem certeza que deseja remover a foto de perfil?')) {
+                return;
+            }
+
+            const loadingDiv = document.getElementById('loading');
+            loadingDiv.style.display = 'block';
+
+            try {
+                const response = await fetch('/users/api/v0/profile/image/', {
+                    method: 'DELETE',
+                    credentials: 'same-origin'
+                });
+
+                if (response.ok) {
+                    // Remove a imagem da tela
+                    document.getElementById('profileImage').style.display = 'none';
+                    document.getElementById('profileImagePlaceholder').style.display = 'flex';
+                    document.getElementById('deleteImageBtn').style.display = 'none';
+                    document.getElementById('profileImageInput').value = '';
+                    
+                    showMessage('Imagem de perfil removida com sucesso!', 'success');
+                } else {
+                    const error = await response.json();
+                    showMessage(error.detail || 'Erro ao remover a imagem', 'error');
+                }
+            } catch (error) {
+                console.error('Erro na remoção:', error);
+                showMessage('Erro ao remover a imagem', 'error');
+            } finally {
+                loadingDiv.style.display = 'none';
+            }
+        }
+
         // Inicialização quando a página carrega
         document.addEventListener('DOMContentLoaded', function() {
             loadUserData();
+
+            // Handler para upload de imagem
+            document.getElementById('profileImageInput').addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    // Validar tipo de arquivo
+                    if (!file.type.startsWith('image/')) {
+                        showMessage('Por favor, selecione apenas arquivos de imagem.', 'error');
+                        return;
+                    }
+                    
+                    // Validar tamanho (5MB)
+                    if (file.size > 5 * 1024 * 1024) {
+                        showMessage('A imagem deve ter no máximo 5MB.', 'error');
+                        return;
+                    }
+                    
+                    uploadProfileImage(file);
+                }
+            });
+
+            // Handler para remover imagem
+            document.getElementById('deleteImageBtn').addEventListener('click', deleteProfileImage);
 
             // Handler do formulário
             document.getElementById('editProfileForm').addEventListener('submit', function(e) {

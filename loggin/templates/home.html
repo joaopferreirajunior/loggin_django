@@ -89,6 +89,37 @@
             color: #666;
         }
 
+        .profile-image-section {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .profile-image {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #ddd;
+            margin-bottom: 10px;
+        }
+
+        .profile-image-placeholder {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background-color: #e9ecef;
+            border: 3px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 10px;
+            color: #6c757d;
+            font-size: 14px;
+        }
+
         .edit-btn {
             background-color: #007bff;
             color: white;
@@ -127,6 +158,18 @@
                 <h2>Seus Dados</h2>
                 <div id="loading" class="loading">Carregando dados do usuário...</div>
                 <div id="user-data" style="display: none;">
+                    <div class="profile-image-section">
+                        <h3>Foto de Perfil</h3>
+                        <img id="profileImage" class="profile-image" style="display: none;" alt="Foto de perfil">
+                        <div id="profileImagePlaceholder" class="profile-image-placeholder">
+                            Sem foto
+                        </div>
+                        <p style="margin-top: 10px; color: #666; font-size: 14px;">
+                            <a href="/edit-profile/" style="color: #007bff; text-decoration: none;">
+                                Clique aqui para adicionar ou alterar sua foto
+                            </a>
+                        </p>
+                    </div>
                     <div class="user-field">
                         <span class="field-label">Usuário:</span>
                         <span class="field-value" id="username">-</span>
@@ -268,6 +311,16 @@
                     document.getElementById('cpf').textContent = profileData.cpf || 'Não informado';
                     document.getElementById('phone').textContent = profileData.phone || 'Não informado';
                     document.getElementById('user_role').textContent = userRole;
+                    
+                    // Exibe a imagem de perfil se existir
+                    if (profileData.profile_image_url) {
+                        document.getElementById('profileImage').src = profileData.profile_image_url;
+                        document.getElementById('profileImage').style.display = 'block';
+                        document.getElementById('profileImagePlaceholder').style.display = 'none';
+                    } else {
+                        document.getElementById('profileImage').style.display = 'none';
+                        document.getElementById('profileImagePlaceholder').style.display = 'flex';
+                    }
                     
                     // Formata a data de nascimento
                     if (profileData.birth) {

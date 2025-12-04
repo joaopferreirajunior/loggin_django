@@ -142,6 +142,38 @@ curl -X DELETE http://localhost:8000/users/api/v0/profile/image/ \
   -H "Authorization: Bearer SEU_ACCESS_TOKEN_AQUI"
 ```
 
+## Testando Interface Web com Upload de Imagem
+
+### 1. Cadastrar e fazer login via interface web
+
+1. Acesse: `http://localhost:8000/register/`
+2. Cadastre um novo usuário
+3. Faça login em: `http://localhost:8000/login/`
+
+### 2. Visualizar dados na página inicial
+
+1. Após o login, você será direcionado para: `http://localhost:8000/`
+2. A página mostrará:
+   - Foto de perfil (placeholder "Sem foto" se não houver imagem)
+   - Dados básicos do usuário (nome, email, CPF, etc.)
+   - Link para editar perfil
+
+### 3. Fazer upload de imagem de perfil
+
+1. Clique em "Editar Perfil" ou acesse: `http://localhost:8000/edit-profile/`
+2. Na seção "Foto de Perfil":
+   - Clique em "Escolher Foto"
+   - Selecione uma imagem (JPEG, PNG, WebP até 5MB)
+   - A imagem será automaticamente redimensionada e enviada para o S3
+   - Você verá a confirmação de sucesso
+3. Use o botão "Remover Foto" para deletar a imagem
+
+### 4. Verificar se funcionou
+
+1. Volte para a página inicial: `http://localhost:8000/`
+2. A imagem de perfil deve aparecer no lugar do placeholder
+3. A imagem está salva no S3 e a URL no banco de dados
+
 ## Upload de Imagem em Android (Flutter)
 
 ### Dependências necessárias
