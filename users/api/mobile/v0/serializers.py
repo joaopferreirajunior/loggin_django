@@ -30,7 +30,7 @@ class ProfileSerializer(serializers.ModelSerializer):
             "profile_image_url"
         )
     
-    def get_profile_image_url(self, obj):
+    def get_profile_image_url(self, obj) -> str:
         """Retorna URL completa da imagem de perfil do S3"""
         return obj.get_profile_image_url()
 

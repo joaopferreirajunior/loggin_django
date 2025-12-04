@@ -46,6 +46,48 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ('id', 'username', 'email', 'first_name', 'last_name')
 
+class LoginSerializer(serializers.Serializer):
+    """Serializer para login"""
+    username = serializers.CharField(
+        help_text="Username ou email do usuário"
+    )
+    password = serializers.CharField(
+        write_only=True,
+        help_text="Senha do usuário"
+    )
+
+class LoginResponseSerializer(serializers.Serializer):
+    """Serializer para resposta de login"""
+    detail = serializers.CharField()
+    user = UserSerializer()
+    refresh = serializers.CharField()
+    access = serializers.CharField()
+
+class AuthResponseSerializer(serializers.Serializer):
+    """Serializer para respostas de autenticação"""
+    detail = serializers.CharField()
+
+class PasswordRecoverySerializer(serializers.Serializer):
+    """Serializer para recuperação de senha"""
+    email = serializers.EmailField(help_text="Email para recuperação")
+
+class PasswordRecoveryResponseSerializer(serializers.Serializer):
+    """Serializer para resposta de recuperação"""
+    detail = serializers.CharField()
+    test_token = serializers.CharField(required=False)
+
+class PasswordResetSerializer(serializers.Serializer):
+    """Serializer para reset de senha"""
+    token = serializers.CharField(help_text="Token de recuperação")
+    password = serializers.CharField(
+        min_length=8,
+        help_text="Nova senha (mínimo 8 caracteres)"
+    )
+
+class TokenValidationSerializer(serializers.Serializer):
+    """Serializer para validação de token"""
+    valid = serializers.BooleanField()
+
 class ProfileSerializer(serializers.ModelSerializer):
     """Serializer do perfil do usuário"""
     profile_image_url = serializers.SerializerMethodField()
@@ -61,7 +103,7 @@ class ProfileSerializer(serializers.ModelSerializer):
             'recovery_token': {'write_only': True},
         }
     
-    def get_profile_image_url(self, obj):
+    def get_profile_image_url(self, obj) -> str:
         """Retorna a URL da imagem de perfil"""
         return obj.get_profile_image_url()
 
@@ -218,7 +260,7 @@ class UserWithImageSerializer(serializers.ModelSerializer):
         model = User
         fields = ('id', 'username', 'email', 'first_name', 'last_name', 'profile')
     
-    def get_profile(self, obj):
+    def get_profile(self, obj) -> dict:
         """Retorna dados do perfil incluindo URL da imagem"""
         try:
             profile = obj.profile

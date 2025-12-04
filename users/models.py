@@ -50,7 +50,7 @@ class Profile(AuditModel):
     def __str__(self):
         return f"Perfil de {self.user.get_username()}"
     
-    def get_profile_image_url(self):
+    def get_profile_image_url(self) -> str:
         """Retorna URL assinada temporária da imagem de perfil do S3"""
         if self.profile_image:
             try:

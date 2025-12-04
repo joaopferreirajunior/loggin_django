@@ -1,4 +1,4 @@
-from rest_framework import permissions, status, parsers
+from rest_framework import permissions, status, parsers, serializers
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view, permission_classes, parser_classes
@@ -7,6 +7,8 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.views.decorators.csrf import csrf_exempt
 from drf_spectacular.utils import extend_schema, inline_serializer
+from django.contrib.auth import authenticate, login
+from rest_framework_simplejwt.tokens import RefreshToken
 
 # DRF Spectacular imports
 from drf_spectacular.utils import extend_schema, OpenApiParameter
@@ -15,18 +17,20 @@ from drf_spectacular.types import OpenApiTypes
 from .serializers import (
     ProfileImageUploadSerializer, UserWithImageSerializer,
     UserSerializer, ProfileSerializer, UserPermissionsSerializer, RoleAssignmentSerializer,
-    UserRegisterSerializer
+    UserRegisterSerializer, LoginSerializer, LoginResponseSerializer, AuthResponseSerializer,
+    PasswordRecoverySerializer, PasswordRecoveryResponseSerializer, PasswordResetSerializer,
+    TokenValidationSerializer
 )
 from users.models import Profile
 
 User = get_user_model()
 
 @extend_schema(
-    operation_id="manage_profile_image",
-    summary="Gerenciar imagem de perfil",
-    description="Upload (POST) ou remove (DELETE) imagem de perfil. A imagem será redimensionada automaticamente para 800x800px mantendo proporção.",
+    operation_id="upload_profile_image",
+    summary="Upload de imagem de perfil",
+    description="Faz upload de uma nova imagem de perfil. A imagem será redimensionada automaticamente para 800x800px mantendo proporção.",
     tags=["User Management"],
-    methods=['POST', 'DELETE'],
+    methods=['POST'],
     request={
         'multipart/form-data': {
             'type': 'object',
@@ -34,7 +38,7 @@ User = get_user_model()
                 'profile_image': {
                     'type': 'string',
                     'format': 'binary',
-                    'description': 'Arquivo de imagem (JPEG, PNG, WebP - máximo 5MB) - apenas para POST'
+                    'description': 'Arquivo de imagem (JPEG, PNG, WebP - máximo 5MB)'
                 }
             },
             'required': ['profile_image']
@@ -42,7 +46,7 @@ User = get_user_model()
     },
     responses={
         200: inline_serializer(
-            name="ManageProfileImageResponse",
+            name="UploadProfileImageResponse",
             fields={
                 "detail": serializers.CharField(),
                 "profile_image_url": serializers.URLField(allow_null=True, required=False),
@@ -59,6 +63,28 @@ User = get_user_model()
             'type': 'object',
             'properties': {
                 'detail': {'type': 'string', 'example': 'Token de autenticação necessário'}
+            }
+        }
+    }
+)
+@extend_schema(
+    operation_id="delete_profile_image",
+    summary="Remover imagem de perfil",
+    description="Remove a imagem de perfil atual do usuário.",
+    tags=["User Management"],
+    methods=['DELETE'],
+    responses={
+        200: inline_serializer(
+            name="DeleteProfileImageResponse",
+            fields={
+                "detail": serializers.CharField(),
+                "user": UserWithImageSerializer(),
+            },
+        ),
+        404: {
+            'type': 'object',
+            'properties': {
+                'detail': {'type': 'string', 'example': 'Usuário não possui imagem de perfil'}
             }
         }
     }
@@ -142,10 +168,20 @@ def get_current_user(request):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 @extend_schema(
-    operation_id="get_current_user_profile", 
+    operation_id="get_user_profile", 
     summary="Obter perfil completo do usuário",
     description="Retorna dados completos do perfil do usuário autenticado.",
     tags=["User Management"],
+    methods=['GET'],
+    responses={200: ProfileSerializer}
+)
+@extend_schema(
+    operation_id="update_user_profile", 
+    summary="Atualizar perfil do usuário",
+    description="Atualiza dados do perfil do usuário autenticado.",
+    tags=["User Management"],
+    methods=['PATCH'],
+    request=ProfileSerializer,
     responses={200: ProfileSerializer}
 )
 @api_view(['GET', 'PATCH'])
@@ -216,7 +252,12 @@ def assign_role(request):
 
 @extend_schema(
     tags=["Web - Auth"],
-    responses={200: {"type": "object", "properties": {"detail": {"type": "string"}}}}
+    request=UserRegisterSerializer,
+    responses={
+        201: AuthResponseSerializer,
+        400: AuthResponseSerializer,
+        500: AuthResponseSerializer
+    }
 )
 @csrf_exempt
 @api_view(["POST"])
@@ -243,7 +284,8 @@ def register(request):
 
 @extend_schema(
     tags=["Web - Auth"],
-    responses={200: {"type": "object", "properties": {"detail": {"type": "string"}}}}
+    request=None,
+    responses={200: AuthResponseSerializer}
 )
 @api_view(["POST"])
 def logout_view(request):
@@ -254,16 +296,17 @@ def logout_view(request):
 
 @extend_schema(
     tags=["Web - Auth"],
-    responses={200: {"type": "object", "properties": {"detail": {"type": "string"}}}}
+    request=LoginSerializer,
+    responses={
+        200: LoginResponseSerializer,
+        400: AuthResponseSerializer,
+        401: AuthResponseSerializer
+    }
 )
 @csrf_exempt
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def login_view(request):
-    """Login de usuários na web"""
-    from django.contrib.auth import authenticate, login
-    from rest_framework_simplejwt.tokens import RefreshToken
-    
     username_or_email = request.data.get("username")
     password = request.data.get("password")
     
@@ -315,7 +358,8 @@ def login_view(request):
 
 @extend_schema(
     tags=["Web - Auth"],
-    responses={200: {"type": "object", "properties": {"detail": {"type": "string"}}}}
+    request=PasswordRecoverySerializer,
+    responses={200: PasswordRecoveryResponseSerializer}
 )
 @csrf_exempt
 @api_view(["POST"])
@@ -359,7 +403,8 @@ def recovery_password(request):
 
 @extend_schema(
     tags=["Web - Auth"],
-    responses={200: {"type": "object", "properties": {"detail": {"type": "string"}}}}
+    request=PasswordResetSerializer,
+    responses={200: AuthResponseSerializer}
 )
 @csrf_exempt
 @api_view(["POST"])
@@ -414,7 +459,7 @@ def reset_password(request):
 
 @extend_schema(
     tags=["Web - Auth"],
-    responses={200: {"type": "object", "properties": {"valid": {"type": "boolean"}}}}
+    responses={200: TokenValidationSerializer}
 )
 @api_view(["GET"])
 @permission_classes([AllowAny])

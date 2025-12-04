@@ -3,341 +3,18 @@ info:
   title: Medical San Loggin API
   version: 1.0.0
   description: API Web e Mobile do sistema Medical San Loggin
+  contact:
+    name: Medical San Support
+    email: support@medicalsan.com
+  license:
+    name: Private License
 paths:
-  /api/v0/assign-role/:
+  /users/api/mobile/v0/assign-role/:
     post:
-      operationId: api_v0_assign_role_create
+      operationId: users_api_mobile_v0_assign_role_create
       description: Atribui um papel a um usuário (apenas system_admin pode fazer isso)
       tags:
-      - User
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AssignUserRoleRequestRequest'
-        required: true
-      security:
-      - jwtAuth: []
-      - cookieAuth: []
-      - bearerAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AssignUserRoleResponse'
-          description: ''
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Detail'
-          description: ''
-        '403':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Detail'
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Detail'
-          description: ''
-        '500':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Detail'
-          description: ''
-  /api/v0/login/:
-    post:
-      operationId: api_v0_login_create
-      tags:
-      - Auth
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/LoginRequestRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - jwtAuth: []
-      - bearerAuth: []
-      - {}
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/LoginResponse'
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Detail'
-          description: Credenciais inválidas ou email não encontrado
-  /api/v0/logout/:
-    post:
-      operationId: api_v0_logout_create
-      tags:
-      - Auth
-      security:
-      - cookieAuth: []
-      - jwtAuth: []
-      - bearerAuth: []
-      - {}
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Detail'
-          description: ''
-  /api/v0/me/:
-    get:
-      operationId: api_v0_me_retrieve
-      description: Retorna os dados do próprio usuário logado.
-      tags:
-      - User
-      security:
-      - jwtAuth: []
-      - cookieAuth: []
-      - bearerAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-          description: ''
-        '500':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Detail'
-          description: ''
-  /api/v0/me/permissions/:
-    get:
-      operationId: api_v0_me_permissions_retrieve
-      description: Retorna as permissões e grupo do usuário atual
-      tags:
-      - User
-      security:
-      - jwtAuth: []
-      - cookieAuth: []
-      - bearerAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserPermissions'
-          description: ''
-        '500':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Detail'
-          description: ''
-  /api/v0/me/profile/:
-    get:
-      operationId: api_v0_me_profile_retrieve
-      description: Retorna os dados do perfil do próprio usuário logado.
-      tags:
-      - User
-      security:
-      - jwtAuth: []
-      - cookieAuth: []
-      - bearerAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Profile'
-          description: ''
-        '500':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Detail'
-          description: ''
-    patch:
-      operationId: api_v0_me_profile_partial_update
-      description: |-
-        Atualiza parcialmente os campos do perfil do próprio usuário (cpf, birth, phone).
-        Exemplo JSON:
-        { "cpf": "123.456.789-10", "phone": "+55 16 99999-0000" }
-      tags:
-      - User
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PatchedProfileRequest'
-      security:
-      - jwtAuth: []
-      - cookieAuth: []
-      - bearerAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Profile'
-          description: ''
-        '500':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Detail'
-          description: ''
-  /api/v0/recoverypassword/:
-    post:
-      operationId: api_v0_recoverypassword_create
-      description: |-
-        Endpoint para solicitar recuperação de senha via email.
-        Recebe email do usuário e envia token de recuperação.
-      tags:
-      - Auth
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RecoveryPasswordRequestRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - jwtAuth: []
-      - bearerAuth: []
-      - {}
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RecoveryPasswordResponse'
-          description: Mensagem genérica de sucesso. Em ambiente de desenvolvimento
-            pode retornar test_link e test_token.
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Detail'
-          description: Email é obrigatório
-        '500':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Detail'
-          description: Erro interno do servidor
-  /api/v0/register/:
-    post:
-      operationId: api_v0_register_create
-      tags:
-      - Auth
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UserRegisterRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - jwtAuth: []
-      - bearerAuth: []
-      - {}
-      responses:
-        '201':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RegisterResponse'
-          description: ''
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Detail'
-          description: Erros de validação do cadastro
-        '500':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Detail'
-          description: Erro interno do servidor
-  /api/v0/resetpassword/:
-    post:
-      operationId: api_v0_resetpassword_create
-      description: |-
-        Endpoint para resetar senha usando token de recuperação.
-        Recebe token e nova senha, valida e atualiza a senha do usuário.
-      tags:
-      - Auth
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ResetPasswordRequestRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - jwtAuth: []
-      - bearerAuth: []
-      - {}
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ResetPasswordSuccess'
-          description: ''
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Detail'
-          description: Token inválido/expirado ou problemas como senha curta, token
-            ausente, etc.
-        '500':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Detail'
-          description: Erro interno do servidor
-  /api/v0/token/refresh/:
-    post:
-      operationId: api_v0_token_refresh_create
-      description: |-
-        Takes a refresh type JSON web token and returns an access type JSON web
-        token if the refresh token is valid.
-      tags:
-      - api
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/TokenRefreshRequest'
-        required: true
-      security:
-      - bearerAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TokenRefresh'
-          description: ''
-  /mobile/api/v0/assign-role/:
-    post:
-      operationId: mobile_api_v0_assign_role_create
-      description: Atribui um papel a um usuário (apenas system_admin pode fazer isso)
-      tags:
-      - User
+      - Mobile - User
       requestBody:
         content:
           application/json:
@@ -379,11 +56,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/MobileDetail'
           description: ''
-  /mobile/api/v0/login/:
+  /users/api/mobile/v0/login/:
     post:
-      operationId: mobile_api_v0_login_create
+      operationId: users_api_mobile_v0_login_create
       tags:
-      - Auth
+      - Mobile - Auth
       requestBody:
         content:
           application/json:
@@ -408,11 +85,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/MobileDetail'
           description: Credenciais inválidas ou email não encontrado
-  /mobile/api/v0/logout/:
+  /users/api/mobile/v0/logout/:
     post:
-      operationId: mobile_api_v0_logout_create
+      operationId: users_api_mobile_v0_logout_create
       tags:
-      - Auth
+      - Mobile - Auth
       security:
       - cookieAuth: []
       - jwtAuth: []
@@ -425,12 +102,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/MobileDetail'
           description: ''
-  /mobile/api/v0/me/:
+  /users/api/mobile/v0/me/:
     get:
-      operationId: mobile_api_v0_me_retrieve
+      operationId: users_api_mobile_v0_me_retrieve
       description: Retorna os dados do próprio usuário logado.
       tags:
-      - User
+      - Mobile - User
       security:
       - jwtAuth: []
       - cookieAuth: []
@@ -448,12 +125,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/MobileDetail'
           description: ''
-  /mobile/api/v0/me/permissions/:
+  /users/api/mobile/v0/me/permissions/:
     get:
-      operationId: mobile_api_v0_me_permissions_retrieve
+      operationId: users_api_mobile_v0_me_permissions_retrieve
       description: Retorna as permissões e grupo do usuário atual
       tags:
-      - User
+      - Mobile - User
       security:
       - jwtAuth: []
       - cookieAuth: []
@@ -471,12 +148,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/MobileDetail'
           description: ''
-  /mobile/api/v0/me/profile/:
+  /users/api/mobile/v0/me/profile/:
     get:
-      operationId: mobile_api_v0_me_profile_retrieve
+      operationId: users_api_mobile_v0_me_profile_retrieve
       description: Retorna os dados do perfil do próprio usuário logado.
       tags:
-      - User
+      - Mobile - User
       security:
       - jwtAuth: []
       - cookieAuth: []
@@ -495,13 +172,13 @@ paths:
                 $ref: '#/components/schemas/MobileDetail'
           description: ''
     patch:
-      operationId: mobile_api_v0_me_profile_partial_update
+      operationId: users_api_mobile_v0_me_profile_partial_update
       description: |-
         Atualiza parcialmente os campos do perfil do próprio usuário (cpf, birth, phone).
         Exemplo JSON:
         { "cpf": "123.456.789-10", "phone": "+55 16 99999-0000" }
       tags:
-      - User
+      - Mobile - User
       requestBody:
         content:
           application/json:
@@ -524,14 +201,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/MobileDetail'
           description: ''
-  /mobile/api/v0/recoverypassword/:
+  /users/api/mobile/v0/recoverypassword/:
     post:
-      operationId: mobile_api_v0_recoverypassword_create
+      operationId: users_api_mobile_v0_recoverypassword_create
       description: |-
         Endpoint para solicitar recuperação de senha via email.
         Recebe email do usuário e envia token de recuperação.
       tags:
-      - Auth
+      - Mobile - Auth
       requestBody:
         content:
           application/json:
@@ -563,11 +240,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/MobileDetail'
           description: Erro interno do servidor
-  /mobile/api/v0/register/:
+  /users/api/mobile/v0/register/:
     post:
-      operationId: mobile_api_v0_register_create
+      operationId: users_api_mobile_v0_register_create
       tags:
-      - Auth
+      - Mobile - Auth
       requestBody:
         content:
           application/json:
@@ -598,14 +275,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/MobileDetail'
           description: Erro interno do servidor
-  /mobile/api/v0/resetpassword/:
+  /users/api/mobile/v0/resetpassword/:
     post:
-      operationId: mobile_api_v0_resetpassword_create
+      operationId: users_api_mobile_v0_resetpassword_create
       description: |-
         Endpoint para resetar senha usando token de recuperação.
         Recebe token e nova senha, valida e atualiza a senha do usuário.
       tags:
-      - Auth
+      - Mobile - Auth
       requestBody:
         content:
           application/json:
@@ -637,14 +314,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/MobileDetail'
           description: Erro interno do servidor
-  /mobile/api/v0/token/refresh/:
+  /users/api/mobile/v0/token/refresh/:
     post:
-      operationId: mobile_api_v0_token_refresh_create
+      operationId: users_api_mobile_v0_token_refresh_create
       description: |-
         Takes a refresh type JSON web token and returns an access type JSON web
         token if the refresh token is valid.
       tags:
-      - mobile
+      - users
       requestBody:
         content:
           application/json:
@@ -660,55 +337,443 @@ paths:
               schema:
                 $ref: '#/components/schemas/TokenRefresh'
           description: ''
+  /users/api/web/v0/assign-role/:
+    post:
+      operationId: assign_role
+      description: Permite alterar o grupo/role de um usuário (apenas para administradores).
+      summary: Atribuir role ao usuário
+      tags:
+      - User Management
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleAssignmentRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+          description: ''
+  /users/api/web/v0/login/:
+    post:
+      operationId: users_api_web_v0_login_create
+      tags:
+      - Web - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+          description: ''
+  /users/api/web/v0/logout/:
+    post:
+      operationId: users_api_web_v0_logout_create
+      description: Logout do usuário na web
+      tags:
+      - Web - Auth
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+          description: ''
+  /users/api/web/v0/me/:
+    get:
+      operationId: get_current_user
+      description: Retorna dados básicos do usuário autenticado.
+      summary: Obter dados do usuário atual
+      tags:
+      - User Management
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /users/api/web/v0/me/permissions/:
+    get:
+      operationId: get_user_permissions
+      description: Retorna permissões e grupos do usuário autenticado.
+      summary: Obter permissões do usuário
+      tags:
+      - User Management
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPermissions'
+          description: ''
+  /users/api/web/v0/me/profile/:
+    get:
+      operationId: get_user_profile
+      description: Retorna dados completos do perfil do usuário autenticado.
+      summary: Obter perfil completo do usuário
+      tags:
+      - User Management
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+          description: ''
+    patch:
+      operationId: update_user_profile
+      description: Atualiza dados do perfil do usuário autenticado.
+      summary: Atualizar perfil do usuário
+      tags:
+      - User Management
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedProfileRequest'
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+          description: ''
+  /users/api/web/v0/profile/image/:
+    post:
+      operationId: upload_profile_image
+      description: Faz upload de uma nova imagem de perfil. A imagem será redimensionada
+        automaticamente para 800x800px mantendo proporção.
+      summary: Upload de imagem de perfil
+      tags:
+      - User Management
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                profile_image:
+                  type: string
+                  format: binary
+                  description: Arquivo de imagem (JPEG, PNG, WebP - máximo 5MB)
+              required:
+              - profile_image
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadProfileImageResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: Erro de validação da imagem
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: Token de autenticação necessário
+          description: ''
+    delete:
+      operationId: delete_profile_image
+      description: Remove a imagem de perfil atual do usuário.
+      summary: Remover imagem de perfil
+      tags:
+      - User Management
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteProfileImageResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: Usuário não possui imagem de perfil
+          description: ''
+  /users/api/web/v0/profile/image/{user_id}/:
+    get:
+      operationId: serve_profile_image
+      description: Serve a imagem de perfil como proxy do S3 (alternativa a presigned
+        URLs)
+      summary: Servir imagem de perfil
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+        description: ID do usuário
+        required: true
+      tags:
+      - User Management
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Imagem servida com sucesso
+                content:
+                  image/jpeg: {}
+                  image/png: {}
+                  image/webp: {}
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Imagem não encontrada
+          description: ''
+  /users/api/web/v0/recoverypassword/:
+    post:
+      operationId: users_api_web_v0_recoverypassword_create
+      description: Recuperação de senha por email
+      tags:
+      - Web - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordRecoveryRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasswordRecoveryResponse'
+          description: ''
+  /users/api/web/v0/register/:
+    post:
+      operationId: users_api_web_v0_register_create
+      description: Cadastro de novos usuários na web
+      tags:
+      - Web - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegisterRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+          description: ''
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+          description: ''
+  /users/api/web/v0/resetpassword/:
+    post:
+      operationId: users_api_web_v0_resetpassword_create
+      description: Reset de senha usando token
+      tags:
+      - Web - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+          description: ''
+  /users/api/web/v0/token/refresh/:
+    post:
+      operationId: users_api_web_v0_token_refresh_create
+      description: |-
+        Takes a refresh type JSON web token and returns an access type JSON web
+        token if the refresh token is valid.
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+        required: true
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefresh'
+          description: ''
+  /users/api/web/v0/validatetoken/:
+    get:
+      operationId: users_api_web_v0_validatetoken_retrieve
+      description: Valida token de recuperação
+      tags:
+      - Web - Auth
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenValidation'
+          description: ''
 components:
   schemas:
-    AssignUserRoleRequestRequest:
+    AuthResponse:
       type: object
+      description: Serializer para respostas de autenticação
       properties:
-        user_id:
-          type: integer
-        role:
-          $ref: '#/components/schemas/RoleEnum'
+        detail:
+          type: string
       required:
-      - role
-      - user_id
-    AssignUserRoleResponse:
+      - detail
+    DeleteProfileImageResponse:
       type: object
       properties:
         detail:
           type: string
         user:
-          type: string
-        role:
-          type: string
+          $ref: '#/components/schemas/UserWithImage'
       required:
       - detail
-      - role
       - user
-    Detail:
+    LoginRequest:
       type: object
-      description: 'Usado para mensagens simples: {"detail": "..."}'
-      properties:
-        detail:
-          type: string
-      required:
-      - detail
-    LoginRequestRequest:
-      type: object
+      description: Serializer para login
       properties:
         username:
           type: string
           minLength: 1
-          description: Pode ser username ou email
+          description: Username ou email do usuário
         password:
           type: string
+          writeOnly: true
           minLength: 1
+          description: Senha do usuário
       required:
       - password
       - username
     LoginResponse:
       type: object
+      description: Serializer para resposta de login
       properties:
+        detail:
+          type: string
         user:
           $ref: '#/components/schemas/User'
         refresh:
@@ -717,6 +782,7 @@ components:
           type: string
       required:
       - access
+      - detail
       - refresh
       - user
     MobileAssignUserRoleRequestRequest:
@@ -828,6 +894,10 @@ components:
           readOnly: true
           nullable: true
           description: UUID do usuário no ClickHouse
+        profile_image_url:
+          type: string
+          description: Retorna URL completa da imagem de perfil do S3
+          readOnly: true
       required:
       - clickhouse_id
       - confirmation_sent_at
@@ -835,6 +905,7 @@ components:
       - email_confirmed
       - email_confirmed_at
       - invited_at
+      - profile_image_url
       - recovery_token
       - recovery_token_sent_at
     MobileRecoveryPasswordRequestRequest:
@@ -987,6 +1058,42 @@ components:
       - email
       - password
       - username
+    PasswordRecoveryRequest:
+      type: object
+      description: Serializer para recuperação de senha
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+          description: Email para recuperação
+      required:
+      - email
+    PasswordRecoveryResponse:
+      type: object
+      description: Serializer para resposta de recuperação
+      properties:
+        detail:
+          type: string
+        test_token:
+          type: string
+      required:
+      - detail
+    PasswordResetRequest:
+      type: object
+      description: Serializer para reset de senha
+      properties:
+        token:
+          type: string
+          minLength: 1
+          description: Token de recuperação
+        password:
+          type: string
+          minLength: 8
+          description: Nova senha (mínimo 8 caracteres)
+      required:
+      - password
+      - token
     PatchedMobileProfileRequest:
       type: object
       properties:
@@ -1004,21 +1111,7 @@ components:
           maxLength: 20
     PatchedProfileRequest:
       type: object
-      properties:
-        cpf:
-          type: string
-          nullable: true
-          maxLength: 14
-        birth:
-          type: string
-          format: date
-          nullable: true
-        phone:
-          type: string
-          nullable: true
-          maxLength: 20
-    Profile:
-      type: object
+      description: Serializer do perfil do usuário
       properties:
         cpf:
           type: string
@@ -1034,107 +1127,91 @@ components:
           maxLength: 20
         email_confirmed:
           type: boolean
-          readOnly: true
         email_confirmed_at:
           type: string
           format: date-time
-          readOnly: true
           nullable: true
         invited_at:
           type: string
           format: date-time
-          readOnly: true
           nullable: true
         confirmation_token:
           type: string
-          readOnly: true
+          writeOnly: true
           nullable: true
         confirmation_sent_at:
           type: string
           format: date-time
-          readOnly: true
           nullable: true
         recovery_token:
           type: string
-          readOnly: true
+          writeOnly: true
           nullable: true
         recovery_token_sent_at:
           type: string
           format: date-time
-          readOnly: true
           nullable: true
         clickhouse_id:
           type: string
           format: uuid
-          readOnly: true
           nullable: true
           description: UUID do usuário no ClickHouse
-      required:
-      - clickhouse_id
-      - confirmation_sent_at
-      - confirmation_token
-      - email_confirmed
-      - email_confirmed_at
-      - invited_at
-      - recovery_token
-      - recovery_token_sent_at
-    RecoveryPasswordRequestRequest:
+    Profile:
       type: object
+      description: Serializer do perfil do usuário
       properties:
-        email:
+        cpf:
           type: string
-          format: email
-          minLength: 1
+          nullable: true
+          maxLength: 14
+        birth:
+          type: string
+          format: date
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+          maxLength: 20
+        email_confirmed:
+          type: boolean
+        email_confirmed_at:
+          type: string
+          format: date-time
+          nullable: true
+        invited_at:
+          type: string
+          format: date-time
+          nullable: true
+        confirmation_sent_at:
+          type: string
+          format: date-time
+          nullable: true
+        recovery_token_sent_at:
+          type: string
+          format: date-time
+          nullable: true
+        clickhouse_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: UUID do usuário no ClickHouse
+        profile_image_url:
+          type: string
+          description: Retorna a URL da imagem de perfil
+          readOnly: true
       required:
-      - email
-    RecoveryPasswordResponse:
+      - profile_image_url
+    RoleAssignmentRequest:
       type: object
+      description: Serializer para atribuição de roles
       properties:
-        detail:
-          type: string
-        test_link:
-          type: string
-        test_token:
-          type: string
+        user_id:
+          type: integer
+        role:
+          $ref: '#/components/schemas/RoleEnum'
       required:
-      - detail
-      - test_link
-      - test_token
-    RegisterResponse:
-      type: object
-      properties:
-        detail:
-          type: string
-        user:
-          $ref: '#/components/schemas/User'
-        refresh:
-          type: string
-        access:
-          type: string
-      required:
-      - access
-      - detail
-      - refresh
-      - user
-    ResetPasswordRequestRequest:
-      type: object
-      properties:
-        token:
-          type: string
-          minLength: 1
-        password:
-          type: string
-          minLength: 1
-      required:
-      - password
-      - token
-    ResetPasswordSuccess:
-      type: object
-      properties:
-        detail:
-          type: string
-      required:
-      - detail
+      - role
+      - user_id
     RoleEnum:
       enum:
       - system_admin
@@ -1162,8 +1239,31 @@ components:
           minLength: 1
       required:
       - refresh
+    TokenValidation:
+      type: object
+      description: Serializer para validação de token
+      properties:
+        valid:
+          type: boolean
+      required:
+      - valid
+    UploadProfileImageResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+        profile_image_url:
+          type: string
+          format: uri
+          nullable: true
+        user:
+          $ref: '#/components/schemas/UserWithImage'
+      required:
+      - detail
+      - user
     User:
       type: object
+      description: Serializer básico do usuário
       properties:
         id:
           type: integer
@@ -1179,51 +1279,32 @@ components:
           format: email
           title: Email address
           maxLength: 254
-        profile:
-          allOf:
-          - $ref: '#/components/schemas/Profile'
-          readOnly: true
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
       required:
       - id
-      - profile
       - username
     UserPermissions:
       type: object
+      description: Serializer para permissões do usuário
       properties:
         user_role:
           type: string
-        is_system_admin:
-          type: boolean
-        is_office_admin:
-          type: boolean
-        is_regular_user:
-          type: boolean
-        groups:
-          type: array
-          items:
-            type: string
-        permissions:
-          type: array
-          items:
-            type: string
         can_manage_users:
           type: boolean
-        can_view_all_users:
-          type: boolean
-        can_access_admin:
+        is_system_admin:
           type: boolean
       required:
-      - can_access_admin
       - can_manage_users
-      - can_view_all_users
-      - groups
-      - is_office_admin
-      - is_regular_user
       - is_system_admin
-      - permissions
       - user_role
     UserRegisterRequest:
       type: object
+      description: Serializer para registro de novos usuários
       properties:
         username:
           type: string
@@ -1241,19 +1322,48 @@ components:
           writeOnly: true
           minLength: 8
           maxLength: 128
-        cpf:
+        first_name:
           type: string
-          nullable: true
-        birth:
+          maxLength: 150
+        last_name:
           type: string
-          format: date
-          nullable: true
-        phone:
-          type: string
-          nullable: true
+          maxLength: 150
       required:
       - email
       - password
+      - username
+    UserWithImage:
+      type: object
+      description: Serializer do usuário incluindo URL da imagem de perfil
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          title: Email address
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        profile:
+          type: object
+          additionalProperties: {}
+          description: Retorna dados do perfil incluindo URL da imagem
+          readOnly: true
+      required:
+      - id
+      - profile
       - username
   securitySchemes:
     cookieAuth:
@@ -1264,3 +1374,21 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+servers:
+- url: http://localhost:8000
+  description: Development Server
+- url: http://3.236.36.55:8000
+  description: Production Server (AWS)
+tags:
+- name: Web - Auth
+  description: Endpoints de autenticação para aplicação web (login, registro, recuperação
+    de senha)
+- name: Web - User
+  description: Endpoints de gerenciamento de usuários para aplicação web
+- name: Mobile - Auth
+  description: Endpoints de autenticação para aplicação mobile (login, registro, recuperação
+    de senha)
+- name: Mobile - User
+  description: Endpoints de gerenciamento de usuários para aplicação mobile
+- name: User Management
+  description: Endpoints gerais para gerenciamento de perfis e upload de imagens

@@ -164,25 +164,6 @@ curl -X GET http://localhost:8000/users/api/web/v0/profile/image/123/ \
    - **Proxy Django**: Endpoint `/users/api/web/v0/profile/image/<user_id>/` que serve como proxy
 6. **Cache**: Use `cached_network_image` para melhor performance:
 
-```yaml
-dependencies:
-  cached_network_image: ^3.3.0
-```
-
-```dart
-import 'package:cached_network_image/cached_network_image.dart';
-
-CachedNetworkImage(
-  imageUrl: _currentImageUrl!,
-  placeholder: (context, url) => CircularProgressIndicator(),
-  errorWidget: (context, url, error) => Icon(Icons.person),
-  fit: BoxFit.cover,
-  httpHeaders: {
-    'Authorization': 'Bearer $token', // Necessário para endpoint de proxy
-  },
-)
-```
-
 ### Recuperação de Senha
 
 **Solicitar recuperação:**
