@@ -10,6 +10,7 @@ urlpatterns = [
     path("", include("loggin.urls")),                 # páginas HTML e APIs do loggin
     path("admin/", admin.site.urls),                # admin
     path("users/", include("users.urls")), # APIs do app users
+    path("patients/", include("patients.urls")), # APIs do app patients
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"), #  Endpoint que fornece o schema OpenAPI (JSON/YAML)
     path(
         "api/docs/",

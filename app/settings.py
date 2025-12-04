@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     "loggin",
     "users.apps.UsersConfig",
     "devices",
+    "patients.apps.PatientsConfig",
     "projects",
     'drf_spectacular',
 ]
@@ -79,12 +80,20 @@ SPECTACULAR_SETTINGS = {
             "description": "Endpoints de gerenciamento de usuários para aplicação web",
         },
         {
+            "name": "Web - Patients",
+            "description": "Endpoints de gerenciamento de pacientes para aplicação web",
+        },
+        {
             "name": "Mobile - Auth",
             "description": "Endpoints de autenticação para aplicação mobile (login, registro, recuperação de senha)",
         },
         {
             "name": "Mobile - User",
             "description": "Endpoints de gerenciamento de usuários para aplicação mobile",
+        },
+        {
+            "name": "Mobile - Patients",
+            "description": "Endpoints de gerenciamento de pacientes para aplicação mobile",
         },
     ],
     "SECURITY_SCHEMES": {

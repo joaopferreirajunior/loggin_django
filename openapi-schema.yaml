@@ -9,6 +9,680 @@ info:
   license:
     name: Private License
 paths:
+  /patients/api/mobile/v0/medical-records/{record_id}/update/:
+    put:
+      operationId: patients_api_mobile_v0_medical_records_update_update
+      description: Atualiza um prontuário médico específico
+      summary: Atualizar prontuário
+      parameters:
+      - in: path
+        name: record_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Mobile - Patients
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MobileMedicalRecordRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileMedicalRecord'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileDetailResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileDetailResponse'
+          description: ''
+    patch:
+      operationId: patients_api_mobile_v0_medical_records_update_partial_update
+      description: Atualiza um prontuário médico específico
+      summary: Atualizar prontuário
+      parameters:
+      - in: path
+        name: record_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Mobile - Patients
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedMobileMedicalRecordRequest'
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileMedicalRecord'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileDetailResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileDetailResponse'
+          description: ''
+  /patients/api/mobile/v0/medical-records/create/:
+    post:
+      operationId: patients_api_mobile_v0_medical_records_create_create
+      description: Cria um novo prontuário médico
+      summary: Criar prontuário
+      tags:
+      - Mobile - Patients
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MobileMedicalRecordRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileMedicalRecord'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileDetailResponse'
+          description: ''
+  /patients/api/mobile/v0/patients/:
+    get:
+      operationId: patients_api_mobile_v0_patients_list
+      description: Retorna lista paginada de pacientes para aplicação mobile
+      summary: Listar pacientes
+      tags:
+      - Mobile - Patients
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MobilePatient'
+          description: ''
+  /patients/api/mobile/v0/patients/{patient_id}/:
+    get:
+      operationId: patients_api_mobile_v0_patients_retrieve
+      description: Retorna dados de um paciente específico
+      summary: Obter paciente
+      parameters:
+      - in: path
+        name: patient_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Mobile - Patients
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobilePatient'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileDetailResponse'
+          description: ''
+  /patients/api/mobile/v0/patients/{patient_id}/delete/:
+    delete:
+      operationId: patients_api_mobile_v0_patients_delete_destroy
+      description: Remove um paciente (soft delete)
+      summary: Deletar paciente
+      parameters:
+      - in: path
+        name: patient_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Mobile - Patients
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileDetailResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileDetailResponse'
+          description: ''
+  /patients/api/mobile/v0/patients/{patient_id}/records/:
+    get:
+      operationId: patients_api_mobile_v0_patients_records_list
+      description: Retorna todos os prontuários de um paciente
+      summary: Listar prontuários
+      parameters:
+      - in: path
+        name: patient_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Mobile - Patients
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MobileMedicalRecord'
+          description: ''
+  /patients/api/mobile/v0/patients/{patient_id}/update/:
+    put:
+      operationId: patients_api_mobile_v0_patients_update_update
+      description: Atualiza dados de um paciente específico
+      summary: Atualizar paciente
+      parameters:
+      - in: path
+        name: patient_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Mobile - Patients
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MobilePatientRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobilePatient'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileDetailResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileDetailResponse'
+          description: ''
+    patch:
+      operationId: patients_api_mobile_v0_patients_update_partial_update
+      description: Atualiza dados de um paciente específico
+      summary: Atualizar paciente
+      parameters:
+      - in: path
+        name: patient_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Mobile - Patients
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedMobilePatientRequest'
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobilePatient'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileDetailResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileDetailResponse'
+          description: ''
+  /patients/api/mobile/v0/patients/create/:
+    post:
+      operationId: patients_api_mobile_v0_patients_create_create
+      description: Cria um novo paciente na aplicação mobile
+      summary: Criar paciente
+      tags:
+      - Mobile - Patients
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MobilePatientRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobilePatient'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileDetailResponse'
+          description: ''
+  /patients/api/web/v0/medical-records/{record_id}/update/:
+    put:
+      operationId: patients_api_web_v0_medical_records_update_update
+      description: Atualiza um prontuário médico específico
+      summary: Atualizar prontuário
+      parameters:
+      - in: path
+        name: record_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Web - Patients
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebMedicalRecordRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebMedicalRecord'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebDetailResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebDetailResponse'
+          description: ''
+    patch:
+      operationId: patients_api_web_v0_medical_records_update_partial_update
+      description: Atualiza um prontuário médico específico
+      summary: Atualizar prontuário
+      parameters:
+      - in: path
+        name: record_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Web - Patients
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedWebMedicalRecordRequest'
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebMedicalRecord'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebDetailResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebDetailResponse'
+          description: ''
+  /patients/api/web/v0/medical-records/create/:
+    post:
+      operationId: patients_api_web_v0_medical_records_create_create
+      description: Cria um novo prontuário médico
+      summary: Criar prontuário
+      tags:
+      - Web - Patients
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebMedicalRecordRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebMedicalRecord'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebDetailResponse'
+          description: ''
+  /patients/api/web/v0/patients/:
+    get:
+      operationId: patients_api_web_v0_patients_list
+      description: Retorna lista paginada de pacientes para aplicação web
+      summary: Listar pacientes
+      tags:
+      - Web - Patients
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WebPatient'
+          description: ''
+  /patients/api/web/v0/patients/{patient_id}/:
+    get:
+      operationId: patients_api_web_v0_patients_retrieve
+      description: Retorna dados de um paciente específico
+      summary: Obter paciente
+      parameters:
+      - in: path
+        name: patient_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Web - Patients
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebPatient'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebDetailResponse'
+          description: ''
+  /patients/api/web/v0/patients/{patient_id}/delete/:
+    delete:
+      operationId: patients_api_web_v0_patients_delete_destroy
+      description: Remove um paciente (soft delete)
+      summary: Deletar paciente
+      parameters:
+      - in: path
+        name: patient_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Web - Patients
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebDetailResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebDetailResponse'
+          description: ''
+  /patients/api/web/v0/patients/{patient_id}/records/:
+    get:
+      operationId: patients_api_web_v0_patients_records_list
+      description: Retorna todos os prontuários de um paciente
+      summary: Listar prontuários
+      parameters:
+      - in: path
+        name: patient_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Web - Patients
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WebMedicalRecord'
+          description: ''
+  /patients/api/web/v0/patients/{patient_id}/update/:
+    put:
+      operationId: patients_api_web_v0_patients_update_update
+      description: Atualiza dados de um paciente específico
+      summary: Atualizar paciente
+      parameters:
+      - in: path
+        name: patient_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Web - Patients
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebPatientRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebPatient'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebDetailResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebDetailResponse'
+          description: ''
+    patch:
+      operationId: patients_api_web_v0_patients_update_partial_update
+      description: Atualiza dados de um paciente específico
+      summary: Atualizar paciente
+      parameters:
+      - in: path
+        name: patient_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Web - Patients
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedWebPatientRequest'
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebPatient'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebDetailResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebDetailResponse'
+          description: ''
+  /patients/api/web/v0/patients/create/:
+    post:
+      operationId: patients_api_web_v0_patients_create_create
+      description: Cria um novo paciente na aplicação web
+      summary: Criar paciente
+      tags:
+      - Web - Patients
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebPatientRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebPatient'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebDetailResponse'
+          description: ''
   /users/api/mobile/v0/assign-role/:
     post:
       operationId: users_api_mobile_v0_assign_role_create
@@ -196,6 +870,116 @@ paths:
                 $ref: '#/components/schemas/MobileProfile'
           description: ''
         '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileDetail'
+          description: ''
+  /users/api/mobile/v0/profile-image/delete/:
+    delete:
+      operationId: users_api_mobile_v0_profile_image_delete_destroy
+      description: Remove a imagem de perfil atual do usuário mobile
+      summary: Remover imagem de perfil
+      tags:
+      - Mobile - User
+      security:
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                  user:
+                    type: object
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileDetail'
+          description: ''
+  /users/api/mobile/v0/profile-image/serve/{user_id}/:
+    get:
+      operationId: users_api_mobile_v0_profile_image_serve_retrieve
+      description: Serve a imagem de perfil como proxy do S3 para mobile
+      summary: Servir imagem de perfil
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Mobile - User
+      security:
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Imagem servida com sucesso
+                content:
+                  image/jpeg: {}
+                  image/png: {}
+                  image/webp: {}
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileDetail'
+          description: ''
+  /users/api/mobile/v0/profile-image/upload/:
+    post:
+      operationId: users_api_mobile_v0_profile_image_upload_create
+      description: Faz upload de uma nova imagem de perfil para mobile. A imagem será
+        redimensionada automaticamente.
+      summary: Upload de imagem de perfil
+      tags:
+      - Mobile - User
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                profile_image:
+                  type: string
+                  format: binary
+                  description: Arquivo de imagem (JPEG, PNG, WebP - máximo 5MB)
+              required:
+              - profile_image
+      security:
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                  profile_image_url:
+                    type: string
+                  user:
+                    type: object
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileDetail'
+          description: ''
+        '401':
           content:
             application/json:
               schema:
@@ -758,6 +1542,18 @@ components:
       required:
       - detail
       - user
+    GenderEnum:
+      enum:
+      - MALE
+      - FEMALE
+      - OTHER
+      - UNKNOWN
+      type: string
+      description: |-
+        * `MALE` - Male
+        * `FEMALE` - Female
+        * `OTHER` - Other
+        * `UNKNOWN` - Unknown
     LoginRequest:
       type: object
       description: Serializer para login
@@ -822,6 +1618,13 @@ components:
           type: string
       required:
       - detail
+    MobileDetailResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+      required:
+      - detail
     MobileLoginRequestRequest:
       type: object
       properties:
@@ -848,6 +1651,181 @@ components:
       - access
       - refresh
       - user
+    MobileMedicalRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        patientId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        doctorName:
+          type: string
+        complaint:
+          type: string
+        clinicalNotes:
+          type: string
+        anamnese:
+          nullable: true
+      required:
+      - clinicalNotes
+      - complaint
+      - createdAt
+      - doctorName
+      - id
+      - patientId
+    MobileMedicalRecordRequest:
+      type: object
+      properties:
+        patientId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        doctorName:
+          type: string
+          minLength: 1
+        complaint:
+          type: string
+          minLength: 1
+        clinicalNotes:
+          type: string
+          minLength: 1
+        anamnese:
+          nullable: true
+      required:
+      - clinicalNotes
+      - complaint
+      - createdAt
+      - doctorName
+      - patientId
+    MobilePatient:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        fullName:
+          type: string
+        photo:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 200
+        birthDate:
+          type: string
+          format: date
+        gender:
+          $ref: '#/components/schemas/GenderEnum'
+        cpf:
+          type: string
+          nullable: true
+          maxLength: 20
+        phone:
+          type: string
+          nullable: true
+          maxLength: 30
+        email:
+          type: string
+          format: email
+          nullable: true
+          maxLength: 254
+        fullAddress:
+          type: string
+          nullable: true
+        city:
+          type: string
+          nullable: true
+          maxLength: 100
+        region:
+          type: string
+          nullable: true
+          maxLength: 100
+        cep:
+          type: string
+          nullable: true
+          maxLength: 20
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        isActive:
+          type: boolean
+        medicalRecord:
+          allOf:
+          - $ref: '#/components/schemas/MobileMedicalRecord'
+          nullable: true
+          readOnly: true
+      required:
+      - birthDate
+      - createdAt
+      - fullName
+      - id
+      - isActive
+      - medicalRecord
+      - updatedAt
+    MobilePatientRequest:
+      type: object
+      properties:
+        fullName:
+          type: string
+          minLength: 1
+        photo:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 200
+        birthDate:
+          type: string
+          format: date
+        gender:
+          $ref: '#/components/schemas/GenderEnum'
+        cpf:
+          type: string
+          nullable: true
+          maxLength: 20
+        phone:
+          type: string
+          nullable: true
+          maxLength: 30
+        email:
+          type: string
+          format: email
+          nullable: true
+          maxLength: 254
+        fullAddress:
+          type: string
+          nullable: true
+          minLength: 1
+        city:
+          type: string
+          nullable: true
+          maxLength: 100
+        region:
+          type: string
+          nullable: true
+          maxLength: 100
+        cep:
+          type: string
+          nullable: true
+          maxLength: 20
+        isActive:
+          type: boolean
+      required:
+      - birthDate
+      - fullName
+      - isActive
     MobileProfile:
       type: object
       properties:
@@ -1100,6 +2078,73 @@ components:
       required:
       - password
       - token
+    PatchedMobileMedicalRecordRequest:
+      type: object
+      properties:
+        patientId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        doctorName:
+          type: string
+          minLength: 1
+        complaint:
+          type: string
+          minLength: 1
+        clinicalNotes:
+          type: string
+          minLength: 1
+        anamnese:
+          nullable: true
+    PatchedMobilePatientRequest:
+      type: object
+      properties:
+        fullName:
+          type: string
+          minLength: 1
+        photo:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 200
+        birthDate:
+          type: string
+          format: date
+        gender:
+          $ref: '#/components/schemas/GenderEnum'
+        cpf:
+          type: string
+          nullable: true
+          maxLength: 20
+        phone:
+          type: string
+          nullable: true
+          maxLength: 30
+        email:
+          type: string
+          format: email
+          nullable: true
+          maxLength: 254
+        fullAddress:
+          type: string
+          nullable: true
+          minLength: 1
+        city:
+          type: string
+          nullable: true
+          maxLength: 100
+        region:
+          type: string
+          nullable: true
+          maxLength: 100
+        cep:
+          type: string
+          nullable: true
+          maxLength: 20
+        isActive:
+          type: boolean
     PatchedMobileProfileRequest:
       type: object
       properties:
@@ -1162,6 +2207,73 @@ components:
           format: uuid
           nullable: true
           description: UUID do usuário no ClickHouse
+    PatchedWebMedicalRecordRequest:
+      type: object
+      properties:
+        patientId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        doctorName:
+          type: string
+          minLength: 1
+        complaint:
+          type: string
+          minLength: 1
+        clinicalNotes:
+          type: string
+          minLength: 1
+        anamnese:
+          nullable: true
+    PatchedWebPatientRequest:
+      type: object
+      properties:
+        fullName:
+          type: string
+          minLength: 1
+        photo:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 200
+        birthDate:
+          type: string
+          format: date
+        gender:
+          $ref: '#/components/schemas/GenderEnum'
+        cpf:
+          type: string
+          nullable: true
+          maxLength: 20
+        phone:
+          type: string
+          nullable: true
+          maxLength: 30
+        email:
+          type: string
+          format: email
+          nullable: true
+          maxLength: 254
+        fullAddress:
+          type: string
+          nullable: true
+          minLength: 1
+        city:
+          type: string
+          nullable: true
+          maxLength: 100
+        region:
+          type: string
+          nullable: true
+          maxLength: 100
+        cep:
+          type: string
+          nullable: true
+          maxLength: 20
+        isActive:
+          type: boolean
     Profile:
       type: object
       description: Serializer do perfil do usuário
@@ -1363,6 +2475,188 @@ components:
       - id
       - profile
       - username
+    WebDetailResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+      required:
+      - detail
+    WebMedicalRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        patientId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        doctorName:
+          type: string
+        complaint:
+          type: string
+        clinicalNotes:
+          type: string
+        anamnese:
+          nullable: true
+      required:
+      - clinicalNotes
+      - complaint
+      - createdAt
+      - doctorName
+      - id
+      - patientId
+    WebMedicalRecordRequest:
+      type: object
+      properties:
+        patientId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        doctorName:
+          type: string
+          minLength: 1
+        complaint:
+          type: string
+          minLength: 1
+        clinicalNotes:
+          type: string
+          minLength: 1
+        anamnese:
+          nullable: true
+      required:
+      - clinicalNotes
+      - complaint
+      - createdAt
+      - doctorName
+      - patientId
+    WebPatient:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        fullName:
+          type: string
+        photo:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 200
+        birthDate:
+          type: string
+          format: date
+        gender:
+          $ref: '#/components/schemas/GenderEnum'
+        cpf:
+          type: string
+          nullable: true
+          maxLength: 20
+        phone:
+          type: string
+          nullable: true
+          maxLength: 30
+        email:
+          type: string
+          format: email
+          nullable: true
+          maxLength: 254
+        fullAddress:
+          type: string
+          nullable: true
+        city:
+          type: string
+          nullable: true
+          maxLength: 100
+        region:
+          type: string
+          nullable: true
+          maxLength: 100
+        cep:
+          type: string
+          nullable: true
+          maxLength: 20
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        isActive:
+          type: boolean
+        medicalRecord:
+          allOf:
+          - $ref: '#/components/schemas/WebMedicalRecord'
+          nullable: true
+          readOnly: true
+      required:
+      - birthDate
+      - createdAt
+      - fullName
+      - id
+      - isActive
+      - medicalRecord
+      - updatedAt
+    WebPatientRequest:
+      type: object
+      properties:
+        fullName:
+          type: string
+          minLength: 1
+        photo:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 200
+        birthDate:
+          type: string
+          format: date
+        gender:
+          $ref: '#/components/schemas/GenderEnum'
+        cpf:
+          type: string
+          nullable: true
+          maxLength: 20
+        phone:
+          type: string
+          nullable: true
+          maxLength: 30
+        email:
+          type: string
+          format: email
+          nullable: true
+          maxLength: 254
+        fullAddress:
+          type: string
+          nullable: true
+          minLength: 1
+        city:
+          type: string
+          nullable: true
+          maxLength: 100
+        region:
+          type: string
+          nullable: true
+          maxLength: 100
+        cep:
+          type: string
+          nullable: true
+          maxLength: 20
+        isActive:
+          type: boolean
+      required:
+      - birthDate
+      - fullName
+      - isActive
   securitySchemes:
     cookieAuth:
       type: apiKey
@@ -1381,8 +2675,12 @@ tags:
     de senha)
 - name: Web - User
   description: Endpoints de gerenciamento de usuários para aplicação web
+- name: Web - Patients
+  description: Endpoints de gerenciamento de pacientes para aplicação web
 - name: Mobile - Auth
   description: Endpoints de autenticação para aplicação mobile (login, registro, recuperação
     de senha)
 - name: Mobile - User
   description: Endpoints de gerenciamento de usuários para aplicação mobile
+- name: Mobile - Patients
+  description: Endpoints de gerenciamento de pacientes para aplicação mobile
