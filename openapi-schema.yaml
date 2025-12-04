@@ -9,123 +9,9 @@ info:
   license:
     name: Private License
 paths:
-  /patients/api/mobile/v0/medical-records/{record_id}/update/:
-    put:
-      operationId: patients_api_mobile_v0_medical_records_update_update
-      description: Atualiza um prontuário médico específico
-      summary: Atualizar prontuário
-      parameters:
-      - in: path
-        name: record_id
-        schema:
-          type: string
-          format: uuid
-        required: true
-      tags:
-      - Mobile - Patients
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/MobileMedicalRecordRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - jwtAuth: []
-      - bearerAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MobileMedicalRecord'
-          description: ''
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MobileDetailResponse'
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MobileDetailResponse'
-          description: ''
-    patch:
-      operationId: patients_api_mobile_v0_medical_records_update_partial_update
-      description: Atualiza um prontuário médico específico
-      summary: Atualizar prontuário
-      parameters:
-      - in: path
-        name: record_id
-        schema:
-          type: string
-          format: uuid
-        required: true
-      tags:
-      - Mobile - Patients
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PatchedMobileMedicalRecordRequest'
-      security:
-      - cookieAuth: []
-      - jwtAuth: []
-      - bearerAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MobileMedicalRecord'
-          description: ''
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MobileDetailResponse'
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MobileDetailResponse'
-          description: ''
-  /patients/api/mobile/v0/medical-records/create/:
-    post:
-      operationId: patients_api_mobile_v0_medical_records_create_create
-      description: Cria um novo prontuário médico
-      summary: Criar prontuário
-      tags:
-      - Mobile - Patients
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/MobileMedicalRecordRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - jwtAuth: []
-      - bearerAuth: []
-      responses:
-        '201':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MobileMedicalRecord'
-          description: ''
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MobileDetailResponse'
-          description: ''
-  /patients/api/mobile/v0/patients/:
+  /patients/api/mobile/v0/:
     get:
-      operationId: patients_api_mobile_v0_patients_list
+      operationId: patients_api_mobile_v0_list
       description: Retorna lista paginada de pacientes para aplicação mobile
       summary: Listar pacientes
       tags:
@@ -143,9 +29,9 @@ paths:
                 items:
                   $ref: '#/components/schemas/MobilePatient'
           description: ''
-  /patients/api/mobile/v0/patients/{patient_id}/:
+  /patients/api/mobile/v0/{patient_id}/:
     get:
-      operationId: patients_api_mobile_v0_patients_retrieve
+      operationId: patients_api_mobile_v0_retrieve
       description: Retorna dados de um paciente específico
       summary: Obter paciente
       parameters:
@@ -174,9 +60,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/MobileDetailResponse'
           description: ''
-  /patients/api/mobile/v0/patients/{patient_id}/delete/:
+  /patients/api/mobile/v0/{patient_id}/delete/:
     delete:
-      operationId: patients_api_mobile_v0_patients_delete_destroy
+      operationId: patients_api_mobile_v0_delete_destroy
       description: Remove um paciente (soft delete)
       summary: Deletar paciente
       parameters:
@@ -205,9 +91,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/MobileDetailResponse'
           description: ''
-  /patients/api/mobile/v0/patients/{patient_id}/records/:
+  /patients/api/mobile/v0/{patient_id}/records/:
     get:
-      operationId: patients_api_mobile_v0_patients_records_list
+      operationId: patients_api_mobile_v0_records_list
       description: Retorna todos os prontuários de um paciente
       summary: Listar prontuários
       parameters:
@@ -232,9 +118,9 @@ paths:
                 items:
                   $ref: '#/components/schemas/MobileMedicalRecord'
           description: ''
-  /patients/api/mobile/v0/patients/{patient_id}/update/:
+  /patients/api/mobile/v0/{patient_id}/update/:
     put:
-      operationId: patients_api_mobile_v0_patients_update_update
+      operationId: patients_api_mobile_v0_update_update
       description: Atualiza dados de um paciente específico
       summary: Atualizar paciente
       parameters:
@@ -276,7 +162,7 @@ paths:
                 $ref: '#/components/schemas/MobileDetailResponse'
           description: ''
     patch:
-      operationId: patients_api_mobile_v0_patients_update_partial_update
+      operationId: patients_api_mobile_v0_update_partial_update
       description: Atualiza dados de um paciente específico
       summary: Atualizar paciente
       parameters:
@@ -316,9 +202,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/MobileDetailResponse'
           description: ''
-  /patients/api/mobile/v0/patients/create/:
+  /patients/api/mobile/v0/create/:
     post:
-      operationId: patients_api_mobile_v0_patients_create_create
+      operationId: patients_api_mobile_v0_create_create
       description: Cria um novo paciente na aplicação mobile
       summary: Criar paciente
       tags:
@@ -346,9 +232,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/MobileDetailResponse'
           description: ''
-  /patients/api/web/v0/medical-records/{record_id}/update/:
+  /patients/api/mobile/v0/mrecords/{record_id}/update/:
     put:
-      operationId: patients_api_web_v0_medical_records_update_update
+      operationId: patients_api_mobile_v0_mrecords_update_update
       description: Atualiza um prontuário médico específico
       summary: Atualizar prontuário
       parameters:
@@ -359,12 +245,12 @@ paths:
           format: uuid
         required: true
       tags:
-      - Web - Patients
+      - Mobile - Patients
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/WebMedicalRecordRequest'
+              $ref: '#/components/schemas/MobileMedicalRecordRequest'
         required: true
       security:
       - cookieAuth: []
@@ -375,22 +261,22 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WebMedicalRecord'
+                $ref: '#/components/schemas/MobileMedicalRecord'
           description: ''
         '400':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WebDetailResponse'
+                $ref: '#/components/schemas/MobileDetailResponse'
           description: ''
         '404':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WebDetailResponse'
+                $ref: '#/components/schemas/MobileDetailResponse'
           description: ''
     patch:
-      operationId: patients_api_web_v0_medical_records_update_partial_update
+      operationId: patients_api_mobile_v0_mrecords_update_partial_update
       description: Atualiza um prontuário médico específico
       summary: Atualizar prontuário
       parameters:
@@ -401,12 +287,12 @@ paths:
           format: uuid
         required: true
       tags:
-      - Web - Patients
+      - Mobile - Patients
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedWebMedicalRecordRequest'
+              $ref: '#/components/schemas/PatchedMobileMedicalRecordRequest'
       security:
       - cookieAuth: []
       - jwtAuth: []
@@ -416,32 +302,32 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WebMedicalRecord'
+                $ref: '#/components/schemas/MobileMedicalRecord'
           description: ''
         '400':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WebDetailResponse'
+                $ref: '#/components/schemas/MobileDetailResponse'
           description: ''
         '404':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WebDetailResponse'
+                $ref: '#/components/schemas/MobileDetailResponse'
           description: ''
-  /patients/api/web/v0/medical-records/create/:
+  /patients/api/mobile/v0/mrecords/create/:
     post:
-      operationId: patients_api_web_v0_medical_records_create_create
+      operationId: patients_api_mobile_v0_mrecords_create_create
       description: Cria um novo prontuário médico
       summary: Criar prontuário
       tags:
-      - Web - Patients
+      - Mobile - Patients
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/WebMedicalRecordRequest'
+              $ref: '#/components/schemas/MobileMedicalRecordRequest'
         required: true
       security:
       - cookieAuth: []
@@ -452,17 +338,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WebMedicalRecord'
+                $ref: '#/components/schemas/MobileMedicalRecord'
           description: ''
         '400':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WebDetailResponse'
+                $ref: '#/components/schemas/MobileDetailResponse'
           description: ''
-  /patients/api/web/v0/patients/:
+  /patients/api/web/v0/:
     get:
-      operationId: patients_api_web_v0_patients_list
+      operationId: patients_api_web_v0_list
       description: Retorna lista paginada de pacientes para aplicação web
       summary: Listar pacientes
       tags:
@@ -480,9 +366,9 @@ paths:
                 items:
                   $ref: '#/components/schemas/WebPatient'
           description: ''
-  /patients/api/web/v0/patients/{patient_id}/:
+  /patients/api/web/v0/{patient_id}/:
     get:
-      operationId: patients_api_web_v0_patients_retrieve
+      operationId: patients_api_web_v0_retrieve
       description: Retorna dados de um paciente específico
       summary: Obter paciente
       parameters:
@@ -511,9 +397,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/WebDetailResponse'
           description: ''
-  /patients/api/web/v0/patients/{patient_id}/delete/:
+  /patients/api/web/v0/{patient_id}/delete/:
     delete:
-      operationId: patients_api_web_v0_patients_delete_destroy
+      operationId: patients_api_web_v0_delete_destroy
       description: Remove um paciente (soft delete)
       summary: Deletar paciente
       parameters:
@@ -542,9 +428,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/WebDetailResponse'
           description: ''
-  /patients/api/web/v0/patients/{patient_id}/records/:
+  /patients/api/web/v0/{patient_id}/records/:
     get:
-      operationId: patients_api_web_v0_patients_records_list
+      operationId: patients_api_web_v0_records_list
       description: Retorna todos os prontuários de um paciente
       summary: Listar prontuários
       parameters:
@@ -569,9 +455,9 @@ paths:
                 items:
                   $ref: '#/components/schemas/WebMedicalRecord'
           description: ''
-  /patients/api/web/v0/patients/{patient_id}/update/:
+  /patients/api/web/v0/{patient_id}/update/:
     put:
-      operationId: patients_api_web_v0_patients_update_update
+      operationId: patients_api_web_v0_update_update
       description: Atualiza dados de um paciente específico
       summary: Atualizar paciente
       parameters:
@@ -613,7 +499,7 @@ paths:
                 $ref: '#/components/schemas/WebDetailResponse'
           description: ''
     patch:
-      operationId: patients_api_web_v0_patients_update_partial_update
+      operationId: patients_api_web_v0_update_partial_update
       description: Atualiza dados de um paciente específico
       summary: Atualizar paciente
       parameters:
@@ -653,9 +539,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/WebDetailResponse'
           description: ''
-  /patients/api/web/v0/patients/create/:
+  /patients/api/web/v0/create/:
     post:
-      operationId: patients_api_web_v0_patients_create_create
+      operationId: patients_api_web_v0_create_create
       description: Cria um novo paciente na aplicação web
       summary: Criar paciente
       tags:
@@ -676,6 +562,120 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/WebPatient'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebDetailResponse'
+          description: ''
+  /patients/api/web/v0/mrecords/{record_id}/update/:
+    put:
+      operationId: patients_api_web_v0_mrecords_update_update
+      description: Atualiza um prontuário médico específico
+      summary: Atualizar prontuário
+      parameters:
+      - in: path
+        name: record_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Web - Patients
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebMedicalRecordRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebMedicalRecord'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebDetailResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebDetailResponse'
+          description: ''
+    patch:
+      operationId: patients_api_web_v0_mrecords_update_partial_update
+      description: Atualiza um prontuário médico específico
+      summary: Atualizar prontuário
+      parameters:
+      - in: path
+        name: record_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Web - Patients
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedWebMedicalRecordRequest'
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebMedicalRecord'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebDetailResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebDetailResponse'
+          description: ''
+  /patients/api/web/v0/mrecords/create/:
+    post:
+      operationId: patients_api_web_v0_mrecords_create_create
+      description: Cria um novo prontuário médico
+      summary: Criar prontuário
+      tags:
+      - Web - Patients
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebMedicalRecordRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebMedicalRecord'
           description: ''
         '400':
           content:

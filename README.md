@@ -200,6 +200,184 @@ curl -X POST http://localhost:8000/users/api/web/v0/resetpassword/ \
   -d '{"token": "abc123token", "password": "novaSenha123"}'
 ```
 
+### Gerenciamento de Pacientes
+
+**Listar pacientes:**
+```bash
+# Web
+curl -X GET http://localhost:8000/patients/api/web/v0/ \
+  -H "Authorization: Bearer SEU_ACCESS_TOKEN_AQUI"
+
+# Mobile
+curl -X GET http://localhost:8000/patients/api/mobile/v0/ \
+  -H "Authorization: Bearer SEU_ACCESS_TOKEN_AQUI"
+```
+
+**Criar paciente:**
+```bash
+# Web
+curl -X POST http://localhost:8000/patients/api/web/v0/create/ \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer SEU_ACCESS_TOKEN_AQUI" \
+  -d '{
+    "fullName": "Maria da Silva",
+    "birthDate": "1985-03-15",
+    "gender": "FEMALE",
+    "cpf": "123.456.789-00",
+    "phone": "(11) 99999-9999",
+    "email": "maria@email.com",
+    "fullAddress": "Rua das Flores, 123",
+    "city": "São Paulo",
+    "region": "SP",
+    "cep": "01234-567"
+  }'
+
+# Mobile
+curl -X POST http://localhost:8000/patients/api/mobile/v0/create/ \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer SEU_ACCESS_TOKEN_AQUI" \
+  -d '{
+    "fullName": "João Santos",
+    "birthDate": "1990-07-22",
+    "gender": "MALE",
+    "cpf": "987.654.321-00",
+    "phone": "(11) 88888-8888"
+  }'
+```
+
+**Obter paciente específico:**
+```bash
+# Web
+curl -X GET http://localhost:8000/patients/api/web/v0/550e8400-e29b-41d4-a716-446655440000/ \
+  -H "Authorization: Bearer SEU_ACCESS_TOKEN_AQUI"
+
+# Mobile
+curl -X GET http://localhost:8000/patients/api/mobile/v0/550e8400-e29b-41d4-a716-446655440000/ \
+  -H "Authorization: Bearer SEU_ACCESS_TOKEN_AQUI"
+```
+
+**Atualizar paciente:**
+```bash
+# Web - Atualização parcial (PATCH)
+curl -X PATCH http://localhost:8000/patients/api/web/v0/550e8400-e29b-41d4-a716-446655440000/update/ \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer SEU_ACCESS_TOKEN_AQUI" \
+  -d '{"phone": "(11) 77777-7777", "email": "novoemail@email.com"}'
+
+# Mobile - Atualização completa (PUT)
+curl -X PUT http://localhost:8000/patients/api/mobile/v0/550e8400-e29b-41d4-a716-446655440000/update/ \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer SEU_ACCESS_TOKEN_AQUI" \
+  -d '{
+    "fullName": "João Santos Silva",
+    "birthDate": "1990-07-22",
+    "gender": "MALE",
+    "cpf": "987.654.321-00",
+    "phone": "(11) 77777-7777",
+    "email": "joao.santos@email.com",
+    "isActive": true
+  }'
+```
+
+**Remover paciente (soft delete):**
+```bash
+# Web
+curl -X DELETE http://localhost:8000/patients/api/web/v0/550e8400-e29b-41d4-a716-446655440000/delete/ \
+  -H "Authorization: Bearer SEU_ACCESS_TOKEN_AQUI"
+
+# Mobile
+curl -X DELETE http://localhost:8000/patients/api/mobile/v0/550e8400-e29b-41d4-a716-446655440000/delete/ \
+  -H "Authorization: Bearer SEU_ACCESS_TOKEN_AQUI"
+```
+
+### Gerenciamento de Prontuários Médicos
+
+**Listar prontuários de um paciente:**
+```bash
+# Web
+curl -X GET http://localhost:8000/patients/api/web/v0/550e8400-e29b-41d4-a716-446655440000/records/ \
+  -H "Authorization: Bearer SEU_ACCESS_TOKEN_AQUI"
+
+# Mobile
+curl -X GET http://localhost:8000/patients/api/mobile/v0/550e8400-e29b-41d4-a716-446655440000/records/ \
+  -H "Authorization: Bearer SEU_ACCESS_TOKEN_AQUI"
+```
+
+**Criar prontuário médico:**
+```bash
+# Web
+curl -X POST http://localhost:8000/patients/api/web/v0/mrecords/create/ \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer SEU_ACCESS_TOKEN_AQUI" \
+  -d '{
+    "patientId": "550e8400-e29b-41d4-a716-446655440000",
+    "createdAt": "2025-12-04T14:30:00Z",
+    "doctorName": "Dr. Carlos Silva",
+    "complaint": "Dor de cabeça persistente há 3 dias",
+    "clinicalNotes": "Paciente apresenta cefaleia frontal, sem febre. Pressão arterial normal.",
+    "anamnese": {
+      "symptoms": ["dor de cabeça", "cansaço"],
+      "duration": "3 dias",
+      "intensity": 7,
+      "medications": ["paracetamol"]
+    }
+  }'
+
+# Mobile
+curl -X POST http://localhost:8000/patients/api/mobile/v0/mrecords/create/ \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer SEU_ACCESS_TOKEN_AQUI" \
+  -d '{
+    "patientId": "550e8400-e29b-41d4-a716-446655440000",
+    "createdAt": "2025-12-04T15:00:00Z",
+    "doctorName": "Dr. Ana Costa",
+    "complaint": "Consulta de rotina",
+    "clinicalNotes": "Paciente em bom estado geral, sem queixas.",
+    "anamnese": {
+      "type": "routine_check",
+      "blood_pressure": "120/80",
+      "weight": "70kg",
+      "height": "1.75m"
+    }
+  }'
+```
+
+**Atualizar prontuário médico:**
+```bash
+# Web
+curl -X PATCH http://localhost:8000/patients/api/web/v0/mrecords/660e8400-e29b-41d4-a716-446655440000/update/ \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer SEU_ACCESS_TOKEN_AQUI" \
+  -d '{
+    "clinicalNotes": "Paciente apresenta melhora significativa após medicação.",
+    "anamnese": {
+      "symptoms": ["dor de cabeça leve"],
+      "duration": "1 dia",
+      "intensity": 3,
+      "medications": ["paracetamol", "ibuprofeno"],
+      "follow_up": "Retorno em 1 semana se sintomas persistirem"
+    }
+  }'
+
+# Mobile
+curl -X PUT http://localhost:8000/patients/api/mobile/v0/mrecords/660e8400-e29b-41d4-a716-446655440000/update/ \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer SEU_ACCESS_TOKEN_AQUI" \
+  -d '{
+    "patientId": "550e8400-e29b-41d4-a716-446655440000",
+    "createdAt": "2025-12-04T15:00:00Z",
+    "doctorName": "Dr. Ana Costa",
+    "complaint": "Consulta de rotina - Retorno",
+    "clinicalNotes": "Paciente retorna para avaliação. Estado geral excelente.",
+    "anamnese": {
+      "type": "follow_up",
+      "blood_pressure": "118/78",
+      "weight": "69kg",
+      "improvement": "significativa"
+    }
+  }'
+```
+
 ### Fluxo de Recuperação de Senha
 
 1. **Solicitação**: Usuário acessa `/recovery-password/` e informa email
@@ -231,13 +409,15 @@ python manage.py spectacular --format openapi --file openapi-schema.yaml
 
 A API está organizada em seções distintas:
 
-**Web APIs** (`/users/api/web/v0/`):
-- **Web - Auth**: Login, registro, recuperação de senha para aplicação web
-- **Web - User**: Gerenciamento de usuários e perfis para aplicação web
+**Web APIs**:
+- **Web - Auth**: Login, registro, recuperação de senha para aplicação web (`/users/api/web/v0/`)
+- **Web - User**: Gerenciamento de usuários e perfis para aplicação web (`/users/api/web/v0/`)
+- **Web - Patients**: Gerenciamento de pacientes e prontuários para aplicação web (`/patients/api/web/v0/`)
 
-**Mobile APIs** (`/users/api/mobile/v0/`):
-- **Mobile - Auth**: Login, registro, recuperação de senha para aplicação mobile  
-- **Mobile - User**: Gerenciamento de usuários e perfis para aplicação mobile
+**Mobile APIs**:
+- **Mobile - Auth**: Login, registro, recuperação de senha para aplicação mobile (`/users/api/mobile/v0/`)
+- **Mobile - User**: Gerenciamento de usuários e perfis para aplicação mobile (`/users/api/mobile/v0/`)
+- **Mobile - Patients**: Gerenciamento de pacientes e prontuários para aplicação mobile (`/patients/api/mobile/v0/`)
 
 ## Deploy AWS EC2
 
@@ -294,9 +474,14 @@ loggin_django/
 ├── users/               # Gerenciamento de usuários e perfis
 │   ├── services.py      # Serviço S3 para upload de imagens
 │   └── api/v0/          # APIs de usuários (upload de imagem)
+├── patients/            # Gerenciamento de pacientes e prontuários
+│   └── api/             # APIs separadas por plataforma
+│       ├── web/v0/      # Endpoints para aplicação web
+│       └── mobile/v0/   # Endpoints para aplicação mobile
 ├── devices/             # APIs para dados de equipamentos
 ├── projects/            # APIs para projetos
 ├── docker-compose.yml   # Configuração Docker
 ├── requirements.txt     # Dependências Python
 └── update.sh           # Script de deploy automático
 ```
+
