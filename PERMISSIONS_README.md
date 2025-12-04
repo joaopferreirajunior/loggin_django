@@ -69,7 +69,7 @@ if user_profile.can_manage_users():
 
 ```javascript
 // Atribuir papel via API (apenas system_admin)
-fetch('/api/web/v0/assign-role/', {
+fetch('/users/api/web/v0/assign-role/', {
     method: 'POST',
     headers: {
         'Content-Type': 'application/json',
@@ -86,7 +86,7 @@ fetch('/api/web/v0/assign-role/', {
 
 ```javascript
 // Buscar permissões do usuário atual
-fetch('/api/web/v0/me/permissions/')
+fetch('/users/api/web/v0/me/permissions/')
 .then(response => response.json())
 .then(data => {
     console.log('Papel:', data.user_role);
@@ -165,8 +165,8 @@ print(profile.get_user_role())  # 'office_admin'
 
 ## APIs Disponíveis
 
-- `GET /api/web/v0/me/permissions/` - Retorna permissões do usuário atual
-- `POST /api/web/v0/assign-role/` - Atribui papel a um usuário (requer permissão)
+- `GET /users/api/web/v0/me/permissions/` - Retorna permissões do usuário atual
+- `POST /users/api/web/v0/assign-role/` - Atribui papel a um usuário (requer permissão)
 
 ## Troubleshooting
 

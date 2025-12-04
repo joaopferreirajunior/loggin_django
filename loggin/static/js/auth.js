@@ -45,12 +45,19 @@ function isAuthenticated() {
 async function makeAuthenticatedRequest(url, options = {}) {
     const token = getAccessToken();
     
+    // Para FormData, não definir Content-Type
+    const headers = {
+        'Authorization': token ? `Bearer ${token}` : '',
+        ...options.headers
+    };
+    
+    // Só adiciona Content-Type se não for FormData
+    if (!(options.body instanceof FormData)) {
+        headers['Content-Type'] = 'application/json';
+    }
+    
     const defaultOptions = {
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': token ? `Bearer ${token}` : '',
-            ...options.headers
-        }
+        headers: headers
     };
     
     return fetch(url, { ...defaultOptions, ...options });
@@ -65,7 +72,7 @@ async function refreshAccessToken() {
     }
     
     try {
-        const response = await fetch('/api/web/v0/token/refresh/', {
+        const response = await fetch('/users/api/web/v0/token/refresh/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -92,7 +99,7 @@ async function refreshAccessToken() {
 async function logout() {
     try {
         // Tenta fazer logout no servidor
-        await fetch('/api/web/v0/logout/', {
+        await fetch('/users/api/web/v0/logout/', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${getAccessToken()}`

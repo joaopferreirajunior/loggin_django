@@ -1,194 +1,240 @@
-from django.contrib.auth.models import User
 from rest_framework import serializers
-from django.core.validators import validate_email
-from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from users.models import Profile
+from users.services import S3ImageService
 
+# DRF Spectacular imports
+from drf_spectacular.utils import extend_schema_serializer, OpenApiExample
 
 User = get_user_model()
 
-class ProfileSerializer(serializers.ModelSerializer):
-    profile_image_url = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = Profile
-        fields = (
-            "cpf", "birth", "phone", 
-            "email_confirmed", "email_confirmed_at", "invited_at",
-            "confirmation_token", "confirmation_sent_at", 
-            "recovery_token", "recovery_token_sent_at", "clickhouse_id",
-            "profile_image_url"
-        )
-        read_only_fields = (
-            "email_confirmed", "email_confirmed_at", "invited_at",
-            "confirmation_token", "confirmation_sent_at", 
-            "recovery_token", "recovery_token_sent_at", "clickhouse_id",
-            "profile_image_url"
-        )
-    
-    def get_profile_image_url(self, obj):
-        """Retorna URL completa da imagem de perfil do S3"""
-        return obj.get_profile_image_url()
-
-class UserSerializer(serializers.ModelSerializer):
-    profile = ProfileSerializer(read_only=True)
-    
-    class Meta:
-        model = User
-        fields = ("id", "username", "email", "profile")
-    
-
 class UserRegisterSerializer(serializers.ModelSerializer):
+    """Serializer para registro de novos usuários"""
     password = serializers.CharField(write_only=True, min_length=8, max_length=128)
     email = serializers.EmailField(required=True)
-    # campos adicionais para o perfil
-    cpf = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    birth = serializers.DateField(required=False, allow_null=True)
-    phone = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'password', 'cpf', 'birth', 'phone']
+        fields = ('username', 'email', 'password', 'first_name', 'last_name')
+
+    def validate_email(self, value):
+        """Validação customizada para email único"""
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("Este email já está em uso.")
+        return value
 
     def validate_username(self, value):
-        if not value.isalnum():
-            raise serializers.ValidationError("O nome de usuário só pode conter letras e números.")
+        """Validação customizada para username único"""
         if User.objects.filter(username=value).exists():
             raise serializers.ValidationError("Este nome de usuário já está em uso.")
         return value
 
-    def validate_email(self, value):
-        try:
-            validate_email(value)
-        except ValidationError:
-            raise serializers.ValidationError("Formato de e-mail inválido.")
-        if User.objects.filter(email=value).exists():
-            raise serializers.ValidationError("Este e-mail já está em uso.")
-        return value
-
-    def validate_cpf(self, value):
-        # validação simples: se informado, garante unicidade
-        if value:
-            if Profile.objects.filter(cpf=value).exists():
-                raise serializers.ValidationError("Este CPF já está em uso.")
-        return value
-
     def create(self, validated_data):
-        # extrai campos do perfil se existirem
-        cpf = validated_data.pop('cpf', None)
-        birth = validated_data.pop('birth', None)
-        phone = validated_data.pop('phone', None)
-
-        user = User.objects.create_user(**validated_data)
-
-        # aguarda o signal criar o profile, então atualiza com os dados extras
-        try:
-            # usa get_or_create para evitar conflitos com o signal
-            profile, created = Profile.objects.get_or_create(
-                user=user,
-                defaults={
-                    'cpf': cpf,
-                    'birth': birth,
-                    'phone': phone
-                }
-            )
-            # se o profile já existia (criado pelo signal), atualiza os campos
-            if not created:
-                if cpf:
-                    profile.cpf = cpf
-                if birth:
-                    profile.birth = birth
-                if phone:
-                    profile.phone = phone
-                profile.save()
-        except Exception as e:
-            # log do erro para debug
-            print(f"Erro ao criar/atualizar perfil do usuário {user.username}: {e}")
-            # se falhar, o usuário ainda existe, só não terá o perfil completo
-
+        """Criação de usuário com senha criptografada"""
+        password = validated_data.pop('password')
+        user = User.objects.create_user(password=password, **validated_data)
+        
+        # Criar profile automaticamente
+        Profile.objects.create(user=user)
+        
         return user
 
-# --- Schemas genéricos de mensagens/erros ---
+class UserSerializer(serializers.ModelSerializer):
+    """Serializer básico do usuário"""
+    class Meta:
+        model = User
+        fields = ('id', 'username', 'email', 'first_name', 'last_name')
 
-
-class DetailSerializer(serializers.Serializer):
-    """Usado para mensagens simples: {"detail": "..."}"""
-    detail = serializers.CharField()
-
-
-# --- Auth / Registro / Login ---
-
-
-class RegisterResponseSerializer(serializers.Serializer):
-    detail = serializers.CharField()
-    user = UserSerializer()
-    refresh = serializers.CharField()
-    access = serializers.CharField()
-
-
-class LoginRequestSerializer(serializers.Serializer):
-    username = serializers.CharField(
-        help_text="Pode ser username ou email"
-    )
-    password = serializers.CharField()
-
-
-class LoginResponseSerializer(serializers.Serializer):
-    user = UserSerializer()
-    refresh = serializers.CharField()
-    access = serializers.CharField()
-
-
-# --- Recuperação de senha ---
-
-
-class RecoveryPasswordRequestSerializer(serializers.Serializer):
-    email = serializers.EmailField()
-
-
-class RecoveryPasswordResponseSerializer(serializers.Serializer):
-    detail = serializers.CharField()
-    test_link = serializers.CharField()
-    test_token = serializers.CharField()
-
-
-class ResetPasswordRequestSerializer(serializers.Serializer):
-    token = serializers.CharField()
-    password = serializers.CharField()
-
-
-class ResetPasswordSuccessSerializer(serializers.Serializer):
-    detail = serializers.CharField()
-
-
-# --- Permissões / papéis de usuário ---
-
+class ProfileSerializer(serializers.ModelSerializer):
+    """Serializer do perfil do usuário"""
+    profile_image_url = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Profile
+        fields = ('cpf', 'birth', 'phone', 'email_confirmed', 'email_confirmed_at', 
+                 'invited_at', 'confirmation_token', 'confirmation_sent_at',
+                 'recovery_token', 'recovery_token_sent_at', 'clickhouse_id',
+                 'profile_image_url')
+        extra_kwargs = {
+            'confirmation_token': {'write_only': True},
+            'recovery_token': {'write_only': True},
+        }
+    
+    def get_profile_image_url(self, obj):
+        """Retorna a URL da imagem de perfil"""
+        return obj.get_profile_image_url()
 
 class UserPermissionsSerializer(serializers.Serializer):
+    """Serializer para permissões do usuário"""
     user_role = serializers.CharField()
-    is_system_admin = serializers.BooleanField()
-    is_office_admin = serializers.BooleanField()
-    is_regular_user = serializers.BooleanField()
-    groups = serializers.ListField(
-        child=serializers.CharField()
-    )
-    permissions = serializers.ListField(
-        child=serializers.CharField()
-    )
     can_manage_users = serializers.BooleanField()
-    can_view_all_users = serializers.BooleanField()
-    can_access_admin = serializers.BooleanField()
+    is_system_admin = serializers.BooleanField()
+    
+    def to_representation(self, instance):
+        """Converte o usuário em dados de permissões"""
+        # Determina o role baseado nos grupos
+        user_role = 'regular_user'
+        if instance.groups.filter(name='system_admin').exists():
+            user_role = 'system_admin'
+        elif instance.groups.filter(name='office_admin').exists():
+            user_role = 'office_admin'
+        
+        # Verifica permissões
+        can_manage_users = instance.has_perm('auth.change_user') or user_role in ['system_admin', 'office_admin']
+        is_system_admin = user_role == 'system_admin'
+        
+        return {
+            'user_role': user_role,
+            'can_manage_users': can_manage_users,
+            'is_system_admin': is_system_admin
+        }
 
-
-class AssignUserRoleRequestSerializer(serializers.Serializer):
+class RoleAssignmentSerializer(serializers.Serializer):
+    """Serializer para atribuição de roles"""
     user_id = serializers.IntegerField()
-    role = serializers.ChoiceField(
-        choices=["system_admin", "office_admin", "regular_user"]
+    role = serializers.ChoiceField(choices=['system_admin', 'office_admin', 'regular_user'])
+    
+    def save(self, current_user):
+        """Atribui o role ao usuário"""
+        user_id = self.validated_data['user_id']
+        role = self.validated_data['role']
+        
+        # Verifica se o usuário atual pode alterar roles
+        if not (current_user.groups.filter(name='system_admin').exists() or 
+               current_user.has_perm('auth.change_user')):
+            raise PermissionError("Você não tem permissão para alterar grupos de usuário")
+        
+        try:
+            target_user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            raise ValueError("Usuário não encontrado")
+        
+        # Remove grupos anteriores
+        target_user.groups.clear()
+        
+        # Adiciona novo grupo se não for regular_user
+        if role != 'regular_user':
+            group, _ = Group.objects.get_or_create(name=role)
+            target_user.groups.add(group)
+        
+        return f"Role '{role}' atribuído ao usuário '{target_user.username}' com sucesso"
+
+@extend_schema_serializer(
+    examples=[
+        OpenApiExample(
+            "Upload de imagem de perfil",
+            description="Arquivo de imagem para upload (JPEG, PNG, WebP até 5MB)",
+            value={
+                "profile_image": "binary_image_data"
+            },
+        )
+    ]
+)
+class ProfileImageUploadSerializer(serializers.Serializer):
+    """
+    Serializer para upload de imagem de perfil
+    """
+    profile_image = serializers.ImageField(
+        required=True,
+        help_text="Imagem de perfil (JPEG, PNG, WebP - máximo 5MB)"
     )
+    
+    def validate_profile_image(self, value):
+        """
+        Valida a imagem usando o serviço S3ImageService
+        """
+        s3_service = S3ImageService()
+        is_valid, error_message = s3_service.validate_image(value)
+        
+        if not is_valid:
+            raise serializers.ValidationError(error_message)
+        
+        return value
+    
+    def save(self, user):
+        """
+        Processa e salva a imagem no S3
+        """
+        try:
+            profile_image = self.validated_data['profile_image']
+            s3_service = S3ImageService()
+            
+            # Get or create profile
+            profile, created = Profile.objects.get_or_create(user=user)
+            
+            # Remove imagem anterior se existir
+            if profile.profile_image:
+                profile.delete_profile_image()
+            
+            # Upload nova imagem
+            success, message, s3_key = s3_service.process_and_upload_profile_image(
+                user.id, profile_image
+            )
+            
+            if not success:
+                raise serializers.ValidationError(f"Erro no upload: {message}")
+            
+            # Atualiza o profile com o novo path
+            profile.profile_image = s3_key
+            profile.save()
+            
+            return profile
+            
+        except serializers.ValidationError:
+            # Re-raise validation errors
+            raise
+        except Exception as e:
+            # Log the full error for debugging
+            import traceback
+            print(f"Erro completo no upload: {traceback.format_exc()}")
+            raise serializers.ValidationError(f"Erro interno no upload: {str(e)}")
 
-
-class AssignUserRoleResponseSerializer(serializers.Serializer):
-    detail = serializers.CharField()
-    user = serializers.CharField()
-    role = serializers.CharField()
+@extend_schema_serializer(
+    examples=[
+        OpenApiExample(
+            "Profile com imagem",
+            value={
+                "id": 1,
+                "username": "joao123",
+                "email": "joao@email.com",
+                "profile": {
+                    "cpf": "12345678901",
+                    "birth": "1990-01-15", 
+                    "phone": "(11) 99999-9999",
+                    "profile_image_url": "https://medicalsan-uploads.s3.us-east-1.amazonaws.com/profiles/user_1/avatar_123.jpg"
+                }
+            }
+        )
+    ]
+)
+class UserWithImageSerializer(serializers.ModelSerializer):
+    """
+    Serializer do usuário incluindo URL da imagem de perfil
+    """
+    profile = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = User
+        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'profile')
+    
+    def get_profile(self, obj):
+        """Retorna dados do perfil incluindo URL da imagem"""
+        try:
+            profile = obj.profile
+            profile_data = {
+                'cpf': profile.cpf,
+                'birth': profile.birth,
+                'phone': profile.phone,
+                'email_confirmed': profile.email_confirmed,
+                'profile_image_url': profile.get_profile_image_url()
+            }
+            return profile_data
+        except Profile.DoesNotExist:
+            return {
+                'cpf': None,
+                'birth': None, 
+                'phone': None,
+                'email_confirmed': False,
+                'profile_image_url': None
+            }

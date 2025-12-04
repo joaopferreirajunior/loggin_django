@@ -3,5 +3,6 @@ from . import views
 
 urlpatterns = [
     #API
-    path("api/v0/", include("users.api.v0.urls")), # APIs do app users
+    path("api/mobile/v0/", include("users.api.mobile.v0.urls")), # APIs do app users
+    path("api/web/v0/", include("users.api.web.v0.urls")), # APIs do app users
 ]

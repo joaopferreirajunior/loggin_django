@@ -1,596 +1,439 @@
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
-from rest_framework import permissions
+from rest_framework import permissions, status, parsers
 from rest_framework.response import Response
-from rest_framework import status
 from rest_framework.views import APIView
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.models import User, Group, Permission
+from rest_framework.decorators import api_view, permission_classes, parser_classes
+from rest_framework.permissions import AllowAny
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.views.decorators.csrf import csrf_exempt
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework.authentication import SessionAuthentication
-from django.core.mail import send_mail
-from django.utils import timezone
-from django.conf import settings
-from django.contrib.auth.hashers import make_password
-from django.shortcuts import redirect
-from django.http import HttpResponseBadRequest
-from datetime import timedelta
-import secrets
-import string
-from .serializers import  (   
-    UserRegisterSerializer,
-    UserSerializer,
-    ProfileSerializer,
-    DetailSerializer,
-    RegisterResponseSerializer,
-    LoginRequestSerializer,
-    LoginResponseSerializer,
-    RecoveryPasswordRequestSerializer,
-    RecoveryPasswordResponseSerializer,
-    ResetPasswordRequestSerializer,
-    ResetPasswordSuccessSerializer,
-    UserPermissionsSerializer,
-    AssignUserRoleRequestSerializer,
-    AssignUserRoleResponseSerializer,
+
+# DRF Spectacular imports
+from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.types import OpenApiTypes
+
+from .serializers import (
+    ProfileImageUploadSerializer, UserWithImageSerializer,
+    UserSerializer, ProfileSerializer, UserPermissionsSerializer, RoleAssignmentSerializer,
+    UserRegisterSerializer
 )
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResponse
 from users.models import Profile
+
+User = get_user_model()
+
+@extend_schema(
+    operation_id="manage_profile_image",
+    summary="Gerenciar imagem de perfil",
+    description="Upload (POST) ou remove (DELETE) imagem de perfil. A imagem será redimensionada automaticamente para 800x800px mantendo proporção.",
+    tags=["User Management"],
+    methods=['POST', 'DELETE'],
+    request={
+        'multipart/form-data': {
+            'type': 'object',
+            'properties': {
+                'profile_image': {
+                    'type': 'string',
+                    'format': 'binary',
+                    'description': 'Arquivo de imagem (JPEG, PNG, WebP - máximo 5MB) - apenas para POST'
+                }
+            },
+            'required': ['profile_image']
+        }
+    },
+    responses={
+        200: {
+            'type': 'object',
+            'properties': {
+                'detail': {'type': 'string', 'example': 'Imagem de perfil atualizada/removida com sucesso'},
+                'profile_image_url': {'type': 'string', 'example': 'https://bucket.s3.region.amazonaws.com/profiles/user_1/avatar.jpg'},
+                'user': UserWithImageSerializer
+            }
+        },
+        400: {
+            'type': 'object',
+            'properties': {
+                'detail': {'type': 'string', 'example': 'Erro de validação da imagem'}
+            }
+        },
+        401: {
+            'type': 'object',
+            'properties': {
+                'detail': {'type': 'string', 'example': 'Token de autenticação necessário'}
+            }
+        }
+    }
+)
+@csrf_exempt
+@api_view(['POST', 'DELETE'])
+@permission_classes([permissions.IsAuthenticated])
+@parser_classes([parsers.MultiPartParser, parsers.FormParser])
+def manage_profile_image(request):
+    """
+    Gerencia upload e remoção da imagem de perfil
+    """
+    if request.method == 'POST':
+        # Upload da imagem
+        serializer = ProfileImageUploadSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            try:
+                # Salva a imagem e atualiza o profile
+                profile = serializer.save(user=request.user)
+                
+                # Retorna dados atualizados do usuário
+                user_serializer = UserWithImageSerializer(request.user)
+                
+                return Response({
+                    'detail': 'Imagem de perfil atualizada com sucesso',
+                    'profile_image_url': profile.get_profile_image_url(),
+                    'user': user_serializer.data
+                }, status=status.HTTP_200_OK)
+                
+            except Exception as e:
+                return Response({
+                    'detail': f'Erro interno ao processar imagem: {str(e)}'
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    elif request.method == 'DELETE':
+        # Remoção da imagem
+        try:
+            profile = request.user.profile
+            
+            if not profile.profile_image:
+                return Response({
+                    'detail': 'Usuário não possui imagem de perfil'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # Remove imagem do S3 e limpa campo
+            success = profile.delete_profile_image()
+            
+            if success:
+                # Retorna dados atualizados do usuário
+                user_serializer = UserWithImageSerializer(request.user)
+                
+                return Response({
+                    'detail': 'Imagem de perfil removida com sucesso',
+                    'user': user_serializer.data
+                }, status=status.HTTP_200_OK)
+            else:
+                return Response({
+                    'detail': 'Erro ao remover imagem do S3'
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                
+        except Profile.DoesNotExist:
+            return Response({
+                'detail': 'Profile do usuário não encontrado'
+            }, status=status.HTTP_404_NOT_FOUND)
+
+@extend_schema(
+    operation_id="get_current_user",
+    summary="Obter dados do usuário atual",
+    description="Retorna dados básicos do usuário autenticado.",
+    tags=["User Management"],
+    responses={200: UserSerializer}
+)
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def get_current_user(request):
+    """Retorna dados básicos do usuário atual"""
+    serializer = UserSerializer(request.user)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+@extend_schema(
+    operation_id="get_current_user_profile", 
+    summary="Obter perfil completo do usuário",
+    description="Retorna dados completos do perfil do usuário autenticado.",
+    tags=["User Management"],
+    responses={200: ProfileSerializer}
+)
+@api_view(['GET', 'PATCH'])
+@permission_classes([permissions.IsAuthenticated])
+def get_current_user_profile(request):
+    """Retorna ou atualiza dados do perfil do usuário atual"""
+    if request.method == 'GET':
+        try:
+            profile = request.user.profile
+            serializer = ProfileSerializer(profile)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Profile.DoesNotExist:
+            # Create profile if it doesn't exist
+            profile = Profile.objects.create(user=request.user)
+            serializer = ProfileSerializer(profile)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    elif request.method == 'PATCH':
+        try:
+            profile = request.user.profile
+        except Profile.DoesNotExist:
+            profile = Profile.objects.create(user=request.user)
+        
+        serializer = ProfileSerializer(profile, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@extend_schema(
+    operation_id="get_user_permissions",
+    summary="Obter permissões do usuário",
+    description="Retorna permissões e grupos do usuário autenticado.",
+    tags=["User Management"],
+    responses={200: UserPermissionsSerializer}
+)
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def get_user_permissions(request):
+    """Retorna permissões do usuário atual"""
+    serializer = UserPermissionsSerializer(request.user)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+@extend_schema(
+    operation_id="assign_role",
+    summary="Atribuir role ao usuário",
+    description="Permite alterar o grupo/role de um usuário (apenas para administradores).",
+    tags=["User Management"],
+    request=RoleAssignmentSerializer,
+    responses={200: {"type": "object", "properties": {"detail": {"type": "string"}}}}
+)
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def assign_role(request):
+    """Atribui role a um usuário (apenas administradores)"""
+    serializer = RoleAssignmentSerializer(data=request.data)
+    if serializer.is_valid():
+        try:
+            result = serializer.save(current_user=request.user)
+            return Response({"detail": result}, status=status.HTTP_200_OK)
+        except PermissionError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_403_FORBIDDEN)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# Views de autenticação para web
 
 @extend_schema(
     tags=["Web - Auth"],
-    request=UserRegisterSerializer,
-    responses={
-        201: RegisterResponseSerializer,
-        400: OpenApiResponse(
-            response=DetailSerializer,
-            description="Erros de validação do cadastro",
-        ),
-        500: OpenApiResponse(
-            response=DetailSerializer,
-            description="Erro interno do servidor",
-        ),
-    },
+    responses={200: {"type": "object", "properties": {"detail": {"type": "string"}}}}
 )
+@csrf_exempt
 @api_view(["POST"])
 @permission_classes([AllowAny])
-@csrf_exempt
 def register(request):
+    """Cadastro de novos usuários na web"""
     try:
         serializer = UserRegisterSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
-            print(f"DEBUG: Usuário {user.username} criado com sucesso")
             
-            # Gera tokens JWT para o novo usuário
-            refresh = RefreshToken.for_user(user)
-            user_serializer = UserSerializer(user)
-            
+            # Para web, retorna sucesso simples
             return Response({
                 "detail": "Conta criada com sucesso!",
-                "user": user_serializer.data,
-                "refresh": str(refresh),
-                "access": str(refresh.access_token),
+                "user_id": user.id
             }, status=status.HTTP_201_CREATED)
         else:
-            print(f"DEBUG: Erros de validação no registro: {serializer.errors}")
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
-        print(f"DEBUG: Erro interno no registro: {str(e)}")
-        import traceback
-        traceback.print_exc()
         return Response(
-            {"detail": f"Erro interno do servidor: {str(e)}"}, 
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            {"detail": f"Erro interno do servidor: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
-    
 
 @extend_schema(
     tags=["Web - Auth"],
-    request=LoginRequestSerializer,
-    responses={
-        200: LoginResponseSerializer,
-        401: OpenApiResponse(
-            response=DetailSerializer,
-            description="Credenciais inválidas ou email não encontrado",
-        ),
-    },
+    responses={200: {"type": "object", "properties": {"detail": {"type": "string"}}}}
 )
 @api_view(["POST"])
-@permission_classes([AllowAny])
-@csrf_exempt
-def login_view(request):
-    username_or_email = request.data.get("username")
-    password = request.data.get("password")
-    
-    print(f"DEBUG: Tentativa de login com: '{username_or_email}'")
-    print(f"DEBUG: Request headers: {request.headers}")
-
-    # Primeiro, verifica se é um email válido
-    if "@" in username_or_email:
-        # É um email, tenta encontrar o usuário por email
-        try:
-            user_obj = User.objects.get(email=username_or_email)
-            username = user_obj.username
-            print(f"DEBUG: Email '{username_or_email}' encontrado, username: '{username}'")
-        except User.DoesNotExist:
-            print(f"DEBUG: Email '{username_or_email}' não encontrado")
-            return Response({"detail": "Email não encontrado"}, status=status.HTTP_401_UNAUTHORIZED)
-    else:
-        # É um username
-        username = username_or_email
-        print(f"DEBUG: Usando como username: '{username}'")
-
-    user = authenticate(username=username, password=password)
-    print(f"DEBUG: Resultado da autenticação: {user}")
-    
-    if user is not None:
-        login(request, user)
-        print(f"DEBUG: Login realizado com sucesso para usuário: {user.username}")
-        
-        # Gera tokens JWT
-        refresh = RefreshToken.for_user(user)
-        
-        # Retorna os dados completos do usuário com tokens
-        serializer = UserSerializer(user)
-        return Response({
-            "user": serializer.data,
-            "refresh": str(refresh),
-            "access": str(refresh.access_token),
-        }, status=status.HTTP_200_OK)
-    else:
-        print(f"DEBUG: Falha na autenticação para username: '{username}'")
-        return Response({"detail": "Credenciais inválidas"}, status=status.HTTP_401_UNAUTHORIZED)
-
-@extend_schema(
-    tags=["Web - Auth"],
-    request=None,  # <-- isso é o que faltava
-    responses={
-        200: DetailSerializer,
-    },
-)
-@api_view(["POST"])
-@csrf_exempt
 def logout_view(request):
+    """Logout do usuário na web"""
+    from django.contrib.auth import logout
     logout(request)
     return Response({"detail": "Logout realizado com sucesso"}, status=status.HTTP_200_OK)
 
 @extend_schema(
     tags=["Web - Auth"],
-    request=RecoveryPasswordRequestSerializer,
-    responses={
-        200: OpenApiResponse(
-            response=RecoveryPasswordResponseSerializer,
-            description=(
-                "Mensagem genérica de sucesso. "
-                "Em ambiente de desenvolvimento pode retornar test_link e test_token."
-            ),
-        ),
-        400: OpenApiResponse(
-            response=DetailSerializer,
-            description="Email é obrigatório",
-        ),
-        500: OpenApiResponse(
-            response=DetailSerializer,
-            description="Erro interno do servidor",
-        ),
-    },
+    responses={200: {"type": "object", "properties": {"detail": {"type": "string"}}}}
 )
+@csrf_exempt
 @api_view(["POST"])
 @permission_classes([AllowAny])
+def login_view(request):
+    """Login de usuários na web"""
+    from django.contrib.auth import authenticate, login
+    from rest_framework_simplejwt.tokens import RefreshToken
+    
+    username_or_email = request.data.get("username")
+    password = request.data.get("password")
+    
+    # Validações básicas
+    if not username_or_email:
+        return Response(
+            {"detail": "Username ou email é obrigatório"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    
+    if not password:
+        return Response(
+            {"detail": "Senha é obrigatória"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Verifica se é email ou username
+    if "@" in username_or_email:
+        try:
+            user_obj = User.objects.get(email=username_or_email)
+            username = user_obj.username
+        except User.DoesNotExist:
+            return Response(
+                {"detail": "Email não encontrado"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+    else:
+        username = username_or_email
+
+    user = authenticate(username=username, password=password)
+
+    if user is not None:
+        login(request, user)
+        
+        # Gera tokens JWT
+        refresh = RefreshToken.for_user(user)
+        
+        return Response({
+            "detail": "Login realizado com sucesso",
+            "user": UserSerializer(user).data,
+            "refresh": str(refresh),
+            "access": str(refresh.access_token),
+        }, status=status.HTTP_200_OK)
+    else:
+        return Response(
+            {"detail": "Credenciais inválidas"},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
+
+@extend_schema(
+    tags=["Web - Auth"],
+    responses={200: {"type": "object", "properties": {"detail": {"type": "string"}}}}
+)
 @csrf_exempt
+@api_view(["POST"])
+@permission_classes([AllowAny])
 def recovery_password(request):
-    """
-    Endpoint para solicitar recuperação de senha via email.
-    Recebe email do usuário e envia token de recuperação.
-    """
+    """Recuperação de senha por email"""
     email = request.data.get("email")
     
     if not email:
         return Response(
-            {"detail": "Email é obrigatório"}, 
-            status=status.HTTP_400_BAD_REQUEST
+            {"detail": "Email é obrigatório"},
+            status=status.HTTP_400_BAD_REQUEST,
         )
-    
-    print(f"DEBUG: Solicitação de recuperação de senha para: {email}")
-    
+
     try:
-        # Busca o usuário pelo email
         user = User.objects.get(email=email)
-        print(f"DEBUG: Usuário encontrado: {user.username}")
-        
-        # Garante que o profile existe
         profile, created = Profile.objects.get_or_create(user=user)
-        if created:
-            print(f"DEBUG: Profile criado para usuário: {user.username}")
         
-        # Gera token de recuperação (string aleatória segura)
-        recovery_token = generate_recovery_token()
-        print(f"DEBUG: Token gerado: {recovery_token[:10]}...")
+        # Gera token de recuperação
+        import secrets, string
+        alphabet = string.ascii_letters + string.digits
+        recovery_token = "".join(secrets.choice(alphabet) for _ in range(32))
         
-        # Salva o token e timestamp no profile
+        # Salva o token
+        from django.utils import timezone
         profile.recovery_token = recovery_token
         profile.recovery_token_sent_at = timezone.now()
         profile.save()
         
-        # Envia email de recuperação
-        try:
-            send_recovery_email(user, email, recovery_token)
-            print(f"DEBUG: Email de recuperação enviado para: {email}")
-        except Exception as email_error:
-            print(f"DEBUG: Erro ao enviar email: {email_error}")
-            # Mesmo se o email falhar, não revelamos isso ao usuário por segurança
-        
-        # Para fins de teste, retorna o link de validação
-        validation_link = f"{getattr(settings, 'FRONTEND_URL', 'http://localhost:8000')}/api/web/v0/validatetoken/?token={recovery_token}"
-        
-        return Response(
-            {
-                "detail": f"Se o email {email} estiver registrado, você receberá instruções para recuperação de senha.",
-                "test_link": validation_link,  # APENAS PARA DESENVOLVIMENTO
-                "test_token": recovery_token   # APENAS PARA DESENVOLVIMENTO
-            }, 
-            status=status.HTTP_200_OK
-        )
-        
+        # Envia email (simulado)
+        return Response({
+            "detail": f"Se o email {email} estiver registrado, você receberá instruções para recuperação de senha.",
+            "test_token": recovery_token  # Apenas para desenvolvimento
+        }, status=status.HTTP_200_OK)
+
     except User.DoesNotExist:
-        print(f"DEBUG: Email não encontrado: {email}")
-        # Por segurança, sempre retorna a mesma mensagem
-        return Response(
-            {"detail": f"Se o email {email} estiver registrado, você receberá instruções para recuperação de senha."}, 
-            status=status.HTTP_200_OK
-        )
-    except Exception as e:
-        print(f"DEBUG: Erro interno na recuperação: {e}")
-        return Response(
-            {"detail": "Erro interno do servidor"}, 
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
-
-def generate_recovery_token():
-    """Gera token seguro de 32 caracteres para recuperação de senha"""
-    alphabet = string.ascii_letters + string.digits
-    return ''.join(secrets.choice(alphabet) for _ in range(32))
-
-def send_recovery_email(user, email, token):
-    """Envia email com link de recuperação de senha"""
-    subject = "Recuperação de Senha - Medical San"
-    
-    # URL para validar token (que redirecionará para reset se válido)
-    validate_url = f"{getattr(settings, 'FRONTEND_URL', 'http://localhost:8000')}/api/web/v0/validatetoken/?token={token}"
-    
-    message = f"""
-    Olá {user.username},
-
-    Você solicitou a recuperação da sua senha.
-
-    Clique no link abaixo para redefinir sua senha:
-    {validate_url}
-
-    Este link é válido por 24 horas.
-
-    Se você não solicitou esta recuperação, ignore este email.
-
-    Atenciosamente,
-    Equipe Medical San
-    """
-    
-    # Envia o email
-    send_mail(
-        subject=subject,
-        message=message,
-        from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@medicalsan.com'),
-        recipient_list=[email],
-        fail_silently=False,  # Para debug, depois pode mudar para True
-    )
-
+        # Retorna mesmo resultado por segurança
+        return Response({
+            "detail": f"Se o email {email} estiver registrado, você receberá instruções para recuperação de senha."
+        }, status=status.HTTP_200_OK)
 
 @extend_schema(
     tags=["Web - Auth"],
-    request=ResetPasswordRequestSerializer,
-    responses={
-        200: ResetPasswordSuccessSerializer,
-        400: OpenApiResponse(
-            response=DetailSerializer,
-            description=(
-                "Token inválido/expirado ou problemas como senha curta, "
-                "token ausente, etc."
-            ),
-        ),
-        500: OpenApiResponse(
-            response=DetailSerializer,
-            description="Erro interno do servidor",
-        ),
-    },
+    responses={200: {"type": "object", "properties": {"detail": {"type": "string"}}}}
 )
+@csrf_exempt
 @api_view(["POST"])
 @permission_classes([AllowAny])
-@csrf_exempt
 def reset_password(request):
-    """
-    Endpoint para resetar senha usando token de recuperação.
-    Recebe token e nova senha, valida e atualiza a senha do usuário.
-    """
+    """Reset de senha usando token"""
     token = request.data.get("token")
     new_password = request.data.get("password")
-    
-    if not token:
+
+    if not token or not new_password:
         return Response(
-            {"detail": "Token é obrigatório"}, 
-            status=status.HTTP_400_BAD_REQUEST
+            {"detail": "Token e nova senha são obrigatórios"},
+            status=status.HTTP_400_BAD_REQUEST,
         )
-    
-    if not new_password:
-        return Response(
-            {"detail": "Nova senha é obrigatória"}, 
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    
+
     if len(new_password) < 8:
         return Response(
-            {"detail": "A senha deve ter pelo menos 8 caracteres"}, 
-            status=status.HTTP_400_BAD_REQUEST
+            {"detail": "A senha deve ter pelo menos 8 caracteres"},
+            status=status.HTTP_400_BAD_REQUEST,
         )
-    
-    print(f"DEBUG: Tentativa de reset com token: {token[:10]}...")
-    
+
     try:
-        # Busca o profile com o token
         profile = Profile.objects.get(recovery_token=token)
-        user = profile.user
         
-        print(f"DEBUG: Token encontrado para usuário: {user.username}")
-        
-        # Verifica se o token não expirou (24 horas)
-        if not is_token_valid(profile):
-            print(f"DEBUG: Token expirado para usuário: {user.username}")
+        # Verifica se token não expirou (24h)
+        from django.utils import timezone
+        from datetime import timedelta
+        if profile.recovery_token_sent_at and (timezone.now() - profile.recovery_token_sent_at) > timedelta(hours=24):
             return Response(
-                {"detail": "Token de recuperação expirado. Solicite uma nova recuperação de senha."}, 
-                status=status.HTTP_400_BAD_REQUEST
+                {"detail": "Token expirado"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
         
-        # Atualiza a senha do usuário
-        user.set_password(new_password)
-        user.save()
+        # Atualiza senha
+        profile.user.set_password(new_password)
+        profile.user.save()
         
-        # Limpa o token de recuperação (uso único)
+        # Limpa token
         profile.recovery_token = None
         profile.recovery_token_sent_at = None
         profile.save()
         
-        print(f"DEBUG: Senha alterada com sucesso para usuário: {user.username}")
-        
-        return Response(
-            {"detail": "Senha alterada com sucesso! Você pode fazer login com sua nova senha."}, 
-            status=status.HTTP_200_OK
-        )
+        return Response({
+            "detail": "Senha alterada com sucesso!"
+        }, status=status.HTTP_200_OK)
         
     except Profile.DoesNotExist:
-        print(f"DEBUG: Token não encontrado: {token[:10]}...")
         return Response(
-            {"detail": "Token de recuperação inválido ou expirado"}, 
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    except Exception as e:
-        print(f"DEBUG: Erro interno no reset de senha: {e}")
-        return Response(
-            {"detail": "Erro interno do servidor"}, 
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            {"detail": "Token inválido"},
+            status=status.HTTP_400_BAD_REQUEST,
         )
 
-def is_token_valid(profile):
-    """
-    Verifica se o token de recuperação ainda é válido (não expirou).
-    Token é válido por 24 horas após o envio.
-    """
-    if not profile.recovery_token or not profile.recovery_token_sent_at:
-        return False
-    
-    # Calcula a diferença de tempo
-    now = timezone.now()
-    token_age = now - profile.recovery_token_sent_at
-    
-    # Token válido por 24 horas
-    return token_age < timedelta(hours=24)
-
-@extend_schema(exclude=True)
+@extend_schema(
+    tags=["Web - Auth"],
+    responses={200: {"type": "object", "properties": {"valid": {"type": "boolean"}}}}
+)
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def validate_token(request):
-    """
-    Endpoint para validar token de recuperação via GET.
-    GET /api/web/v0/validatetoken/?token=abc123token
-    
-    Se token válido: redireciona para /reset-password/?token=abc123token
-    Se token inválido: redireciona para /recovery-password/ com erro
-    """
+    """Valida token de recuperação"""
     token = request.GET.get("token")
     
     if not token:
-        # Redireciona para página de recuperação com erro
-        return redirect(f'/recovery-password/?error=token_missing')
-    
+        return Response({"valid": False}, status=status.HTTP_400_BAD_REQUEST)
+
     try:
         profile = Profile.objects.get(recovery_token=token)
         
-        if is_token_valid(profile):
-            # Token válido - redireciona para página de reset com token
-            print(f"DEBUG: Token válido para usuário: {profile.user.username}")
-            return redirect(f'/reset-password/?token={token}')
-        else:
-            # Token expirado
-            print(f"DEBUG: Token expirado para usuário: {profile.user.username}")
-            return redirect(f'/recovery-password/?error=token_expired')
-            
+        # Verifica se token não expirou
+        from django.utils import timezone
+        from datetime import timedelta
+        if profile.recovery_token_sent_at and (timezone.now() - profile.recovery_token_sent_at) > timedelta(hours=24):
+            return Response({"valid": False}, status=status.HTTP_400_BAD_REQUEST)
+        
+        return Response({"valid": True}, status=status.HTTP_200_OK)
+        
     except Profile.DoesNotExist:
-        # Token não encontrado
-        print(f"DEBUG: Token não encontrado: {token[:10]}...")
-        return redirect(f'/recovery-password/?error=token_invalid')
-    except Exception as e:
-        print(f"DEBUG: Erro na validação do token: {e}")
-        return redirect(f'/recovery-password/?error=server_error')
-
-
-#Retorna os dados completos do próprio usuário logado
-@extend_schema_view(
-    get=extend_schema(
-        tags=["Web - User"],
-        responses={200: ProfileSerializer, 500: DetailSerializer},
-    ),
-    patch=extend_schema(
-        tags=["Web - User"],
-        request=ProfileSerializer,
-        responses={200: ProfileSerializer, 500: DetailSerializer},
-    ),
-)
-class MeProfileView(APIView):
-    authentication_classes = [JWTAuthentication, SessionAuthentication]
-    permission_classes = [permissions.IsAuthenticated]
-    serializer_class = ProfileSerializer  # ajuda o drf-spectacular
-
-    def patch(self, request):
-        """
-        Atualiza parcialmente os campos do perfil do próprio usuário (cpf, birth, phone).
-        Exemplo JSON:
-        { "cpf": "123.456.789-10", "phone": "+55 16 99999-0000" }
-        """
-        try:
-            # Garante que o profile existe
-            profile, created = Profile.objects.get_or_create(user=request.user)
-            if created:
-                print(f"DEBUG: Profile criado para usuário: {request.user.username}")
-                
-            serializer = ProfileSerializer(profile, data=request.data, partial=True)
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        except Exception as e:
-            print(f"DEBUG: Erro em MeProfileView.patch: {e}")
-            return Response({"detail": f"Erro ao atualizar perfil: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
-    def get(self, request):
-        """Retorna os dados do perfil do próprio usuário logado."""
-        try:
-            # Garante que o profile existe
-            profile, created = Profile.objects.get_or_create(user=request.user)
-            if created:
-                print(f"DEBUG: Profile criado para usuário: {request.user.username}")
-            
-            serializer = ProfileSerializer(profile)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        except Exception as e:
-            print(f"DEBUG: Erro em MeProfileView.get: {e}")
-            return Response({"detail": f"Erro ao buscar perfil do usuário: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
-#Retorna os dados de auth_user do próprio usuário logado
-@extend_schema_view(
-    get=extend_schema(
-        tags=["Web - User"],
-        responses={200: UserSerializer, 500: DetailSerializer},
-    ),
-)
-class MeView(APIView):
-    authentication_classes = [JWTAuthentication, SessionAuthentication]
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get(self, request):
-        """Retorna os dados do próprio usuário logado."""
-        try:
-            serializer = UserSerializer(request.user)
-            return Response(serializer.data)
-        except Exception as e:
-            print(f"DEBUG: Erro em MeView.get: {e}")
-            return Response({"detail": f"Erro ao buscar dados do usuário: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-#View para gerenciar permissões e grupos de usuário
-@extend_schema_view(
-    get=extend_schema(
-        tags=["Web - User"],
-        responses={200: UserPermissionsSerializer, 500: DetailSerializer},
-    ),
-)
-class UserPermissionsView(APIView):
-    authentication_classes = [JWTAuthentication, SessionAuthentication]
-    permission_classes = [permissions.IsAuthenticated]
-    
-    def get(self, request):
-        """Retorna as permissões e grupo do usuário atual"""
-        try:
-            user = request.user
-            profile = user.profile
-            
-            # Dados do usuário e permissões
-            user_data = {
-                "user_role": profile.get_user_role(),
-                "is_system_admin": profile.is_system_admin(),
-                "is_office_admin": profile.is_office_admin(),
-                "is_regular_user": profile.is_regular_user(),
-                "groups": [group.name for group in user.groups.all()],
-                "permissions": list(user.get_all_permissions()),
-                "can_manage_users": profile.can_manage_users(),
-                "can_view_all_users": profile.can_view_all_users(),
-                "can_access_admin": profile.can_access_admin(),
-            }
-            
-            return Response(user_data, status=status.HTTP_200_OK)
-            
-        except Exception as e:
-            print(f"DEBUG: Erro em UserPermissionsView.get: {e}")
-            return Response({"detail": f"Erro ao buscar permissões: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-@extend_schema_view(
-    post=extend_schema(
-        tags=["Web - User"],
-        request=AssignUserRoleRequestSerializer,
-        responses={
-            200: AssignUserRoleResponseSerializer,
-            400: DetailSerializer,
-            403: DetailSerializer,
-            404: DetailSerializer,
-            500: DetailSerializer,
-        },
-    ),
-)
-class AssignUserRoleView(APIView):
-    authentication_classes = [JWTAuthentication, SessionAuthentication]
-    permission_classes = [permissions.IsAuthenticated]
-    
-    def post(self, request):
-        """Atribui um papel a um usuário (apenas system_admin pode fazer isso)"""
-        try:
-            # Verificar se o usuário atual tem permissão
-            if not request.user.has_perm('auth.can_manage_permissions'):
-                return Response({"detail": "Sem permissão para gerenciar papéis de usuários"}, status=status.HTTP_403_FORBIDDEN)
-            
-            user_id = request.data.get('user_id')
-            role = request.data.get('role')
-            
-            if not user_id or not role:
-                return Response({"detail": "user_id e role são obrigatórios"}, status=status.HTTP_400_BAD_REQUEST)
-            
-            if role not in ['system_admin', 'office_admin', 'regular_user']:
-                return Response({"detail": "Papel inválido"}, status=status.HTTP_400_BAD_REQUEST)
-            
-            # Buscar o usuário
-            try:
-                target_user = User.objects.get(id=user_id)
-            except User.DoesNotExist:
-                return Response({"detail": "Usuário não encontrado"}, status=status.HTTP_404_NOT_FOUND)
-            
-            # Atribuir o papel
-            success = Profile.assign_role(target_user, role)
-            
-            if success:
-                return Response({
-                    "detail": f"Papel {role} atribuído com sucesso ao usuário {target_user.username}",
-                    "user": target_user.username,
-                    "role": role
-                }, status=status.HTTP_200_OK)
-            else:
-                return Response({"detail": "Erro ao atribuir papel"}, status=status.HTTP_400_BAD_REQUEST)
-                
-        except Exception as e:
-            print(f"DEBUG: Erro em AssignUserRoleView.post: {e}")
-            return Response({"detail": f"Erro ao atribuir papel: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({"valid": False}, status=status.HTTP_400_BAD_REQUEST)

@@ -22,7 +22,7 @@ def login_page(request):
             api_url = request.build_absolute_uri(reverse("api_web_login"))
         except:
             # fallback para URL hardcoded se reverse falhar
-            api_url = request.build_absolute_uri("/api/web/v0/login/")
+            api_url = request.build_absolute_uri("/users/api/web/v0/login/")
 
         try:
             resp = requests.post(
@@ -68,7 +68,7 @@ def register_page(request):
             api_url = request.build_absolute_uri(reverse("api_web_register"))
         except:
             # fallback para URL hardcoded se reverse falhar
-            api_url = request.build_absolute_uri("/api/web/v0/register/")
+            api_url = request.build_absolute_uri("/users/api/web/v0/register/")
 
         try:
             payload = {"username": username, "email": email, "password": password}

@@ -264,7 +264,7 @@
             async function loadUserData() {
                 try {
                     // Busca dados básicos do usuário usando autenticação JWT
-                    const userResponse = await makeAuthenticatedRequest('/api/web/v0/me/', {
+                    const userResponse = await makeAuthenticatedRequest('/users/api/web/v0/me/', {
                         method: 'GET'
                     });
 
@@ -275,7 +275,7 @@
                     const userData = await userResponse.json();
 
                     // Busca dados do perfil usando autenticação JWT
-                    const profileResponse = await makeAuthenticatedRequest('/api/web/v0/me/profile/', {
+                    const profileResponse = await makeAuthenticatedRequest('/users/api/web/v0/me/profile/', {
                         method: 'GET'
                     });
 
@@ -288,7 +288,7 @@
                     // Busca dados de permissões para obter o grupo
                     let userRole = 'Não informado';
                     try {
-                        const permissionsResponse = await makeAuthenticatedRequest('/api/web/v0/me/permissions/', {
+                        const permissionsResponse = await makeAuthenticatedRequest('/users/api/web/v0/me/permissions/', {
                             method: 'GET'
                         });
 
