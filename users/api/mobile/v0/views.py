@@ -11,12 +11,15 @@ from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework_simplejwt.views import TokenRefreshView
 from rest_framework.authentication import SessionAuthentication
 from django.core.mail import send_mail
 from django.utils import timezone
 from django.conf import settings
 from django.shortcuts import redirect
 from datetime import timedelta
+from drf_spectacular.utils import extend_schema
+from users.models import Profile
 import secrets
 import string
 
@@ -748,3 +751,210 @@ class AssignUserRoleView(APIView):
                 {"detail": f"Erro ao atribuir papel: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+@extend_schema(
+    summary="Upload de imagem de perfil",
+    description="Faz upload de uma nova imagem de perfil para mobile. A imagem será redimensionada automaticamente.",
+    tags=["Mobile - User"],
+    request={
+        'multipart/form-data': {
+            'type': 'object',
+            'properties': {
+                'profile_image': {
+                    'type': 'string',
+                    'format': 'binary',
+                    'description': 'Arquivo de imagem (JPEG, PNG, WebP - máximo 5MB)'
+                }
+            },
+            'required': ['profile_image']
+        }
+    },
+    responses={
+        200: {
+            'type': 'object',
+            'properties': {
+                'detail': {'type': 'string'},
+                'profile_image_url': {'type': 'string'},
+                'user': {'type': 'object'}
+            }
+        },
+        400: DetailSerializer,
+        401: DetailSerializer
+    }
+)
+class MobileProfileImageUploadView(APIView):
+    """
+    Upload de imagem de perfil para mobile
+    """
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def post(self, request):
+        """Upload da imagem"""
+        from .serializers import MobileProfileImageUploadSerializer, MobileUserWithImageSerializer
+        
+        serializer = MobileProfileImageUploadSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            try:
+                # Salva a imagem e atualiza o profile
+                profile = serializer.save(user=request.user)
+                
+                # Retorna dados atualizados do usuário
+                user_serializer = MobileUserWithImageSerializer(request.user)
+                
+                return Response({
+                    'detail': 'Imagem de perfil atualizada com sucesso',
+                    'profile_image_url': profile.get_profile_image_url(),
+                    'user': user_serializer.data
+                }, status=status.HTTP_200_OK)
+                
+            except Exception as e:
+                return Response({
+                    'detail': f'Erro interno ao processar imagem: {str(e)}'
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@extend_schema(
+    summary="Remover imagem de perfil",
+    description="Remove a imagem de perfil atual do usuário mobile",
+    tags=["Mobile - User"],
+    responses={
+        200: {
+            'type': 'object',
+            'properties': {
+                'detail': {'type': 'string'},
+                'user': {'type': 'object'}
+            }
+        },
+        404: DetailSerializer
+    }
+)
+class MobileProfileImageDeleteView(APIView):
+    """
+    Remoção de imagem de perfil para mobile
+    """
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def delete(self, request):
+        """Remove a imagem"""
+        from .serializers import MobileUserWithImageSerializer
+        
+        try:
+            profile = request.user.profile
+            
+            if not profile.profile_image:
+                return Response({
+                    'detail': 'Usuário não possui imagem de perfil'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # Remove imagem do S3 e limpa campo
+            success = profile.delete_profile_image()
+            
+            if success:
+                # Retorna dados atualizados do usuário
+                user_serializer = MobileUserWithImageSerializer(request.user)
+                
+                return Response({
+                    'detail': 'Imagem de perfil removida com sucesso',
+                    'user': user_serializer.data
+                }, status=status.HTTP_200_OK)
+            else:
+                return Response({
+                    'detail': 'Erro ao remover imagem do S3'
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                
+        except Profile.DoesNotExist:
+            return Response({
+                'detail': 'Profile do usuário não encontrado'
+            }, status=status.HTTP_404_NOT_FOUND)
+
+
+@extend_schema(
+    summary="Servir imagem de perfil",
+    description="Serve a imagem de perfil como proxy do S3 para mobile",
+    tags=["Mobile - User"],
+    responses={
+        200: {
+            'description': 'Imagem servida com sucesso',
+            'content': {
+                'image/jpeg': {},
+                'image/png': {},
+                'image/webp': {}
+            }
+        },
+        404: DetailSerializer
+    }
+)
+class MobileServeProfileImageView(APIView):
+    """
+    Serve imagem de perfil como proxy do S3 para mobile
+    """
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request, user_id):
+        """Serve a imagem"""
+        try:
+            from django.http import HttpResponse
+            from users.services import S3ImageService
+            import mimetypes
+            
+            # Buscar profile do usuário
+            profile = Profile.objects.get(user_id=user_id)
+            
+            if not profile.profile_image:
+                return Response(
+                    {"detail": "Usuário não possui imagem de perfil"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Baixar imagem do S3
+            s3_service = S3ImageService()
+            
+            try:
+                response = s3_service.s3_client.get_object(
+                    Bucket=s3_service.bucket_name,
+                    Key=profile.profile_image
+                )
+                
+                # Determinar content type baseado na extensão
+                content_type, _ = mimetypes.guess_type(profile.profile_image)
+                if not content_type:
+                    content_type = 'image/jpeg'  # fallback
+                
+                # Retornar imagem como resposta HTTP
+                image_data = response['Body'].read()
+                
+                http_response = HttpResponse(image_data, content_type=content_type)
+                http_response['Cache-Control'] = 'public, max-age=3600'  # Cache de 1 hora
+                http_response['Content-Length'] = len(image_data)
+                
+                return http_response
+                
+            except Exception as e:
+                return Response(
+                    {"detail": f"Erro ao buscar imagem no S3: {str(e)}"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+            
+        except Profile.DoesNotExist:
+            return Response(
+                {"detail": "Usuário não encontrado"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+
+@extend_schema(
+    summary="Renovar token JWT",
+    description="Renova o token de acesso usando o refresh token para aplicação mobile",
+    tags=["Mobile - User"],
+    responses={200: {"type": "object", "properties": {"access": {"type": "string"}}}}
+)
+class MobileTokenRefreshView(TokenRefreshView):
+    """View customizada para refresh token com documentação adequada"""
+    pass

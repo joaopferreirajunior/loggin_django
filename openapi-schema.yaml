@@ -317,11 +317,11 @@ paths:
   /users/api/mobile/v0/token/refresh/:
     post:
       operationId: users_api_mobile_v0_token_refresh_create
-      description: |-
-        Takes a refresh type JSON web token and returns an access type JSON web
-        token if the refresh token is valid.
+      description: Renova o token de acesso usando o refresh token para aplicação
+        mobile
+      summary: Renovar token JWT
       tags:
-      - users
+      - Mobile - User
       requestBody:
         content:
           application/json:
@@ -335,7 +335,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TokenRefresh'
+                type: object
+                properties:
+                  access:
+                    type: string
           description: ''
   /users/api/web/v0/assign-role/:
     post:
@@ -694,11 +697,11 @@ paths:
   /users/api/web/v0/token/refresh/:
     post:
       operationId: users_api_web_v0_token_refresh_create
-      description: |-
-        Takes a refresh type JSON web token and returns an access type JSON web
-        token if the refresh token is valid.
+      description: Renova o token de acesso usando o refresh token para aplicação
+        web
+      summary: Renovar token JWT
       tags:
-      - users
+      - Web - User
       requestBody:
         content:
           application/json:
@@ -712,7 +715,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TokenRefresh'
+                type: object
+                properties:
+                  access:
+                    type: string
           description: ''
   /users/api/web/v0/validatetoken/:
     get:
@@ -1222,14 +1228,6 @@ components:
         * `system_admin` - system_admin
         * `office_admin` - office_admin
         * `regular_user` - regular_user
-    TokenRefresh:
-      type: object
-      properties:
-        access:
-          type: string
-          readOnly: true
-      required:
-      - access
     TokenRefreshRequest:
       type: object
       properties:
@@ -1375,8 +1373,6 @@ components:
       scheme: bearer
       bearerFormat: JWT
 servers:
-- url: http://localhost:8000
-  description: Development Server
 - url: http://3.236.36.55:8000
   description: Production Server (AWS)
 tags:
@@ -1390,5 +1386,3 @@ tags:
     de senha)
 - name: Mobile - User
   description: Endpoints de gerenciamento de usuários para aplicação mobile
-- name: User Management
-  description: Endpoints gerais para gerenciamento de perfis e upload de imagens

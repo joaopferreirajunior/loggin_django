@@ -65,10 +65,6 @@ SPECTACULAR_SETTINGS = {
     },
     "SERVERS": [
         {
-            "url": "http://localhost:8000",
-            "description": "Development Server",
-        },
-        {
             "url": "http://3.236.36.55:8000",
             "description": "Production Server (AWS)",
         },
@@ -89,10 +85,6 @@ SPECTACULAR_SETTINGS = {
         {
             "name": "Mobile - User",
             "description": "Endpoints de gerenciamento de usuários para aplicação mobile",
-        },
-        {
-            "name": "User Management",
-            "description": "Endpoints gerais para gerenciamento de perfis e upload de imagens",
         },
     ],
     "SECURITY_SCHEMES": {

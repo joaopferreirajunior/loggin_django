@@ -1,6 +1,5 @@
 from django.urls import path
 from . import views
-from rest_framework_simplejwt.views import TokenRefreshView
 
 urlpatterns = [
     path('login/', views.login_view, name='api_web_login'),
@@ -9,7 +8,7 @@ urlpatterns = [
     path('recoverypassword/', views.recovery_password, name='api_web_recovery_password'),
     path('resetpassword/', views.reset_password, name='api_web_reset_password'),
     path('validatetoken/', views.validate_token, name='api_web_validate_token'),
-    path('token/refresh/', TokenRefreshView.as_view(), name='api_web_token_refresh'),
+    path('token/refresh/', views.WebTokenRefreshView.as_view(), name='api_web_token_refresh'),
     
     # User data endpoints
     path("me/", views.get_current_user, name="api_web_current_user"),  # GET - dados básicos do usuário

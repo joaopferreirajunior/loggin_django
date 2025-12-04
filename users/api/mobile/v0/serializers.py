@@ -209,3 +209,99 @@ class AssignUserRoleResponseSerializer(serializers.Serializer):
     detail = serializers.CharField()
     user = serializers.CharField()
     role = serializers.CharField()
+
+
+@extend_schema_serializer(component_name="MobileProfileImageUpload")
+class MobileProfileImageUploadSerializer(serializers.Serializer):
+    """
+    Serializer para upload de imagem de perfil mobile
+    """
+    profile_image = serializers.ImageField(
+        required=True,
+        help_text="Imagem de perfil (JPEG, PNG, WebP - máximo 5MB)"
+    )
+    
+    def validate_profile_image(self, value):
+        """
+        Valida a imagem usando o serviço S3ImageService
+        """
+        from users.services import S3ImageService
+        s3_service = S3ImageService()
+        is_valid, error_message = s3_service.validate_image(value)
+        
+        if not is_valid:
+            raise serializers.ValidationError(error_message)
+        
+        return value
+    
+    def save(self, user):
+        """
+        Processa e salva a imagem no S3
+        """
+        try:
+            profile_image = self.validated_data['profile_image']
+            from users.services import S3ImageService
+            s3_service = S3ImageService()
+            
+            # Get or create profile
+            profile, created = Profile.objects.get_or_create(user=user)
+            
+            # Remove imagem anterior se existir
+            if profile.profile_image:
+                profile.delete_profile_image()
+            
+            # Upload nova imagem
+            success, message, s3_key = s3_service.process_and_upload_profile_image(
+                user.id, profile_image
+            )
+            
+            if not success:
+                raise serializers.ValidationError(f"Erro no upload: {message}")
+            
+            # Atualiza o profile com o novo path
+            profile.profile_image = s3_key
+            profile.save()
+            
+            return profile
+            
+        except serializers.ValidationError:
+            # Re-raise validation errors
+            raise
+        except Exception as e:
+            # Log the full error for debugging
+            import traceback
+            print(f"Erro completo no upload mobile: {traceback.format_exc()}")
+            raise serializers.ValidationError(f"Erro interno no upload: {str(e)}")
+
+
+@extend_schema_serializer(component_name="MobileUserWithImage")
+class MobileUserWithImageSerializer(serializers.ModelSerializer):
+    """
+    Serializer do usuário mobile incluindo URL da imagem de perfil
+    """
+    profile = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = User
+        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'profile')
+    
+    def get_profile(self, obj) -> dict:
+        """Retorna dados do perfil incluindo URL da imagem"""
+        try:
+            profile = obj.profile
+            profile_data = {
+                'cpf': profile.cpf,
+                'birth': profile.birth,
+                'phone': profile.phone,
+                'email_confirmed': profile.email_confirmed,
+                'profile_image_url': profile.get_profile_image_url()
+            }
+            return profile_data
+        except Profile.DoesNotExist:
+            return {
+                'cpf': None,
+                'birth': None, 
+                'phone': None,
+                'email_confirmed': False,
+                'profile_image_url': None
+            }

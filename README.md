@@ -239,10 +239,6 @@ A API está organizada em seções distintas:
 - **Mobile - Auth**: Login, registro, recuperação de senha para aplicação mobile  
 - **Mobile - User**: Gerenciamento de usuários e perfis para aplicação mobile
 
-**User Management**:
-- Upload e gerenciamento de imagens de perfil
-- Funcionalidades gerais de usuários (comum a web e mobile)
-
 ## Deploy AWS EC2
 
 ### Pré-requisitos

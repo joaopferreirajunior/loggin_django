@@ -1,6 +1,5 @@
 from django.urls import path
 from . import views
-from rest_framework_simplejwt.views import TokenRefreshView
 
 urlpatterns = [
     path("login/", views.login_view, name="api_mobile_login"),
@@ -23,7 +22,7 @@ urlpatterns = [
     ),
     path(
         "token/refresh/",
-        TokenRefreshView.as_view(),
+        views.MobileTokenRefreshView.as_view(),
         name="api_mobile_token_refresh",
     ),
     path("me/", views.MeView.as_view(), name="api_mobile_me"),
@@ -41,5 +40,21 @@ urlpatterns = [
         "assign-role/",
         views.AssignUserRoleView.as_view(),
         name="api_mobile_assign_role",
+    ),
+    # Gerenciamento de imagens de perfil para mobile
+    path(
+        "profile-image/upload/",
+        views.MobileProfileImageUploadView.as_view(),
+        name="api_mobile_profile_image_upload",
+    ),
+    path(
+        "profile-image/delete/",
+        views.MobileProfileImageDeleteView.as_view(),
+        name="api_mobile_profile_image_delete",
+    ),
+    path(
+        "profile-image/serve/<int:user_id>/",
+        views.MobileServeProfileImageView.as_view(),
+        name="api_mobile_profile_image_serve",
     ),
 ]

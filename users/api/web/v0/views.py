@@ -9,6 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 from drf_spectacular.utils import extend_schema, inline_serializer
 from django.contrib.auth import authenticate, login
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenRefreshView
 
 # DRF Spectacular imports
 from drf_spectacular.utils import extend_schema, OpenApiParameter
@@ -565,3 +566,14 @@ def serve_profile_image(request, user_id):
             {"detail": "Usuário não encontrado"},
             status=status.HTTP_404_NOT_FOUND
         )
+
+
+@extend_schema(
+    summary="Renovar token JWT",
+    description="Renova o token de acesso usando o refresh token para aplicação web",
+    tags=["Web - User"],
+    responses={200: {"type": "object", "properties": {"access": {"type": "string"}}}}
+)
+class WebTokenRefreshView(TokenRefreshView):
+    """View customizada para refresh token com documentação adequada"""
+    pass
