@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: Medical San Loggin API
   version: 1.0.0
-  description: API Web e Mobile do sistema Medical San Loggin
+  description: API Web e Mobile do sistema Loggin com endpoints organizados por plataforma
   contact:
     name: Medical San Support
     email: support@medicalsan.com
@@ -343,7 +343,7 @@ paths:
       description: Permite alterar o grupo/role de um usuário (apenas para administradores).
       summary: Atribuir role ao usuário
       tags:
-      - User Management
+      - Web - User
       requestBody:
         content:
           application/json:
@@ -423,7 +423,7 @@ paths:
       description: Retorna dados básicos do usuário autenticado.
       summary: Obter dados do usuário atual
       tags:
-      - User Management
+      - Web - User
       security:
       - cookieAuth: []
       - jwtAuth: []
@@ -441,7 +441,7 @@ paths:
       description: Retorna permissões e grupos do usuário autenticado.
       summary: Obter permissões do usuário
       tags:
-      - User Management
+      - Web - User
       security:
       - cookieAuth: []
       - jwtAuth: []
@@ -459,7 +459,7 @@ paths:
       description: Retorna dados completos do perfil do usuário autenticado.
       summary: Obter perfil completo do usuário
       tags:
-      - User Management
+      - Web - User
       security:
       - cookieAuth: []
       - jwtAuth: []
@@ -476,7 +476,7 @@ paths:
       description: Atualiza dados do perfil do usuário autenticado.
       summary: Atualizar perfil do usuário
       tags:
-      - User Management
+      - Web - User
       requestBody:
         content:
           application/json:
@@ -500,7 +500,7 @@ paths:
         automaticamente para 800x800px mantendo proporção.
       summary: Upload de imagem de perfil
       tags:
-      - User Management
+      - Web - User
       requestBody:
         content:
           multipart/form-data:
@@ -549,7 +549,7 @@ paths:
       description: Remove a imagem de perfil atual do usuário.
       summary: Remover imagem de perfil
       tags:
-      - User Management
+      - Web - User
       security:
       - cookieAuth: []
       - jwtAuth: []
@@ -585,7 +585,7 @@ paths:
         description: ID do usuário
         required: true
       tags:
-      - User Management
+      - Web - User
       security:
       - cookieAuth: []
       - jwtAuth: []

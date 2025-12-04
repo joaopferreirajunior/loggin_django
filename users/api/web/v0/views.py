@@ -29,7 +29,7 @@ User = get_user_model()
     operation_id="upload_profile_image",
     summary="Upload de imagem de perfil",
     description="Faz upload de uma nova imagem de perfil. A imagem será redimensionada automaticamente para 800x800px mantendo proporção.",
-    tags=["User Management"],
+    tags=["Web - User"],
     methods=['POST'],
     request={
         'multipart/form-data': {
@@ -71,7 +71,7 @@ User = get_user_model()
     operation_id="delete_profile_image",
     summary="Remover imagem de perfil",
     description="Remove a imagem de perfil atual do usuário.",
-    tags=["User Management"],
+    tags=["Web - User"],
     methods=['DELETE'],
     responses={
         200: inline_serializer(
@@ -157,7 +157,7 @@ def manage_profile_image(request):
     operation_id="get_current_user",
     summary="Obter dados do usuário atual",
     description="Retorna dados básicos do usuário autenticado.",
-    tags=["User Management"],
+    tags=["Web - User"],
     responses={200: UserSerializer}
 )
 @api_view(['GET'])
@@ -171,7 +171,7 @@ def get_current_user(request):
     operation_id="get_user_profile", 
     summary="Obter perfil completo do usuário",
     description="Retorna dados completos do perfil do usuário autenticado.",
-    tags=["User Management"],
+    tags=["Web - User"],
     methods=['GET'],
     responses={200: ProfileSerializer}
 )
@@ -179,7 +179,7 @@ def get_current_user(request):
     operation_id="update_user_profile", 
     summary="Atualizar perfil do usuário",
     description="Atualiza dados do perfil do usuário autenticado.",
-    tags=["User Management"],
+    tags=["Web - User"],
     methods=['PATCH'],
     request=ProfileSerializer,
     responses={200: ProfileSerializer}
@@ -215,7 +215,7 @@ def get_current_user_profile(request):
     operation_id="get_user_permissions",
     summary="Obter permissões do usuário",
     description="Retorna permissões e grupos do usuário autenticado.",
-    tags=["User Management"],
+    tags=["Web - User"],
     responses={200: UserPermissionsSerializer}
 )
 @api_view(['GET'])
@@ -229,7 +229,7 @@ def get_user_permissions(request):
     operation_id="assign_role",
     summary="Atribuir role ao usuário",
     description="Permite alterar o grupo/role de um usuário (apenas para administradores).",
-    tags=["User Management"],
+    tags=["Web - User"],
     request=RoleAssignmentSerializer,
     responses={200: {"type": "object", "properties": {"detail": {"type": "string"}}}}
 )
@@ -489,7 +489,7 @@ def validate_token(request):
     operation_id="serve_profile_image",
     summary="Servir imagem de perfil",
     description="Serve a imagem de perfil como proxy do S3 (alternativa a presigned URLs)",
-    tags=["User Management"],
+    tags=["Web - User"],
     parameters=[
         OpenApiParameter(
             name="user_id",
