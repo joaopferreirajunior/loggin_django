@@ -39,6 +39,33 @@ class Patient(models.Model):
 
     def __str__(self):
         return self.full_name
+    
+    def get_my_doctors(self, active_only=True):
+        """Retorna todos os usuários que atendem este paciente"""
+        from users.models import UserPatientRelation
+        return UserPatientRelation.get_patient_users(self, active_only)
+    
+    def get_doctor_count(self, active_only=True):
+        """Retorna o número de usuários que atendem este paciente"""
+        return self.get_my_doctors(active_only).count()
+    
+    def is_treated_by_user(self, user):
+        """Verifica se este paciente está sendo atendido por um usuário específico"""
+        from users.models import UserPatientRelation
+        return UserPatientRelation.objects.filter(
+            user=user,
+            patient=self,
+            is_active=True
+        ).exists()
+    
+    def add_doctor(self, user, notes=None):
+        """Adiciona um usuário aos cuidadores deste paciente"""
+        from users.models import UserPatientRelation
+        return UserPatientRelation.create_relation(
+            user=user,
+            patient=self,
+            notes=notes
+        )
 
 
 class MedicalRecord(models.Model):

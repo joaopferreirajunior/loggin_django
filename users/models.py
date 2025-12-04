@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models
 from app.utils import AuditModel
+import uuid
 
 #class Profile(models.Model):
 #    user = models.OneToOneField(
@@ -140,4 +141,129 @@ class Profile(AuditModel):
             user.groups.add(group)
             return True
         return False
+    
+    def get_my_patients(self, active_only=True):
+        """Retorna todos os pacientes atendidos por este usuário"""
+        return UserPatientRelation.get_user_patients(self.user, active_only)
+    
+    def get_patient_count(self, active_only=True):
+        """Retorna o número de pacientes atendidos por este usuário"""
+        return self.get_my_patients(active_only).count()
+    
+    def is_treating_patient(self, patient):
+        """Verifica se este usuário está atendendo um paciente específico"""
+        return UserPatientRelation.objects.filter(
+            user=self.user,
+            patient=patient,
+            is_active=True
+        ).exists()
+    
+    def add_patient(self, patient, notes=None):
+        """Adiciona um paciente aos cuidados deste usuário"""
+        return UserPatientRelation.create_relation(
+            user=self.user,
+            patient=patient,
+            notes=notes
+        )
+
+
+class UserPatientRelation(AuditModel):
+    """
+    Modelo de relacionamento many-to-many entre usuários e pacientes.
+    Permite que cada usuário tenha vários pacientes e cada paciente 
+    possa ser atendido por vários usuários.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    
+    # Relacionamento com usuário (médico, enfermeiro, etc.)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="patient_relations",
+        help_text="Usuário que atende o paciente"
+    )
+    
+    # Relacionamento com paciente
+    patient = models.ForeignKey(
+        'patients.Patient',
+        on_delete=models.CASCADE,
+        related_name="user_relations",
+        help_text="Paciente sendo atendido"
+    )
+    
+    # Data de início do atendimento
+    start_date = models.DateTimeField(
+        auto_now_add=True,
+        help_text="Data de início do relacionamento"
+    )
+    
+    # Data de fim do atendimento (opcional)
+    end_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Data de fim do relacionamento (se aplicável)"
+    )
+    
+    # Notas sobre o relacionamento
+    notes = models.TextField(
+        null=True,
+        blank=True,
+        help_text="Notas adicionais sobre o relacionamento"
+    )
+    
+    class Meta:
+        unique_together = ['user', 'patient']
+        indexes = [
+            models.Index(fields=['user', 'is_active']),
+            models.Index(fields=['patient', 'is_active']),
+        ]
+        verbose_name = "Relacionamento Usuário-Paciente"
+        verbose_name_plural = "Relacionamentos Usuário-Paciente"
+    
+    def __str__(self):
+        return f"{self.user.get_full_name() or self.user.username} - {self.patient.full_name}"
+    
+    def deactivate(self):
+        """Desativa o relacionamento sem deletar"""
+        from django.utils import timezone
+        self.is_active = False
+        self.end_date = timezone.now()
+        self.save()
+    
+    def activate(self):
+        """Reativa o relacionamento"""
+        self.is_active = True
+        self.end_date = None
+        self.save()
+    
+    @classmethod
+    def get_user_patients(cls, user, active_only=True):
+        """Retorna todos os pacientes de um usuário"""
+        queryset = cls.objects.filter(user=user)
+        if active_only:
+            queryset = queryset.filter(is_active=True)
+        return queryset.select_related('patient')
+    
+    @classmethod
+    def get_patient_users(cls, patient, active_only=True):
+        """Retorna todos os usuários que atendem um paciente"""
+        queryset = cls.objects.filter(patient=patient)
+        if active_only:
+            queryset = queryset.filter(is_active=True)
+        return queryset.select_related('user')
+    
+    @classmethod
+    def create_relation(cls, user, patient, notes=None):
+        """Cria um novo relacionamento entre usuário e paciente"""
+        relation, created = cls.objects.get_or_create(
+            user=user,
+            patient=patient,
+            defaults={
+                'is_active': True,
+                'notes': notes
+            }
+        )
+        if not created and not relation.is_active:
+            relation.activate()
+        return relation, created
     

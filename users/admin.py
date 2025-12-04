@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import Profile
+from .models import Profile, UserPatientRelation
 
 User = get_user_model()
 
@@ -25,3 +25,63 @@ admin.site.register(User, UserAdmin)
 class ProfileAdmin(admin.ModelAdmin):
     list_display = ("user", "cpf", "birth", "phone")
     search_fields = ("user__username", "user__email", "cpf", "phone")
+
+
+@admin.register(UserPatientRelation)
+class UserPatientRelationAdmin(admin.ModelAdmin):
+    list_display = (
+        'user_display', 'patient_display',
+        'is_active', 'start_date', 'end_date'
+    )
+    list_filter = ('is_active', 'start_date', 'created')
+    search_fields = (
+        'user__username', 'user__first_name', 'user__last_name',
+        'patient__full_name', 'patient__cpf'
+    )
+    ordering = ('-start_date',)
+    readonly_fields = ('id', 'created', 'modified')
+    
+    fieldsets = (
+        ('Relacionamento', {
+            'fields': ('user', 'patient')
+        }),
+        ('Status', {
+            'fields': ('is_active', 'start_date', 'end_date')
+        }),
+        ('Observações', {
+            'fields': ('notes',),
+            'classes': ('collapse',)
+        }),
+        ('Metadados', {
+            'fields': ('id', 'created', 'modified'),
+            'classes': ('collapse',)
+        })
+    )
+    
+    def user_display(self, obj):
+        return f"{obj.user.get_full_name() or obj.user.username}"
+    user_display.short_description = 'Usuário'
+    
+    def patient_display(self, obj):
+        return obj.patient.full_name
+    patient_display.short_description = 'Paciente'
+    
+    actions = ['deactivate_relations', 'activate_relations']
+    
+    def deactivate_relations(self, request, queryset):
+        count = 0
+        for relation in queryset:
+            if relation.is_active:
+                relation.deactivate()
+                count += 1
+        self.message_user(request, f"{count} relacionamento(s) desativado(s) com sucesso.")
+    deactivate_relations.short_description = "Desativar relacionamentos selecionados"
+    
+    def activate_relations(self, request, queryset):
+        count = 0
+        for relation in queryset:
+            if not relation.is_active:
+                relation.activate()
+                count += 1
+        self.message_user(request, f"{count} relacionamento(s) ativado(s) com sucesso.")
+    activate_relations.short_description = "Ativar relacionamentos selecionados"
