@@ -290,7 +290,7 @@ curl -X DELETE http://localhost:8000/patients/api/mobile/v0/550e8400-e29b-41d4-a
   -H "Authorization: Bearer SEU_ACCESS_TOKEN_AQUI"
 ```
 
-### Gerenciamento de Prontuários Médicos
+### Gerenciamento de Prontuários
 
 **Listar prontuários de um paciente:**
 ```bash

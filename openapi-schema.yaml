@@ -974,7 +974,7 @@ paths:
     get:
       operationId: users_api_mobile_v0_patient_doctors_retrieve
       description: Lista todos os usuários que atendem um paciente específico
-      summary: Listar médicos de um paciente
+      summary: Listar profissionais que atendem um paciente
       parameters:
       - in: path
         name: patient_id
@@ -1562,7 +1562,7 @@ paths:
     get:
       operationId: users_api_web_v0_patient_doctors_retrieve
       description: Lista todos os usuários que atendem um paciente específico
-      summary: Listar médicos de um paciente
+      summary: Listar profissionais que atendem um paciente
       parameters:
       - in: path
         name: patient_id

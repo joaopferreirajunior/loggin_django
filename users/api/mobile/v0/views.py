@@ -1080,7 +1080,7 @@ def remove_patient_from_care(request, relation_id):
 
 
 @extend_schema(
-    summary="Listar médicos de um paciente",
+    summary="Listar profissionais que atendem um paciente",
     description="Lista todos os usuários que atendem um paciente específico",
     tags=["Mobile - User"],
     responses={
@@ -1104,7 +1104,7 @@ def remove_patient_from_care(request, relation_id):
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
 def patient_doctors(request, patient_id):
-    """Lista todos os médicos que atendem um paciente específico"""
+    """Lista todos os profissionais que atendem um paciente específico"""
     from users.models import UserPatientRelation
     from patients.models import Patient
     from .patient_relations_serializers import PatientDoctorsListSerializer

@@ -64,7 +64,7 @@ class UserPatientsListSerializer(serializers.Serializer):
 
 @extend_schema_serializer(component_name="MobilePatientDoctorsListItem") 
 class PatientDoctorsListSerializer(serializers.Serializer):
-    """Serializer para listar os médicos de um paciente"""
+    """Serializer para listar os profissionais que atendem um paciente"""
     relationId = serializers.UUIDField(source='id')
     userId = serializers.IntegerField(source='user.id')
     userName = serializers.SerializerMethodField()

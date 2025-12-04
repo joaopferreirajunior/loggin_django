@@ -77,5 +77,5 @@ urlpatterns = [
         "patient-doctors/<uuid:patient_id>/",
         views.patient_doctors,
         name="api_mobile_patient_doctors",
-    ),  # GET - médicos de um paciente
+    ),  # GET - profissionais que atendem um paciente
 ]

@@ -59,7 +59,7 @@ class UserPatientsListSerializer(serializers.Serializer):
 
 @extend_schema_serializer(component_name="WebPatientDoctorsListItem") 
 class PatientDoctorsListSerializer(serializers.Serializer):
-    """Serializer para listar os médicos de um paciente"""
+    """Serializer para listar os profissionais que atendem um paciente"""
     relation_id = serializers.UUIDField(source='id')
     user_id = serializers.IntegerField(source='user.id')
     user_name = serializers.SerializerMethodField()
