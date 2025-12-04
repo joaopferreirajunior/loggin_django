@@ -21,4 +21,10 @@ urlpatterns = [
     # Profile image management  
     path("profile/image/", views.manage_profile_image, name="api_web_profile_image"),  # POST/DELETE - gerenciar imagem
     path("profile/image/<int:user_id>/", views.serve_profile_image, name="api_web_serve_profile_image"),  # GET - servir imagem como proxy
+    
+    # Patient relationship management
+    path("my-patients/", views.my_patients, name="api_web_my_patients"),  # GET - listar meus pacientes
+    path("add-patient/", views.add_patient_to_care, name="api_web_add_patient"),  # POST - adicionar paciente aos cuidados
+    path("remove-patient/<uuid:relation_id>/", views.remove_patient_from_care, name="api_web_remove_patient"),  # DELETE - remover paciente
+    path("patient-doctors/<uuid:patient_id>/", views.patient_doctors, name="api_web_patient_doctors"),  # GET - médicos de um paciente
 ]

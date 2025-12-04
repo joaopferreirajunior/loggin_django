@@ -57,4 +57,25 @@ urlpatterns = [
         views.MobileServeProfileImageView.as_view(),
         name="api_mobile_profile_image_serve",
     ),
+    # Patient relationship management
+    path(
+        "my-patients/",
+        views.my_patients,
+        name="api_mobile_my_patients",
+    ),  # GET - listar meus pacientes
+    path(
+        "add-patient/",
+        views.add_patient_to_care,
+        name="api_mobile_add_patient",
+    ),  # POST - adicionar paciente aos cuidados
+    path(
+        "remove-patient/<uuid:relation_id>/",
+        views.remove_patient_from_care,
+        name="api_mobile_remove_patient",
+    ),  # DELETE - remover paciente
+    path(
+        "patient-doctors/<uuid:patient_id>/",
+        views.patient_doctors,
+        name="api_mobile_patient_doctors",
+    ),  # GET - médicos de um paciente
 ]

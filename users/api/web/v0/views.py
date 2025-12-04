@@ -577,3 +577,163 @@ def serve_profile_image(request, user_id):
 class WebTokenRefreshView(TokenRefreshView):
     """View customizada para refresh token com documentação adequada"""
     pass
+
+
+# ============================================
+# Views para gerenciamento de relacionamentos usuário-paciente
+# ============================================
+
+@extend_schema(
+    summary="Listar meus pacientes",
+    description="Lista todos os pacientes atendidos pelo usuário autenticado",
+    tags=["Web - User"],
+    responses={
+        200: {
+            'type': 'array',
+            'items': {
+                'type': 'object',
+                'properties': {
+                    'relation_id': {'type': 'string', 'format': 'uuid'},
+                    'patient_id': {'type': 'string', 'format': 'uuid'},
+                    'patient_name': {'type': 'string'},
+                    'patient_cpf': {'type': 'string'},
+                    'patient_phone': {'type': 'string'},
+                    'start_date': {'type': 'string', 'format': 'date-time'},
+                    'is_active': {'type': 'boolean'}
+                }
+            }
+        }
+    }
+)
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def my_patients(request):
+    """Lista todos os pacientes do usuário autenticado"""
+    from users.models import UserPatientRelation
+    from .patient_relations_serializers import UserPatientsListSerializer
+    
+    relations = UserPatientRelation.get_user_patients(request.user, active_only=True)
+    serializer = UserPatientsListSerializer(relations, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@extend_schema(
+    summary="Adicionar paciente aos meus cuidados",
+    description="Adiciona um paciente à lista de pacientes atendidos pelo usuário",
+    tags=["Web - User"],
+    request={"application/json": {
+        "type": "object",
+        "properties": {
+            "patient": {"type": "string", "format": "uuid", "description": "ID do paciente"},
+            "notes": {"type": "string", "required": False, "description": "Notas sobre o relacionamento"}
+        },
+        "required": ["patient"]
+    }},
+    responses={
+        201: {
+            "type": "object",
+            "properties": {
+                "detail": {"type": "string"},
+                "relation": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "string", "format": "uuid"},
+                        "patient_name": {"type": "string"},
+                        "start_date": {"type": "string", "format": "date-time"}
+                    }
+                }
+            }
+        },
+        400: {"type": "object", "properties": {"detail": {"type": "string"}}}
+    }
+)
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def add_patient_to_care(request):
+    """Adiciona um paciente aos cuidados do usuário autenticado"""
+    from .patient_relations_serializers import CreateUserPatientRelationSerializer
+    
+    serializer = CreateUserPatientRelationSerializer(data=request.data, context={'request': request})
+    if serializer.is_valid():
+        relation = serializer.save()
+        return Response({
+            'detail': 'Paciente adicionado aos seus cuidados com sucesso',
+            'relation': {
+                'id': relation.id,
+                'patient_name': relation.patient.full_name,
+                'start_date': relation.start_date
+            }
+        }, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@extend_schema(
+    summary="Remover paciente dos meus cuidados",
+    description="Remove um paciente da lista de pacientes atendidos (soft delete)",
+    tags=["Web - User"],
+    responses={
+        200: {'type': 'object', 'properties': {'detail': {'type': 'string'}}},
+        404: {'type': 'object', 'properties': {'detail': {'type': 'string'}}}
+    }
+)
+@api_view(['DELETE'])
+@permission_classes([permissions.IsAuthenticated])
+def remove_patient_from_care(request, relation_id):
+    """Remove um paciente dos cuidados do usuário autenticado"""
+    from users.models import UserPatientRelation
+    
+    try:
+        relation = UserPatientRelation.objects.get(
+            id=relation_id, 
+            user=request.user, 
+            is_active=True
+        )
+        relation.deactivate()
+        return Response({
+            'detail': f'Paciente {relation.patient.full_name} removido dos seus cuidados'
+        }, status=status.HTTP_200_OK)
+    except UserPatientRelation.DoesNotExist:
+        return Response({
+            'detail': 'Relacionamento não encontrado ou já inativo'
+        }, status=status.HTTP_404_NOT_FOUND)
+
+
+@extend_schema(
+    summary="Listar médicos de um paciente",
+    description="Lista todos os usuários que atendem um paciente específico",
+    tags=["Web - User"],
+    responses={
+        200: {
+            'type': 'array',
+            'items': {
+                'type': 'object',
+                'properties': {
+                    'relation_id': {'type': 'string', 'format': 'uuid'},
+                    'user_id': {'type': 'integer'},
+                    'user_name': {'type': 'string'},
+                    'user_email': {'type': 'string'},
+                    'start_date': {'type': 'string', 'format': 'date-time'},
+                    'is_active': {'type': 'boolean'}
+                }
+            }
+        },
+        404: {'type': 'object', 'properties': {'detail': {'type': 'string'}}}
+    }
+)
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def patient_doctors(request, patient_id):
+    """Lista todos os médicos que atendem um paciente específico"""
+    from users.models import UserPatientRelation
+    from patients.models import Patient
+    from .patient_relations_serializers import PatientDoctorsListSerializer
+    
+    try:
+        patient = Patient.objects.get(id=patient_id, is_active=True)
+        relations = UserPatientRelation.get_patient_users(patient, active_only=True)
+        serializer = PatientDoctorsListSerializer(relations, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except Patient.DoesNotExist:
+        return Response({
+            'detail': 'Paciente não encontrado'
+        }, status=status.HTTP_404_NOT_FOUND)

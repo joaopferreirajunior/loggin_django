@@ -683,6 +683,63 @@ paths:
               schema:
                 $ref: '#/components/schemas/WebDetailResponse'
           description: ''
+  /users/api/mobile/v0/add-patient/:
+    post:
+      operationId: users_api_mobile_v0_add_patient_create
+      description: Adiciona um paciente à lista de pacientes atendidos pelo usuário
+      summary: Adicionar paciente aos meus cuidados
+      tags:
+      - Mobile - User
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                patient:
+                  type: string
+                  format: uuid
+                  description: ID do paciente
+                notes:
+                  type: string
+                  required: false
+                  description: Notas sobre o relacionamento
+              required:
+              - patient
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                  relation:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      patientName:
+                        type: string
+                      startDate:
+                        type: string
+                        format: date-time
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+          description: ''
   /users/api/mobile/v0/assign-role/:
     post:
       operationId: users_api_mobile_v0_assign_role_create
@@ -875,6 +932,95 @@ paths:
               schema:
                 $ref: '#/components/schemas/MobileDetail'
           description: ''
+  /users/api/mobile/v0/my-patients/:
+    get:
+      operationId: users_api_mobile_v0_my_patients_retrieve
+      description: Lista todos os pacientes atendidos pelo usuário autenticado
+      summary: Listar meus pacientes
+      tags:
+      - Mobile - User
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    relationId:
+                      type: string
+                      format: uuid
+                    patientId:
+                      type: string
+                      format: uuid
+                    patientName:
+                      type: string
+                    patientCpf:
+                      type: string
+                    patientPhone:
+                      type: string
+                    startDate:
+                      type: string
+                      format: date-time
+                    isActive:
+                      type: boolean
+          description: ''
+  /users/api/mobile/v0/patient-doctors/{patient_id}/:
+    get:
+      operationId: users_api_mobile_v0_patient_doctors_retrieve
+      description: Lista todos os usuários que atendem um paciente específico
+      summary: Listar médicos de um paciente
+      parameters:
+      - in: path
+        name: patient_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Mobile - User
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    relationId:
+                      type: string
+                      format: uuid
+                    userId:
+                      type: integer
+                    userName:
+                      type: string
+                    userEmail:
+                      type: string
+                    startDate:
+                      type: string
+                      format: date-time
+                    isActive:
+                      type: boolean
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+          description: ''
   /users/api/mobile/v0/profile-image/delete/:
     delete:
       operationId: users_api_mobile_v0_profile_image_delete_destroy
@@ -1059,6 +1205,43 @@ paths:
               schema:
                 $ref: '#/components/schemas/MobileDetail'
           description: Erro interno do servidor
+  /users/api/mobile/v0/remove-patient/{relation_id}/:
+    delete:
+      operationId: users_api_mobile_v0_remove_patient_destroy
+      description: Remove um paciente da lista de pacientes atendidos (soft delete)
+      summary: Remover paciente dos meus cuidados
+      parameters:
+      - in: path
+        name: relation_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Mobile - User
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+          description: ''
   /users/api/mobile/v0/resetpassword/:
     post:
       operationId: users_api_mobile_v0_resetpassword_create
@@ -1122,6 +1305,63 @@ paths:
                 type: object
                 properties:
                   access:
+                    type: string
+          description: ''
+  /users/api/web/v0/add-patient/:
+    post:
+      operationId: users_api_web_v0_add_patient_create
+      description: Adiciona um paciente à lista de pacientes atendidos pelo usuário
+      summary: Adicionar paciente aos meus cuidados
+      tags:
+      - Web - User
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                patient:
+                  type: string
+                  format: uuid
+                  description: ID do paciente
+                notes:
+                  type: string
+                  required: false
+                  description: Notas sobre o relacionamento
+              required:
+              - patient
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                  relation:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      patient_name:
+                        type: string
+                      start_date:
+                        type: string
+                        format: date-time
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
                     type: string
           description: ''
   /users/api/web/v0/assign-role/:
@@ -1279,6 +1519,95 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Profile'
+          description: ''
+  /users/api/web/v0/my-patients/:
+    get:
+      operationId: users_api_web_v0_my_patients_retrieve
+      description: Lista todos os pacientes atendidos pelo usuário autenticado
+      summary: Listar meus pacientes
+      tags:
+      - Web - User
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    relation_id:
+                      type: string
+                      format: uuid
+                    patient_id:
+                      type: string
+                      format: uuid
+                    patient_name:
+                      type: string
+                    patient_cpf:
+                      type: string
+                    patient_phone:
+                      type: string
+                    start_date:
+                      type: string
+                      format: date-time
+                    is_active:
+                      type: boolean
+          description: ''
+  /users/api/web/v0/patient-doctors/{patient_id}/:
+    get:
+      operationId: users_api_web_v0_patient_doctors_retrieve
+      description: Lista todos os usuários que atendem um paciente específico
+      summary: Listar médicos de um paciente
+      parameters:
+      - in: path
+        name: patient_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Web - User
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    relation_id:
+                      type: string
+                      format: uuid
+                    user_id:
+                      type: integer
+                    user_name:
+                      type: string
+                    user_email:
+                      type: string
+                    start_date:
+                      type: string
+                      format: date-time
+                    is_active:
+                      type: boolean
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
           description: ''
   /users/api/web/v0/profile/image/:
     post:
@@ -1453,6 +1782,43 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthResponse'
+          description: ''
+  /users/api/web/v0/remove-patient/{relation_id}/:
+    delete:
+      operationId: users_api_web_v0_remove_patient_destroy
+      description: Remove um paciente da lista de pacientes atendidos (soft delete)
+      summary: Remover paciente dos meus cuidados
+      parameters:
+      - in: path
+        name: relation_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Web - User
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
           description: ''
   /users/api/web/v0/resetpassword/:
     post:
