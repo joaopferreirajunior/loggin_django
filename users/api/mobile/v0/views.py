@@ -538,7 +538,7 @@ def validate_token(request):
     ),
 )
 class MeProfileView(APIView):
-    authentication_classes = [JWTAuthentication, SessionAuthentication]
+    authentication_classes = [JWTAuthentication]
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = ProfileSerializer  # ajuda o drf-spectacular
 
@@ -609,7 +609,7 @@ class MeProfileView(APIView):
     ),
 )
 class MeView(APIView):
-    authentication_classes = [JWTAuthentication, SessionAuthentication]
+    authentication_classes = [JWTAuthentication]
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
@@ -633,7 +633,7 @@ class MeView(APIView):
     ),
 )
 class UserPermissionsView(APIView):
-    authentication_classes = [JWTAuthentication, SessionAuthentication]
+    authentication_classes = [JWTAuthentication]
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
@@ -679,7 +679,7 @@ class UserPermissionsView(APIView):
     ),
 )
 class AssignUserRoleView(APIView):
-    authentication_classes = [JWTAuthentication, SessionAuthentication]
+    authentication_classes = [JWTAuthentication]
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
