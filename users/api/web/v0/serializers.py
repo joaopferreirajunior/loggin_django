@@ -82,16 +82,11 @@ class ProfileSerializer(serializers.ModelSerializer):
         model = Profile
         fields = ('first_name', 'last_name', 'cpf', 'birth', 'phone', 'email',
                  'email_confirmed', 'email_confirmed_at', 'invited_at', 
-                 'confirmation_token', 'confirmation_sent_at',
-                 'recovery_token', 'recovery_token_sent_at', 'clickhouse_id',
+                 'confirmation_sent_at', 'clickhouse_id',
                  'profile_image_url')
-        extra_kwargs = {
-            'confirmation_token': {'write_only': True},
-            'recovery_token': {'write_only': True},
-        }
         read_only_fields = (
             'email_confirmed', 'email_confirmed_at', 'invited_at',
-            'confirmation_sent_at', 'recovery_token_sent_at', 'clickhouse_id',
+            'confirmation_sent_at', 'clickhouse_id',
             'profile_image_url'
         )
     
