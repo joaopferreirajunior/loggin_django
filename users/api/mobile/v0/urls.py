@@ -27,11 +27,6 @@ urlpatterns = [
     ),
     path("me/", views.MeView.as_view(), name="api_mobile_me"),
     path(
-        "me/profile/",
-        views.MeProfileView.as_view(),
-        name="api_mobile_me_profile",
-    ),
-    path(
         "me/permissions/",
         views.UserPermissionsView.as_view(),
         name="api_mobile_me_permissions",
@@ -43,12 +38,12 @@ urlpatterns = [
     ),
     # Gerenciamento de imagens de perfil para mobile
     path(
-        "profile-image/upload/",
+        "profile/image/",
         views.MobileProfileImageUploadView.as_view(),
-        name="api_mobile_profile_image_upload",
+        name="api_mobile_profile_image",
     ),
     path(
-        "profile-image/delete/",
+        "profile/image/delete/",
         views.MobileProfileImageDeleteView.as_view(),
         name="api_mobile_profile_image_delete",
     ),

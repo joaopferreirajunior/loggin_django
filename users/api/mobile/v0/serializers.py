@@ -13,11 +13,15 @@ User = get_user_model()
 @extend_schema_serializer(component_name="MobileProfile")
 class ProfileSerializer(serializers.ModelSerializer):
     profile_image_url = serializers.SerializerMethodField()
+    # Campos do User para permitir edição junto com o profile
+    email = serializers.EmailField(source='user.email', help_text="Email do usuário")
+    first_name = serializers.CharField(source='user.first_name', help_text="Nome do usuário", max_length=150, allow_blank=True)
+    last_name = serializers.CharField(source='user.last_name', help_text="Sobrenome do usuário", max_length=150, allow_blank=True)
     
     class Meta:
         model = Profile
         fields = (
-            "cpf", "birth", "phone", 
+            "first_name", "last_name", "cpf", "birth", "phone", "email",
             "email_confirmed", "email_confirmed_at", "invited_at",
             "confirmation_token", "confirmation_sent_at", 
             "recovery_token", "recovery_token_sent_at", "clickhouse_id",
@@ -33,29 +37,58 @@ class ProfileSerializer(serializers.ModelSerializer):
     def get_profile_image_url(self, obj) -> str:
         """Retorna URL completa da imagem de perfil do S3"""
         return obj.get_profile_image_url()
+    
+    def update(self, instance, validated_data):
+        """Atualiza tanto o Profile quanto os campos do User"""
+        # Extrai dados do User se existirem
+        user_data = {}
+        if 'user' in validated_data:
+            user_data = validated_data.pop('user')
+        
+        # Atualiza o Profile
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        
+        # Atualiza o User se houver dados
+        if user_data:
+            user = instance.user
+            for attr, value in user_data.items():
+                setattr(user, attr, value)
+            user.save()
+        
+        return instance
 
 
 @extend_schema_serializer(component_name="MobileUser")
 class UserSerializer(serializers.ModelSerializer):
     profile = ProfileSerializer(read_only=True)
+    # Campos adicionais para exibição
+    full_name = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ("id", "username", "email", "profile")
+        fields = ("id", "username", "email", "first_name", "last_name", "full_name", "profile")
+    
+    def get_full_name(self, obj):
+        """Retorna nome completo baseado nos campos first_name e last_name do User"""
+        return obj.get_full_name() or obj.username
 
 
 @extend_schema_serializer(component_name="MobileUserRegisterRequest")
 class UserRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8, max_length=128)
     email = serializers.EmailField(required=True)
+    first_name = serializers.CharField(required=True, max_length=150, help_text="Nome do usuário")
+    last_name = serializers.CharField(required=True, max_length=150, help_text="Sobrenome do usuário")
     # campos adicionais para o perfil
-    cpf = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    birth = serializers.DateField(required=False, allow_null=True)
-    phone = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    cpf = serializers.CharField(required=True, help_text="CPF do usuário")
+    birth = serializers.DateField(required=False, allow_null=True, help_text="Data de nascimento")
+    phone = serializers.CharField(required=False, allow_blank=True, allow_null=True, help_text="Telefone")
 
     class Meta:
         model = User
-        fields = ["username", "email", "password", "cpf", "birth", "phone"]
+        fields = ["username", "email", "password", "first_name", "last_name", "cpf", "birth", "phone"]
 
     def validate_username(self, value):
         if not value.isalnum():
@@ -83,8 +116,8 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data):
-        # extrai campos do perfil se existirem
-        cpf = validated_data.pop("cpf", None)
+        # extrai campos do perfil
+        cpf = validated_data.pop("cpf")
         birth = validated_data.pop("birth", None)
         phone = validated_data.pop("phone", None)
 

@@ -23,9 +23,9 @@ class Profile(AuditModel):
         on_delete=models.CASCADE,
         related_name="profile",
     )
-    # Campos adicionaisv vindos do clickhouse
     
-    cpf   = models.CharField(max_length=14, unique=True, null=True, blank=True)
+    # Campos de identificação pessoal
+    cpf = models.CharField(max_length=14, unique=True, null=True, blank=True)
     birth = models.DateField(null=True, blank=True)
     phone = models.CharField(max_length=20, null=True, blank=True)
     email_confirmed        = models.BooleanField(default=False)

@@ -9,14 +9,24 @@ from drf_spectacular.utils import extend_schema_serializer, OpenApiExample
 
 User = get_user_model()
 
+class DetailSerializer(serializers.Serializer):
+    """Usado para mensagens simples: {"detail": "..."}"""
+    detail = serializers.CharField()
+
 class UserRegisterSerializer(serializers.ModelSerializer):
     """Serializer para registro de novos usuários"""
     password = serializers.CharField(write_only=True, min_length=8, max_length=128)
     email = serializers.EmailField(required=True)
+    first_name = serializers.CharField(required=True, max_length=150, help_text="Nome do usuário")
+    last_name = serializers.CharField(required=True, max_length=150, help_text="Sobrenome do usuário")
+    # campos adicionais para o perfil
+    cpf = serializers.CharField(required=True, help_text="CPF do usuário")
+    birth = serializers.DateField(required=False, allow_null=True, help_text="Data de nascimento")
+    phone = serializers.CharField(required=False, allow_blank=True, allow_null=True, help_text="Telefone")
 
     class Meta:
         model = User
-        fields = ('username', 'email', 'password', 'first_name', 'last_name')
+        fields = ('username', 'email', 'password', 'first_name', 'last_name', 'cpf', 'birth', 'phone')
 
     def validate_email(self, value):
         """Validação customizada para email único"""
@@ -26,25 +36,102 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 
     def validate_username(self, value):
         """Validação customizada para username único"""
+        if not value.isalnum():
+            raise serializers.ValidationError(
+                "O nome de usuário só pode conter letras e números."
+            )
         if User.objects.filter(username=value).exists():
             raise serializers.ValidationError("Este nome de usuário já está em uso.")
+        return value
+    
+    def validate_cpf(self, value):
+        """Validação customizada para CPF único"""
+        if Profile.objects.filter(cpf=value).exists():
+            raise serializers.ValidationError("Este CPF já está em uso.")
         return value
 
     def create(self, validated_data):
         """Criação de usuário com senha criptografada"""
+        # Extrai campos do perfil
+        cpf = validated_data.pop('cpf')
+        birth = validated_data.pop('birth', None)
+        phone = validated_data.pop('phone', None)
+        
         password = validated_data.pop('password')
         user = User.objects.create_user(password=password, **validated_data)
         
-        # Criar profile automaticamente
-        Profile.objects.create(user=user)
+        # Criar profile automaticamente com dados do perfil
+        Profile.objects.create(
+            user=user,
+            cpf=cpf,
+            birth=birth,
+            phone=phone
+        )
         
         return user
 
+class ProfileSerializer(serializers.ModelSerializer):
+    """Serializer do perfil do usuário"""
+    profile_image_url = serializers.SerializerMethodField()
+    # Campos do User para permitir edição junto com o profile
+    email = serializers.EmailField(source='user.email', help_text="Email do usuário")
+    first_name = serializers.CharField(source='user.first_name', help_text="Nome do usuário", max_length=150, allow_blank=True)
+    last_name = serializers.CharField(source='user.last_name', help_text="Sobrenome do usuário", max_length=150, allow_blank=True)
+    
+    class Meta:
+        model = Profile
+        fields = ('first_name', 'last_name', 'cpf', 'birth', 'phone', 'email',
+                 'email_confirmed', 'email_confirmed_at', 'invited_at', 
+                 'confirmation_token', 'confirmation_sent_at',
+                 'recovery_token', 'recovery_token_sent_at', 'clickhouse_id',
+                 'profile_image_url')
+        extra_kwargs = {
+            'confirmation_token': {'write_only': True},
+            'recovery_token': {'write_only': True},
+        }
+        read_only_fields = (
+            'email_confirmed', 'email_confirmed_at', 'invited_at',
+            'confirmation_sent_at', 'recovery_token_sent_at', 'clickhouse_id',
+            'profile_image_url'
+        )
+    
+    def get_profile_image_url(self, obj) -> str:
+        """Retorna a URL da imagem de perfil"""
+        return obj.get_profile_image_url()
+    
+    def update(self, instance, validated_data):
+        """Atualiza tanto o Profile quanto os campos do User"""
+        # Extrai dados do User se existirem
+        user_data = {}
+        if 'user' in validated_data:
+            user_data = validated_data.pop('user')
+        
+        # Atualiza o Profile
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        
+        # Atualiza o User se houver dados
+        if user_data:
+            user = instance.user
+            for attr, value in user_data.items():
+                setattr(user, attr, value)
+            user.save()
+        
+        return instance
+
 class UserSerializer(serializers.ModelSerializer):
-    """Serializer básico do usuário"""
+    """Serializer completo do usuário com perfil"""
+    profile = ProfileSerializer(read_only=True)
+    full_name = serializers.SerializerMethodField()
+    
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'first_name', 'last_name')
+        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'full_name', 'profile')
+    
+    def get_full_name(self, obj):
+        """Retorna nome completo baseado nos campos first_name e last_name do User"""
+        return obj.get_full_name() or obj.username
 
 class LoginSerializer(serializers.Serializer):
     """Serializer para login"""
@@ -87,25 +174,6 @@ class PasswordResetSerializer(serializers.Serializer):
 class TokenValidationSerializer(serializers.Serializer):
     """Serializer para validação de token"""
     valid = serializers.BooleanField()
-
-class ProfileSerializer(serializers.ModelSerializer):
-    """Serializer do perfil do usuário"""
-    profile_image_url = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = Profile
-        fields = ('cpf', 'birth', 'phone', 'email_confirmed', 'email_confirmed_at', 
-                 'invited_at', 'confirmation_token', 'confirmation_sent_at',
-                 'recovery_token', 'recovery_token_sent_at', 'clickhouse_id',
-                 'profile_image_url')
-        extra_kwargs = {
-            'confirmation_token': {'write_only': True},
-            'recovery_token': {'write_only': True},
-        }
-    
-    def get_profile_image_url(self, obj) -> str:
-        """Retorna a URL da imagem de perfil"""
-        return obj.get_profile_image_url()
 
 class UserPermissionsSerializer(serializers.Serializer):
     """Serializer para permissões do usuário"""

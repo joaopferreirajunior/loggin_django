@@ -537,75 +537,16 @@ def validate_token(request):
         responses={200: ProfileSerializer, 500: DetailSerializer},
     ),
 )
-class MeProfileView(APIView):
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [permissions.IsAuthenticated]
-    serializer_class = ProfileSerializer  # ajuda o drf-spectacular
-
-    def patch(self, request):
-        """
-        Atualiza parcialmente os campos do perfil do próprio usuário (cpf, birth, phone).
-        Exemplo JSON:
-        { "cpf": "123.456.789-10", "phone": "+55 16 99999-0000" }
-        """
-        try:
-            # Garante que o profile existe
-            profile, created = Profile.objects.get_or_create(
-                user=request.user
-            )
-            if created:
-                print(
-                    f"DEBUG MOBILE: Profile criado para usuário: {request.user.username}"
-                )
-
-            serializer = ProfileSerializer(
-                profile,
-                data=request.data,
-                partial=True,
-            )
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(
-                serializer.data,
-                status=status.HTTP_200_OK,
-            )
-        except Exception as e:
-            print(f"DEBUG MOBILE: Erro em MeProfileView.patch: {e}")
-            return Response(
-                {"detail": f"Erro ao atualizar perfil: {str(e)}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-
-    def get(self, request):
-        """Retorna os dados do perfil do próprio usuário logado."""
-        try:
-            # Garante que o profile existe
-            profile, created = Profile.objects.get_or_create(
-                user=request.user
-            )
-            if created:
-                print(
-                    f"DEBUG MOBILE: Profile criado para usuário: {request.user.username}"
-                )
-
-            serializer = ProfileSerializer(profile)
-            return Response(
-                serializer.data,
-                status=status.HTTP_200_OK,
-            )
-        except Exception as e:
-            print(f"DEBUG MOBILE: Erro em MeProfileView.get: {e}")
-            return Response(
-                {"detail": f"Erro ao buscar perfil do usuário: {str(e)}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-
-
 # Retorna os dados de auth_user do próprio usuário logado
 @extend_schema_view(
     get=extend_schema(
         tags=["Mobile - User"],
         responses={200: UserSerializer, 500: DetailSerializer},
+    ),
+    patch=extend_schema(
+        tags=["Mobile - User"],
+        request=ProfileSerializer,
+        responses={200: UserSerializer, 400: DetailSerializer, 500: DetailSerializer},
     ),
 )
 class MeView(APIView):
@@ -613,14 +554,41 @@ class MeView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        """Retorna os dados do próprio usuário logado."""
+        """Retorna os dados completos do próprio usuário logado com perfil."""
         try:
+            # Garante que o profile existe
+            profile, created = Profile.objects.get_or_create(user=request.user)
+            if created:
+                print(f"DEBUG MOBILE: Profile criado para usuário: {request.user.username}")
+            
             serializer = UserSerializer(request.user)
             return Response(serializer.data)
         except Exception as e:
             print(f"DEBUG MOBILE: Erro em MeView.get: {e}")
             return Response(
                 {"detail": f"Erro ao buscar dados do usuário: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+    
+    def patch(self, request):
+        """Atualiza dados do perfil do usuário atual."""
+        try:
+            # Garante que o profile existe
+            profile, created = Profile.objects.get_or_create(user=request.user)
+            if created:
+                print(f"DEBUG MOBILE: Profile criado para usuário: {request.user.username}")
+            
+            serializer = ProfileSerializer(profile, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                # Retorna dados completos atualizados
+                user_serializer = UserSerializer(request.user)
+                return Response(user_serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            print(f"DEBUG MOBILE: Erro em MeView.patch: {e}")
+            return Response(
+                {"detail": f"Erro ao atualizar perfil: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 

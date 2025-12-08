@@ -20,7 +20,7 @@ from .serializers import (
     UserSerializer, ProfileSerializer, UserPermissionsSerializer, RoleAssignmentSerializer,
     UserRegisterSerializer, LoginSerializer, LoginResponseSerializer, AuthResponseSerializer,
     PasswordRecoverySerializer, PasswordRecoveryResponseSerializer, PasswordResetSerializer,
-    TokenValidationSerializer
+    TokenValidationSerializer, DetailSerializer
 )
 from users.models import Profile
 
@@ -155,61 +155,42 @@ def manage_profile_image(request):
             }, status=status.HTTP_404_NOT_FOUND)
 
 @extend_schema(
-    operation_id="get_current_user",
-    summary="Obter dados do usuário atual",
-    description="Retorna dados básicos do usuário autenticado.",
-    tags=["Web - User"],
-    responses={200: UserSerializer}
-)
-@api_view(['GET'])
-@permission_classes([permissions.IsAuthenticated])
-def get_current_user(request):
-    """Retorna dados básicos do usuário atual"""
-    serializer = UserSerializer(request.user)
-    return Response(serializer.data, status=status.HTTP_200_OK)
-
-@extend_schema(
-    operation_id="get_user_profile", 
-    summary="Obter perfil completo do usuário",
-    description="Retorna dados completos do perfil do usuário autenticado.",
+    operation_id="get_user_data", 
+    summary="Obter dados completos do usuário",
+    description="Retorna dados completos do usuário autenticado incluindo perfil.",
     tags=["Web - User"],
     methods=['GET'],
-    responses={200: ProfileSerializer}
+    responses={200: UserSerializer}
 )
 @extend_schema(
-    operation_id="update_user_profile", 
-    summary="Atualizar perfil do usuário",
+    operation_id="update_user_data", 
+    summary="Atualizar dados do usuário",
     description="Atualiza dados do perfil do usuário autenticado.",
     tags=["Web - User"],
     methods=['PATCH'],
     request=ProfileSerializer,
-    responses={200: ProfileSerializer}
+    responses={200: UserSerializer, 400: DetailSerializer}
 )
 @api_view(['GET', 'PATCH'])
 @permission_classes([permissions.IsAuthenticated])
-def get_current_user_profile(request):
-    """Retorna ou atualiza dados do perfil do usuário atual"""
+def get_current_user(request):
+    """Retorna dados completos do usuário atual com perfil ou atualiza o perfil"""
+    # Garante que o profile existe
+    profile, created = Profile.objects.get_or_create(user=request.user)
+    if created:
+        print(f"DEBUG WEB: Profile criado para usuário: {request.user.username}")
+    
     if request.method == 'GET':
-        try:
-            profile = request.user.profile
-            serializer = ProfileSerializer(profile)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        except Profile.DoesNotExist:
-            # Create profile if it doesn't exist
-            profile = Profile.objects.create(user=request.user)
-            serializer = ProfileSerializer(profile)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
     
     elif request.method == 'PATCH':
-        try:
-            profile = request.user.profile
-        except Profile.DoesNotExist:
-            profile = Profile.objects.create(user=request.user)
-        
         serializer = ProfileSerializer(profile, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            # Retorna dados completos atualizados
+            user_serializer = UserSerializer(request.user)
+            return Response(user_serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @extend_schema(

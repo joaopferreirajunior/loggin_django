@@ -11,8 +11,7 @@ urlpatterns = [
     path('token/refresh/', views.WebTokenRefreshView.as_view(), name='api_web_token_refresh'),
     
     # User data endpoints
-    path("me/", views.get_current_user, name="api_web_current_user"),  # GET - dados básicos do usuário
-    path("me/profile/", views.get_current_user_profile, name="api_web_current_user_profile"),  # GET/PATCH - dados completos do perfil
+    path("me/", views.get_current_user, name="api_web_current_user"),  # GET/PATCH - dados completos do usuário com perfil
     path("me/permissions/", views.get_user_permissions, name="api_web_user_permissions"),  # GET - permissões do usuário
     
     # Role management
