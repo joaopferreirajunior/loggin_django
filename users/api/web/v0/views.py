@@ -194,6 +194,29 @@ def get_current_user(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @extend_schema(
+    operation_id="get_user_profile", 
+    summary="Obter perfil completo do usuário",
+    description="Alias para /me/ - retorna dados completos do usuário autenticado incluindo perfil.",
+    tags=["Web - User"],
+    methods=['GET'],
+    responses={200: UserSerializer}
+)
+@extend_schema(
+    operation_id="update_user_profile", 
+    summary="Atualizar perfil do usuário",
+    description="Alias para /me/ - atualiza dados do perfil do usuário autenticado.",
+    tags=["Web - User"],
+    methods=['PATCH'],
+    request=ProfileSerializer,
+    responses={200: UserSerializer, 400: DetailSerializer}
+)
+@api_view(['GET', 'PATCH'])
+@permission_classes([permissions.IsAuthenticated])
+def get_current_user_profile(request):
+    """Alias para get_current_user - mantém compatibilidade com frontend"""
+    return get_current_user(request)
+
+@extend_schema(
     operation_id="get_user_permissions",
     summary="Obter permissões do usuário",
     description="Retorna permissões e grupos do usuário autenticado.",

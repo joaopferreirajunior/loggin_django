@@ -272,18 +272,17 @@
                         throw new Error(`Erro ${userResponse.status}: ${userResponse.statusText}`);
                     }
 
-                    const userData = await userResponse.json();
-
-                    // Busca dados do perfil usando autenticação JWT
-                    const profileResponse = await makeAuthenticatedRequest('/users/api/web/v0/me/profile/', {
+                    // Busca dados completos do usuário (user + profile) usando autenticação JWT
+                    const userResponse = await makeAuthenticatedRequest('/users/api/web/v0/me/', {
                         method: 'GET'
                     });
 
-                    if (!profileResponse.ok) {
-                        throw new Error(`Erro ${profileResponse.status}: ${profileResponse.statusText}`);
+                    if (!userResponse.ok) {
+                        throw new Error(`Erro ${userResponse.status}: ${userResponse.statusText}`);
                     }
 
-                    const profileData = await profileResponse.json();
+                    const userData = await userResponse.json();
+                    const profileData = userData.profile; // Profile está aninhado no user
 
                     // Busca dados de permissões para obter o grupo
                     let userRole = 'Não informado';

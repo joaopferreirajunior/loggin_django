@@ -330,10 +330,8 @@
                     throw new Error(`Erro ${userResponse.status}: ${userResponse.statusText}`);
                 }
 
-                const userData = await userResponse.json();
-
-                // Busca dados do perfil
-                const profileResponse = await fetch('/users/api/web/v0/me/profile/', {
+                // Busca dados completos do usuário (user + profile)
+                const userResponse = await fetch('/users/api/web/v0/me/', {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -341,11 +339,12 @@
                     credentials: 'same-origin'
                 });
 
-                if (!profileResponse.ok) {
-                    throw new Error(`Erro ${profileResponse.status}: ${profileResponse.statusText}`);
+                if (!userResponse.ok) {
+                    throw new Error(`Erro ${userResponse.status}: ${userResponse.statusText}`);
                 }
 
-                const profileData = await profileResponse.json();
+                const userData = await userResponse.json();
+                const profileData = userData.profile; // Profile está aninhado no user
 
                 // Busca dados de permissões e grupos
                 const permissionsResponse = await fetch('/users/api/web/v0/me/permissions/', {
@@ -649,7 +648,7 @@
             try {
                 // 1. Atualizar dados do perfil
                 const csrftoken = getCookie('csrftoken');
-                const profileResponse = await fetch('/users/api/web/v0/me/profile/', {
+                const profileResponse = await fetch('/users/api/web/v0/me/', {
                     method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json',

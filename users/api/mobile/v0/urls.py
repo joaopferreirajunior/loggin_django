@@ -48,7 +48,7 @@ urlpatterns = [
         name="api_mobile_profile_image_delete",
     ),
     path(
-        "profile-image/serve/<int:user_id>/",
+        "profile/image/serve/<int:user_id>/",
         views.MobileServeProfileImageView.as_view(),
         name="api_mobile_profile_image_serve",
     ),
