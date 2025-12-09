@@ -317,19 +317,6 @@
             loadingDiv.style.display = 'block';
 
             try {
-                // Busca dados básicos do usuário
-                const userResponse = await fetch('/users/api/web/v0/me/', {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    credentials: 'same-origin'
-                });
-
-                if (!userResponse.ok) {
-                    throw new Error(`Erro ${userResponse.status}: ${userResponse.statusText}`);
-                }
-
                 // Busca dados completos do usuário (user + profile)
                 const userResponse = await fetch('/users/api/web/v0/me/', {
                     method: 'GET',
@@ -449,7 +436,16 @@
 
             } catch (error) {
                 console.error('Erro ao carregar dados do usuário:', error);
-                showMessage('Erro ao carregar dados do usuário: ' + error.message, true);
+                
+                // Se for erro de autenticação (401/403), redireciona para login
+                if (error.message.includes('401') || error.message.includes('403')) {
+                    showMessage('Sessão expirada. Redirecionando para login...', true);
+                    setTimeout(() => {
+                        window.location.href = '/login/';
+                    }, 2000);
+                } else {
+                    showMessage('Erro ao carregar dados do usuário: ' + error.message, true);
+                }
             } finally {
                 loadingDiv.style.display = 'none';
             }
@@ -577,16 +573,8 @@
 
         // Inicialização quando a página carrega
         document.addEventListener('DOMContentLoaded', function() {
-            // Verifica se o usuário está autenticado com JWT
-            if (!isAuthenticated()) {
-                console.warn('Usuário não possui token JWT válido, redirecionando para login...');
-                showMessage('Sessão expirada. Redirecionando para login...', true);
-                setTimeout(() => {
-                    window.location.href = '/login/';
-                }, 2000);
-                return;
-            }
-            
+            // Para páginas web, usamos autenticação por sessão, não JWT
+            // Tentamos carregar os dados e se der erro de autenticação, redirecionamos
             loadUserData();
 
             // Handler para upload de imagem
