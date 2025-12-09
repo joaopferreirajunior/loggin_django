@@ -219,3 +219,4 @@ db.sqlite3
 
 # Pastas do Docker
 *.log
+PROFILE_UPDATE_SUMMARY.md

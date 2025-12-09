@@ -101,9 +101,23 @@ class ProfileSerializer(serializers.ModelSerializer):
         if 'user' in validated_data:
             user_data = validated_data.pop('user')
         
+        # Verifica se o email está sendo alterado
+        email_changed = False
+        if 'email' in user_data:
+            current_email = instance.user.email
+            new_email = user_data['email']
+            if current_email != new_email:
+                email_changed = True
+        
         # Atualiza o Profile
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
+        
+        # Se o email foi alterado, reseta a confirmação
+        if email_changed:
+            instance.email_confirmed = False
+            instance.email_confirmed_at = None
+        
         instance.save()
         
         # Atualiza o User se houver dados

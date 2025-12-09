@@ -173,8 +173,19 @@
             </div>
 
             <div class="form-group">
+                <label for="first_name">Nome:</label>
+                <input type="text" id="first_name" name="first_name" placeholder="Seu nome" maxlength="150">
+            </div>
+
+            <div class="form-group">
+                <label for="last_name">Sobrenome:</label>
+                <input type="text" id="last_name" name="last_name" placeholder="Seu sobrenome" maxlength="150">
+            </div>
+
+            <div class="form-group">
                 <label for="email">E-mail:</label>
-                <input type="email" id="email" readonly>
+                <input type="email" id="email" name="email" placeholder="seu@email.com">
+                <small class="form-text text-muted">Alterar o e-mail fará com que precise verificá-lo novamente</small>
             </div>
 
             <div class="form-group">
@@ -349,6 +360,8 @@
 
                 // Preenche os campos do formulário
                 document.getElementById('username').value = userData.username || '';
+                document.getElementById('first_name').value = userData.first_name || '';
+                document.getElementById('last_name').value = userData.last_name || '';
                 document.getElementById('email').value = userData.email || '';
                 document.getElementById('cpf').value = profileData.cpf || '';
                 document.getElementById('birth').value = profileData.birth || '';
@@ -609,6 +622,9 @@
                 e.preventDefault();
 
                 const formData = {
+                    first_name: document.getElementById('first_name').value.trim(),
+                    last_name: document.getElementById('last_name').value.trim(),
+                    email: document.getElementById('email').value.trim(),
                     cpf: document.getElementById('cpf').value.trim(),
                     birth: document.getElementById('birth').value,
                     phone: document.getElementById('phone').value.trim()
