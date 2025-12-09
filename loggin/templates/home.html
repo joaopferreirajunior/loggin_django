@@ -263,15 +263,6 @@
             // Função para carregar dados do usuário
             async function loadUserData() {
                 try {
-                    // Busca dados básicos do usuário usando autenticação JWT
-                    const userResponse = await makeAuthenticatedRequest('/users/api/web/v0/me/', {
-                        method: 'GET'
-                    });
-
-                    if (!userResponse.ok) {
-                        throw new Error(`Erro ${userResponse.status}: ${userResponse.statusText}`);
-                    }
-
                     // Busca dados completos do usuário (user + profile) usando autenticação JWT
                     const userResponse = await makeAuthenticatedRequest('/users/api/web/v0/me/', {
                         method: 'GET'
