@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Group, Clinic, GroupAdmin as GroupAdminModel, DeviceClinic
+from .models import Group, Clinic, GroupAdmin as GroupAdminModel, DeviceClinic, UserClinic
 
 
 @admin.register(Group)
@@ -95,6 +95,31 @@ class DeviceClinicAdmin(admin.ModelAdmin):
         }),
         ('Metadata', {
             'fields': ('id', 'assigned_at', 'created', 'modified'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(UserClinic)
+class UserClinicAdmin(admin.ModelAdmin):
+    list_display = ('user', 'clinic', 'role', 'is_active', 'start_date', 'end_date')
+    list_filter = ('clinic__group', 'clinic', 'is_active', 'start_date')
+    search_fields = ('user__username', 'user__email', 'clinic__name', 'role')
+    ordering = ('-start_date',)
+    readonly_fields = ('id', 'start_date', 'created', 'modified')
+    
+    fieldsets = (
+        (None, {
+            'fields': ('user', 'clinic', 'role')
+        }),
+        ('Period', {
+            'fields': ('start_date', 'end_date')
+        }),
+        ('Status', {
+            'fields': ('is_active',)
+        }),
+        ('Metadata', {
+            'fields': ('id', 'created', 'modified'),
             'classes': ('collapse',)
         }),
     )

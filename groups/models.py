@@ -182,3 +182,55 @@ class DeviceClinic(AuditModel):
     
     def __str__(self):
         return f"{self.device.serial or self.device.id} @ {self.clinic.name}"
+
+
+class UserClinic(AuditModel):
+    """
+    Relaciona usuários a clínicas.
+    Define em quais clínicas um usuário (médico, enfermeiro, etc.) trabalha.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="user_clinics",
+        help_text="Usuário vinculado à clínica"
+    )
+    clinic = models.ForeignKey(
+        Clinic,
+        on_delete=models.CASCADE,
+        related_name="clinic_users",
+        help_text="Clínica onde o usuário trabalha"
+    )
+    role = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Função do usuário na clínica (médico, enfermeiro, etc.)"
+    )
+    start_date = models.DateTimeField(
+        auto_now_add=True,
+        help_text="Data de início do vínculo"
+    )
+    end_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Data de fim do vínculo (se aplicável)"
+    )
+    
+    class Meta:
+        verbose_name = "User Clinic"
+        verbose_name_plural = "User Clinics"
+        indexes = [
+            models.Index(fields=['user', 'clinic']),
+            models.Index(fields=['clinic', 'user']),
+            models.Index(fields=['is_active']),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'clinic'],
+                name='unique_user_clinic'
+            )
+        ]
+    
+    def __str__(self):
+        return f"{self.user.username} @ {self.clinic.name}"

@@ -1,6 +1,9 @@
 from rest_framework import serializers
-from groups.models import Group, Clinic, DeviceClinic
+from groups.models import Group, Clinic, DeviceClinic, UserClinic
 from devices.models import Device
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 class DeviceSerializer(serializers.ModelSerializer):
