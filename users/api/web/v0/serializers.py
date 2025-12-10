@@ -15,6 +15,12 @@ class DetailSerializer(serializers.Serializer):
 
 class UserRegisterSerializer(serializers.ModelSerializer):
     """Serializer para registro de novos usuários"""
+    # Campo username customizado para remover validação padrão do Django em inglês
+    username = serializers.CharField(
+        required=True,
+        max_length=150,
+        help_text="Nome de usuário (apenas letras e números)"
+    )
     password = serializers.CharField(write_only=True, min_length=8, max_length=128)
     email = serializers.EmailField(required=True)
     first_name = serializers.CharField(required=True, max_length=150, help_text="Nome do usuário")

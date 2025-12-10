@@ -17,6 +17,20 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
+# ============================
+# CONFIGURAÇÕES DE CHARSET E LOCALIZAÇÃO
+# ============================
+# Força encoding UTF-8
+DEFAULT_CHARSET = 'utf-8'
+FILE_CHARSET = 'utf-8'
+
+# Configurações de idioma e timezone
+LANGUAGE_CODE = 'pt-br'
+TIME_ZONE = 'America/Sao_Paulo'
+USE_I18N = True
+USE_L10N = True
+USE_TZ = True
+
 SECRET_KEY = os.getenv("SECRET_KEY", "unsafe-default-key")
 DEBUG = os.getenv("DEBUG", "False") == "True"
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "*").split(",")
@@ -40,7 +54,10 @@ INSTALLED_APPS = [
 ]
 
 REST_FRAMEWORK = {
-    'DEFAULT_RENDERER_CLASSES': ['rest_framework.renderers.JSONRenderer'],
+    'DEFAULT_RENDERER_CLASSES': [
+        'app.renderers.UTF8JSONRenderer',  # Renderer customizado com UTF-8
+        'rest_framework.renderers.BrowsableAPIRenderer',  # Mantém API navegável
+    ],
     'DEFAULT_PARSER_CLASSES': [
         'rest_framework.parsers.JSONParser',
         'rest_framework.parsers.MultiPartParser',
@@ -51,7 +68,6 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',  # para app
     ],
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
-
 }
 
 SPECTACULAR_SETTINGS = {
@@ -154,6 +170,9 @@ DATABASES = {
         'PASSWORD': os.getenv('DB_PASSWORD', ''),
         'HOST': os.getenv('DB_HOST', ''),
         'PORT': os.getenv('DB_PORT', ''),
+        'OPTIONS': {
+            'charset': 'utf8mb4',
+        } if os.getenv('DB_ENGINE') == 'django.db.backends.mysql' else {},
     }
 }
 

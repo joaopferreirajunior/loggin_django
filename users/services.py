@@ -1,7 +1,7 @@
 import boto3
 import uuid
 import os
-from PIL import Image
+from PIL import Image, ImageOps
 from io import BytesIO
 from django.conf import settings
 from django.core.files.uploadedfile import InMemoryUploadedFile
@@ -107,7 +107,7 @@ class S3ImageService:
     
     def resize_image(self, image_file) -> BytesIO:
         """
-        Redimensiona a imagem mantendo proporção e otimiza para web
+        Redimensiona a imagem mantendo proporção, corrige orientação EXIF e otimiza para web
         
         Args:
             image_file: Arquivo de imagem uploadado
@@ -117,6 +117,10 @@ class S3ImageService:
         """
         # Abre a imagem
         image = Image.open(image_file)
+        
+        # CORREÇÃO EXIF: Aplica rotação baseada nos metadados EXIF
+        # Isso resolve o problema de imagens que rotacionam automaticamente
+        image = ImageOps.exif_transpose(image)
         
         # Converte para RGB se necessário (remove canal alpha)
         if image.mode in ('RGBA', 'LA', 'P'):
@@ -129,15 +133,29 @@ class S3ImageService:
         # Redimensiona mantendo proporção
         image.thumbnail(self.max_size, Image.Resampling.LANCZOS)
         
-        # Salva em buffer com otimização
+        # Salva em buffer com otimização, preservando metadados EXIF
         buffer = BytesIO()
-        image.save(
-            buffer, 
-            format='JPEG', 
-            quality=self.quality,
-            optimize=True,
-            progressive=True
-        )
+        
+        # Tenta preservar EXIF se disponível
+        exif_data = None
+        try:
+            if hasattr(image, '_getexif') and image._getexif() is not None:
+                exif_data = image.info.get('exif')
+        except:
+            pass  # Se houver erro ao ler EXIF, continua sem ele
+        
+        # Salva com ou sem EXIF
+        save_kwargs = {
+            'format': 'JPEG', 
+            'quality': self.quality,
+            'optimize': True,
+            'progressive': True
+        }
+        
+        if exif_data:
+            save_kwargs['exif'] = exif_data
+            
+        image.save(buffer, **save_kwargs)
         buffer.seek(0)
         
         return buffer
