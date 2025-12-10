@@ -49,7 +49,6 @@ INSTALLED_APPS = [
     "users.apps.UsersConfig",
     "devices",
     "patients.apps.PatientsConfig",
-    "projects",
     'drf_spectacular',
 ]
 
