@@ -8,7 +8,7 @@ Este documento descreve como funciona o sistema de permissões implementado, com
 - **Descrição**: Acesso total ao sistema
 - **Permissões**:
   - Gerenciar todos os usuários (criar, editar, deletar)
-  - Gerenciar grupos e permissões
+  - Gerenciar roles e permissões
   - Acessar painel administrativo
   - Todas as permissões de office_admin e regular_user
 

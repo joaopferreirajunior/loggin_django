@@ -6,6 +6,11 @@ from drf_spectacular.views import (
     SpectacularRedocView,
 )
 
+# Customizar textos do admin
+admin.site.site_header = "Loggin - Administração"
+admin.site.site_title = "Loggin Admin"
+admin.site.index_title = "Painel de Administração"
+
 urlpatterns = [
     path("", include("loggin.urls")),                 # páginas HTML e APIs do loggin
     path("admin/", admin.site.urls),                # admin

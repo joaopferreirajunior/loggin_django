@@ -1,7 +1,17 @@
 from django.conf import settings
 from django.db import models
+from django.contrib.auth.models import Group as DjangoGroup
 from app.utils import AuditModel
 import uuid
+
+
+# Modelo proxy para renomear "Grupos" para "Roles" no admin
+class Role(DjangoGroup):
+    class Meta:
+        proxy = True
+        verbose_name = 'Role'
+        verbose_name_plural = 'Roles'
+
 
 #class Profile(models.Model):
 #    user = models.OneToOneField(

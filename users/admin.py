@@ -1,9 +1,28 @@
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import Profile, UserPatientRelation
+from django.contrib.auth.models import Group
+from .models import Profile, UserPatientRelation, Role
 
 User = get_user_model()
+
+
+# Customizar o nome de exibição do modelo Group (roles)
+class RoleAdmin(admin.ModelAdmin):
+    """Admin customizado para roles (Django Groups)"""
+    list_display = ('name', 'permission_count')
+    search_fields = ('name',)
+    filter_horizontal = ('permissions',)
+    
+    def permission_count(self, obj):
+        return obj.permissions.count()
+    permission_count.short_description = 'Número de Permissões'
+
+
+# Desregistrar o admin padrão de Group e registrar o customizado com modelo proxy
+admin.site.unregister(Group)
+admin.site.register(Role, RoleAdmin)
+
 
 class ProfileInline(admin.StackedInline):
     model = Profile

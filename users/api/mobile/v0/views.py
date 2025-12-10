@@ -593,7 +593,7 @@ class MeView(APIView):
             )
 
 
-# View para gerenciar permissões e grupos de usuário
+# View para gerenciar permissões e roles de usuário
 @extend_schema_view(
     get=extend_schema(
         tags=["Mobile - User"],

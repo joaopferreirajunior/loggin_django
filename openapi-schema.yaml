@@ -1465,7 +1465,7 @@ paths:
   /users/api/web/v0/me/permissions/:
     get:
       operationId: get_user_permissions
-      description: Retorna permissões e grupos do usuário autenticado.
+      description: Retorna permissões e roles do usuário autenticado.
       summary: Obter permissões do usuário
       tags:
       - Web - User
