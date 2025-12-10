@@ -55,7 +55,6 @@ INSTALLED_APPS = [
 
 REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
-        'app.renderers.UTF8JSONRenderer',  # Renderer customizado com UTF-8
         'rest_framework.renderers.BrowsableAPIRenderer',  # Mantém API navegável
     ],
     'DEFAULT_PARSER_CLASSES': [
