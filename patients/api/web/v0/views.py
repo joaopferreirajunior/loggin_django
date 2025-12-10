@@ -43,28 +43,30 @@ def create_patient(request):
     """Cria um novo paciente"""
     serializer = PatientSerializer(data=request.data)
     if serializer.is_valid():
-        clinic_id = serializer.validated_data.get('clinic')
+        user = request.user
         
-        # Se uma clínica foi especificada, validar se o usuário está associado a ela
-        if clinic_id:
-            from groups.models import UserClinic
-            
-            # Verificar se é system_admin
-            if not request.user.groups.filter(name='system_admin').exists():
-                # Verificar se o usuário está vinculado à clínica
-                is_user_in_clinic = UserClinic.objects.filter(
-                    user=request.user,
-                    clinic=clinic_id,
-                    is_active=True
-                ).exists()
-                
-                if not is_user_in_clinic:
-                    return Response(
-                        {"detail": "Você não tem permissão para criar pacientes nesta clínica. Apenas usuários vinculados à clínica podem criar pacientes nela."},
-                        status=status.HTTP_403_FORBIDDEN
-                    )
+        # Verificar se é system_admin (pode criar em qualquer grupo)
+        if user.groups.filter(name='system_admin').exists():
+            patient = serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
         
-        patient = serializer.save()
+        # Para usuários não-admin, associar automaticamente ao grupo do usuário
+        from groups.models import UserClinic
+        
+        # Buscar clínica do usuário (primeira clínica ativa)
+        user_clinic = UserClinic.objects.filter(
+            user=user,
+            is_active=True
+        ).select_related('clinic', 'clinic__group').first()
+        
+        if not user_clinic:
+            return Response(
+                {"detail": "Você não está vinculado a nenhuma clínica. Apenas usuários vinculados a clínicas podem criar pacientes."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Associar automaticamente ao grupo da clínica do usuário
+        patient = serializer.save(group=user_clinic.clinic.group)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -103,30 +105,28 @@ def get_patient(request, patient_id):
 def update_patient(request, patient_id):
     """Atualiza dados de um paciente"""
     patient = get_object_or_404(Patient, id=patient_id, is_active=True)
+    user = request.user
+    
+    # Verificar se é system_admin
+    if not user.groups.filter(name='system_admin').exists():
+        # Verificar se o usuário pertence ao mesmo grupo do paciente
+        from groups.models import UserClinic
+        
+        user_in_patient_group = UserClinic.objects.filter(
+            user=user,
+            clinic__group=patient.group,
+            is_active=True
+        ).exists()
+        
+        if not user_in_patient_group:
+            return Response(
+                {"detail": "Você não tem permissão para editar este paciente. Apenas usuários do mesmo grupo podem editar pacientes."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+    
     serializer = PatientSerializer(patient, data=request.data, partial=(request.method == 'PATCH'))
     
     if serializer.is_valid():
-        clinic_id = serializer.validated_data.get('clinic')
-        
-        # Se a clínica está sendo alterada, validar se o usuário está associado à nova clínica
-        if clinic_id and clinic_id != patient.clinic:
-            from groups.models import UserClinic
-            
-            # Verificar se é system_admin
-            if not request.user.groups.filter(name='system_admin').exists():
-                # Verificar se o usuário está vinculado à nova clínica
-                is_user_in_clinic = UserClinic.objects.filter(
-                    user=request.user,
-                    clinic=clinic_id,
-                    is_active=True
-                ).exists()
-                
-                if not is_user_in_clinic:
-                    return Response(
-                        {"detail": "Você não tem permissão para associar pacientes a esta clínica. Apenas usuários vinculados à clínica podem fazê-lo."},
-                        status=status.HTTP_403_FORBIDDEN
-                    )
-        
         serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

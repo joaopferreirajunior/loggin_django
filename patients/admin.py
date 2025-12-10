@@ -4,15 +4,15 @@ from .models import Patient, MedicalRecord
 
 @admin.register(Patient)
 class PatientAdmin(admin.ModelAdmin):
-    list_display = ('full_name', 'clinic', 'cpf', 'birth_date', 'gender', 'city', 'is_active', 'created_at')
-    list_filter = ('gender', 'is_active', 'city', 'region', 'created_at', 'clinic')
-    search_fields = ('full_name', 'cpf', 'email', 'phone', 'clinic__name')
+    list_display = ('full_name', 'group', 'cpf', 'birth_date', 'gender', 'city', 'is_active', 'created_at')
+    list_filter = ('gender', 'is_active', 'city', 'region', 'created_at', 'group')
+    search_fields = ('full_name', 'cpf', 'email', 'phone', 'group__name')
     ordering = ('-created_at',)
     readonly_fields = ('id', 'created_at', 'updated_at')
     
     fieldsets = (
-        ('Clínica', {
-            'fields': ('clinic',)
+        ('Grupo', {
+            'fields': ('group',)
         }),
         ('Informações Pessoais', {
             'fields': ('full_name', 'photo', 'birth_date', 'gender')
