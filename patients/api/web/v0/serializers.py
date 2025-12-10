@@ -29,6 +29,7 @@ class MedicalRecordSerializer(serializers.ModelSerializer):
 
 @extend_schema_serializer(component_name="WebPatient")
 class PatientSerializer(serializers.ModelSerializer):
+    clinicId = serializers.UUIDField(source="clinic_id", allow_null=True, required=False)
     fullName = serializers.CharField(source="full_name")
     birthDate = serializers.DateField(source="birth_date")
     fullAddress = serializers.CharField(source="full_address", allow_null=True, required=False)
@@ -44,6 +45,7 @@ class PatientSerializer(serializers.ModelSerializer):
         model = Patient
         fields = (
             "id",
+            "clinicId",
             "fullName",
             "photo",
             "birthDate",

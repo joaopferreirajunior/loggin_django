@@ -19,7 +19,7 @@ class Device(AuditModel):
     tested = models.BooleanField(null=True, blank=True, db_index=True)
     tested_at = models.DateTimeField(null=True, blank=True, db_index=True)
     clickhouse_id = models.CharField(max_length=255, unique=True, db_index=True)
-    # resto “cauda longa”
+    # resto "cauda longa"
     metadata = models.JSONField(default=dict, blank=True)
 
     class Meta:
@@ -31,6 +31,31 @@ class Device(AuditModel):
             models.Index(fields=["model_name"]),
             models.Index(fields=["sold", "sold_at"]),  # composto útil p/ relatórios
         ]
+    
+    def __str__(self):
+        return f"Device {self.serial or self.id} ({self.get_origin_display()})"
+    
+    def get_current_clinic(self):
+        """Retorna a clínica atual do device (se houver)"""
+        current_assignment = self.device_clinics.filter(is_active=True).first()
+        return current_assignment.clinic if current_assignment else None
+    
+    def is_assigned_to_clinic(self):
+        """Verifica se o device está atualmente atribuído a uma clínica"""
+        return self.device_clinics.filter(is_active=True).exists()
+    
+    def assign_to_clinic(self, clinic, notes=None):
+        """Atribui o device a uma clínica (remove atribuições anteriores)"""
+        # Desativa atribuições anteriores
+        self.device_clinics.filter(is_active=True).update(is_active=False)
+        
+        # Cria nova atribuição
+        return DeviceClinic.objects.create(
+            device=self,
+            clinic=clinic,
+            notes=notes or "",
+            is_active=True
+        )
     
 class DeviceLocation(models.Model):
     device   = models.ForeignKey(

@@ -14,7 +14,7 @@ class Command(BaseCommand):
         
         # Criar ou obter content types
         user_content_type = ContentType.objects.get_for_model(User)
-        userprofile_content_type = ContentType.objects.get_for_model(Profile)
+        profile_content_type = ContentType.objects.get_for_model(Profile)
         
         # Criar permissões customizadas
         permissions_data = [
@@ -28,12 +28,12 @@ class Command(BaseCommand):
             # Permissões de escritório/office
             ('can_manage_office_users', 'Can manage office users', user_content_type),
             ('can_view_office_reports', 'Can view office reports', user_content_type),
-            ('can_manage_office_settings', 'Can manage office settings', userprofile_content_type),
-            ('can_export_office_data', 'Can export office data', userprofile_content_type),
+            ('can_manage_office_settings', 'Can manage office settings', profile_content_type),
+            ('can_export_office_data', 'Can export office data', profile_content_type),
             
             # Permissões de usuário regular
-            ('can_view_own_profile', 'Can view own profile', userprofile_content_type),
-            ('can_edit_own_profile', 'Can edit own profile', userprofile_content_type),
+            ('can_view_own_profile', 'Can view own profile', profile_content_type),
+            ('can_edit_own_profile', 'Can edit own profile', profile_content_type),
             ('can_change_own_password', 'Can change own password', user_content_type),
         ]
         
@@ -58,7 +58,7 @@ class Command(BaseCommand):
                 'permissions': [
                     # Permissões Django padrão
                     'add_user', 'change_user', 'delete_user', 'view_user',
-                    'add_userprofile', 'change_userprofile', 'delete_userprofile', 'view_userprofile',
+                    'add_profile', 'change_profile', 'delete_profile', 'view_profile',
                     'add_group', 'change_group', 'delete_group', 'view_group',
                     'add_permission', 'change_permission', 'delete_permission', 'view_permission',
                     
@@ -77,12 +77,30 @@ class Command(BaseCommand):
                     'can_change_own_password',
                 ]
             },
+            'group_admin': {
+                'name': 'Administrador de Grupo',
+                'permissions': [
+                    # Permissões para gerenciar grupo de clínicas
+                    'add_user', 'change_user', 'view_user',
+                    'add_profile', 'change_profile', 'view_profile',
+                    'view_group', 'view_permission',
+                    
+                    # Permissões customizadas
+                    'can_manage_office_users',
+                    'can_view_office_reports',
+                    'can_manage_office_settings',
+                    'can_export_office_data',
+                    'can_view_own_profile',
+                    'can_edit_own_profile',
+                    'can_change_own_password',
+                ]
+            },
             'office_admin': {
                 'name': 'Administrador de Escritório',
                 'permissions': [
                     # Permissões limitadas para usuários
                     'add_user', 'change_user', 'view_user',
-                    'add_userprofile', 'change_userprofile', 'view_userprofile',
+                    'add_profile', 'change_profile', 'view_profile',
                     'view_group', 'view_permission',
                     
                     # Permissões customizadas
@@ -99,7 +117,7 @@ class Command(BaseCommand):
                 'name': 'Usuário Regular',
                 'permissions': [
                     # Apenas permissões básicas
-                    'view_userprofile',
+                    'view_profile',
                     
                     # Permissões customizadas
                     'can_view_own_profile',
@@ -129,7 +147,26 @@ class Command(BaseCommand):
                         permission = created_permissions[perm_codename]
                     else:
                         # Buscar nas permissões padrão do Django
-                        permission = Permission.objects.get(codename=perm_codename)
+                        # Tentar diferentes content types comuns
+                        permission = None
+                        for ct in [user_content_type, profile_content_type]:
+                            try:
+                                permission = Permission.objects.get(
+                                    codename=perm_codename,
+                                    content_type=ct
+                                )
+                                break
+                            except Permission.DoesNotExist:
+                                continue
+                        
+                        # Se não encontrou nos content types específicos, buscar em geral
+                        if not permission:
+                            permission = Permission.objects.filter(
+                                codename=perm_codename
+                            ).first()
+                        
+                        if not permission:
+                            raise Permission.DoesNotExist(f"Permissão {perm_codename} não encontrada")
                     
                     group.permissions.add(permission)
                     
@@ -147,7 +184,7 @@ class Command(BaseCommand):
         
         # Mostrar resumo
         self.stdout.write('\n=== RESUMO DOS ROLES ===')
-        for group in Group.objects.filter(name__in=['system_admin', 'office_admin', 'regular_user']):
+        for group in Group.objects.filter(name__in=['system_admin', 'group_admin', 'office_admin', 'regular_user']):
             self.stdout.write(f'\n{group.name}:')
             for perm in group.permissions.all():
                 self.stdout.write(f'  - {perm.codename}: {perm.name}')

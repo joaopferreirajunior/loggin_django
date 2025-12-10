@@ -11,6 +11,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),                # admin
     path("users/", include("users.urls")), # APIs do app users
     path("patients/", include("patients.urls")), # APIs do app patients
+    path("groups/", include("groups.urls")), # APIs do app groups
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"), #  Endpoint que fornece o schema OpenAPI (JSON/YAML)
     path(
         "api/docs/",

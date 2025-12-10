@@ -7,6 +7,16 @@ class Patient(models.Model):
     # por CharField se quiser manter totalmente livre.
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
+    # Relacionamento com clínica (opcional)
+    clinic = models.ForeignKey(
+        'groups.Clinic',
+        on_delete=models.PROTECT,
+        related_name='patients',
+        null=True,
+        blank=True,
+        help_text="Clínica à qual o paciente pertence"
+    )
+
     full_name = models.CharField(max_length=255)
     photo = models.URLField(null=True, blank=True)  # ou CharField se não for URL fixa
     birth_date = models.DateField()
