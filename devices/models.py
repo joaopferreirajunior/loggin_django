@@ -1,6 +1,5 @@
 from django.db import models
 from app.utils import AuditModel  # created, modified, is_active
-from projects.models import Project
 
 class DeviceOrigin(models.IntegerChoices):
     MEDIO     = 1, "MedIO"
@@ -32,25 +31,6 @@ class Device(AuditModel):
             models.Index(fields=["model_name"]),
             models.Index(fields=["sold", "sold_at"]),  # composto útil p/ relatórios
         ]
-
-class DeviceProject(AuditModel):
-    device = models.ForeignKey("devices.Device", on_delete=models.CASCADE, related_name="device_projects")
-    project = models.ForeignKey( "projects.Project", on_delete=models.CASCADE, related_name="device_projects")
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=["device", "project"], name="uq_deviceproject_device_project"),
-        ]
-        indexes = [
-            models.Index(fields=["project", "device"]),
-            models.Index(fields=["device", "project"]),
-            models.Index(fields=["is_active"]),
-        ]
-        verbose_name = "Device project"
-        verbose_name_plural = "Device projects"
-
-    def __str__(self):
-        return f"{self.device_id} ↔ {self.project_id}"
     
 class DeviceLocation(models.Model):
     device   = models.ForeignKey(

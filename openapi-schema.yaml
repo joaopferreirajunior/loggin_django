@@ -2351,7 +2351,7 @@ components:
           type: boolean
         is_regular_user:
           type: boolean
-        groups:
+        roles:
           type: array
           items:
             type: string
@@ -2369,7 +2369,7 @@ components:
       - can_access_admin
       - can_manage_users
       - can_view_all_users
-      - groups
+      - roles
       - is_office_admin
       - is_regular_user
       - is_system_admin

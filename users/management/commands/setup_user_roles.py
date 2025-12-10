@@ -7,10 +7,10 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 
 class Command(BaseCommand):
-    help = 'Cria os grupos de usuários e suas permissões'
+    help = 'Cria os roles de usuários e suas permissões'
 
     def handle(self, *args, **options):
-        self.stdout.write('Criando grupos de usuários e permissões...')
+        self.stdout.write('Criando roles de usuários e permissões...')
         
         # Criar ou obter content types
         user_content_type = ContentType.objects.get_for_model(User)
@@ -51,8 +51,8 @@ class Command(BaseCommand):
             else:
                 self.stdout.write(f'  Permissão já existe: {codename}')
         
-        # Definir os grupos e suas permissões
-        groups_config = {
+        # Definir os roles e suas permissões
+        roles_config = {
             'system_admin': {
                 'name': 'Administrador do Sistema',
                 'permissions': [
@@ -109,19 +109,19 @@ class Command(BaseCommand):
             }
         }
         
-        # Criar os grupos
-        for group_codename, config in groups_config.items():
-            group, created = Group.objects.get_or_create(name=group_codename)
+        # Criar os roles
+        for role_codename, config in roles_config.items():
+            group, created = Group.objects.get_or_create(name=role_codename)
             
             if created:
-                self.stdout.write(f'  Grupo criado: {group_codename}')
+                self.stdout.write(f'  Role criado: {role_codename}')
             else:
-                self.stdout.write(f'  Grupo já existe: {group_codename}')
+                self.stdout.write(f'  Role já existe: {role_codename}')
             
-            # Limpar permissões existentes do grupo
+            # Limpar permissões existentes do role
             group.permissions.clear()
             
-            # Adicionar permissões ao grupo
+            # Adicionar permissões ao role
             for perm_codename in config['permissions']:
                 try:
                     # Tentar buscar nas permissões customizadas primeiro
@@ -139,14 +139,14 @@ class Command(BaseCommand):
                     )
                     continue
             
-            self.stdout.write(f'    Adicionadas {group.permissions.count()} permissões ao grupo {group_codename}')
+            self.stdout.write(f'    Adicionadas {group.permissions.count()} permissões ao role {role_codename}')
         
         self.stdout.write(
-            self.style.SUCCESS('Grupos e permissões criados com sucesso!')
+            self.style.SUCCESS('Roles e permissões criados com sucesso!')
         )
         
         # Mostrar resumo
-        self.stdout.write('\n=== RESUMO DOS GRUPOS ===')
+        self.stdout.write('\n=== RESUMO DOS ROLES ===')
         for group in Group.objects.filter(name__in=['system_admin', 'office_admin', 'regular_user']):
             self.stdout.write(f'\n{group.name}:')
             for perm in group.permissions.all():

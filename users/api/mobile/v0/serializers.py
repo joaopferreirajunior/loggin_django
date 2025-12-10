@@ -242,7 +242,7 @@ class UserPermissionsSerializer(serializers.Serializer):
     is_system_admin = serializers.BooleanField()
     is_office_admin = serializers.BooleanField()
     is_regular_user = serializers.BooleanField()
-    groups = serializers.ListField(child=serializers.CharField())
+    roles = serializers.ListField(child=serializers.CharField())
     permissions = serializers.ListField(child=serializers.CharField())
     can_manage_users = serializers.BooleanField()
     can_view_all_users = serializers.BooleanField()

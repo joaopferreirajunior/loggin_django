@@ -223,9 +223,9 @@
             </div>
 
             <div class="form-group">
-                <label for="user_role">Grupo do Usuário:</label>
+                <label for="user_role">Role do Usuário:</label>
                 <select id="user_role" name="user_role">
-                    <option value="">Selecione um grupo...</option>
+                    <option value="">Selecione um role...</option>
                     <option value="system_admin">Administrador do Sistema</option>
                     <option value="office_admin">Administrador de Escritório</option>
                     <option value="regular_user">Usuário Regular</option>
@@ -344,7 +344,7 @@
                 const userData = await userResponse.json();
                 const profileData = userData.profile; // Profile está aninhado no user
 
-                // Busca dados de permissões e grupos
+                // Busca dados de permissões e roles
                 const permissionsResponse = await fetch('/users/api/web/v0/me/permissions/', {
                     method: 'GET',
                     headers: {
@@ -379,11 +379,11 @@
                     document.getElementById('deleteImageBtn').style.display = 'none';
                 }
                 
-                // Preenche o grupo do usuário
+                // Preenche o role do usuário
                 const userRoleSelect = document.getElementById('user_role');
                 userRoleSelect.value = permissionsData.user_role || '';
                 
-                // Verifica se o usuário pode alterar grupos
+                // Verifica se o usuário pode alterar roles
                 if (!permissionsData.can_manage_users && !permissionsData.is_system_admin) {
                     userRoleSelect.disabled = true;
                     userRoleSelect.style.backgroundColor = '#f8f9fa';
@@ -392,7 +392,7 @@
                     // Adiciona aviso
                     const warningMsg = document.createElement('small');
                     warningMsg.style.color = '#6c757d';
-                    warningMsg.textContent = 'Apenas administradores podem alterar grupos de usuário.';
+                    warningMsg.textContent = 'Apenas administradores podem alterar roles de usuário.';
                     userRoleSelect.parentNode.appendChild(warningMsg);
                 }
 
@@ -711,15 +711,15 @@
                             });
 
                             if (roleResponse.ok) {
-                                successMessage += ' Grupo alterado com sucesso!';
+                                successMessage += ' Role alterado com sucesso!';
                             } else {
                                 const roleError = await roleResponse.json();
-                                successMessage += ` Aviso: ${roleError.detail || 'Erro ao alterar grupo.'}`;
+                                successMessage += ` Aviso: ${roleError.detail || 'Erro ao alterar role.'}`;
                             }
                         }
                     } catch (roleError) {
                         console.error('Erro ao alterar papel:', roleError);
-                        successMessage += ' Aviso: Não foi possível alterar o grupo.';
+                        successMessage += ' Aviso: Não foi possível alterar o role.';
                     }
                 }
 

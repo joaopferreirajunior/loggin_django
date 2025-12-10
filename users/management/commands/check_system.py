@@ -12,7 +12,7 @@ class Command(BaseCommand):
         # Verificar apps instalados
         self.stdout.write("\n1. Apps instalados:")
         for app in settings.INSTALLED_APPS:
-            if app.startswith(('loggin', 'users', 'devices', 'projects')):
+            if app.startswith(('loggin', 'users', 'devices')):
                 self.stdout.write(f"   - {app}")
         
         # Verificar URLs principais

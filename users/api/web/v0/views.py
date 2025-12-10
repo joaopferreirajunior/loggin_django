@@ -219,7 +219,7 @@ def get_current_user_profile(request):
 @extend_schema(
     operation_id="get_user_permissions",
     summary="Obter permissões do usuário",
-    description="Retorna permissões e grupos do usuário autenticado.",
+    description="Retorna permissões e roles do usuário autenticado.",
     tags=["Web - User"],
     responses={200: UserPermissionsSerializer}
 )
@@ -233,7 +233,7 @@ def get_user_permissions(request):
 @extend_schema(
     operation_id="assign_role",
     summary="Atribuir role ao usuário",
-    description="Permite alterar o grupo/role de um usuário (apenas para administradores).",
+    description="Permite alterar o role de um usuário (apenas para administradores).",
     tags=["Web - User"],
     request=RoleAssignmentSerializer,
     responses={200: {"type": "object", "properties": {"detail": {"type": "string"}}}}

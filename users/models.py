@@ -89,7 +89,7 @@ class Profile(AuditModel):
         return True
     
     def get_user_role(self):
-        """Retorna o papel/grupo principal do usuário"""
+        """Retorna o papel/role principal do usuário"""
         user_groups = self.user.groups.values_list('name', flat=True)
         
         # Prioridade: system_admin > office_admin > regular_user
@@ -129,13 +129,13 @@ class Profile(AuditModel):
     
     @classmethod
     def assign_role(cls, user, role):
-        """Atribui um papel específico ao usuário"""
+        """Atribui um papel/role específico ao usuário"""
         from django.contrib.auth.models import Group
         
-        # Remove todos os grupos de papel existentes
+        # Remove todos os roles existentes
         user.groups.filter(name__in=['system_admin', 'office_admin', 'regular_user']).delete()
         
-        # Adiciona o novo papel
+        # Adiciona o novo role
         if role in ['system_admin', 'office_admin', 'regular_user']:
             group, created = Group.objects.get_or_create(name=role)
             user.groups.add(group)

@@ -2,7 +2,7 @@
 
 Este documento descreve como funciona o sistema de permissões implementado, compatível com `user.has_perm()` e `user.get_all_permissions()` do Django.
 
-## Grupos de Usuários
+## Roles de Usuários
 
 ### 1. **system_admin** (Administrador do Sistema)
 - **Descrição**: Acesso total ao sistema
@@ -33,7 +33,7 @@ Este documento descreve como funciona o sistema de permissões implementado, com
 ### 1. Configurar o Sistema (Uma vez)
 ```bash
 cd "c:\Medical San\loggin_django"
-python manage.py setup_user_groups
+python manage.py setup_user_roles
 ```
 
 ### 2. Verificar Permissões no Código
@@ -170,6 +170,6 @@ print(profile.get_user_role())  # 'office_admin'
 
 ## Troubleshooting
 
-1. **Erro "Permission not found"**: Execute `python manage.py setup_user_groups`
+1. **Erro "Permission not found"**: Execute `python manage.py setup_user_roles`
 2. **Usuário sem papel**: Atribua papel usando `Profile.assign_role()`
-3. **Permissões não funcionam**: Verifique se o usuário está no grupo correto
+3. **Permissões não funcionam**: Verifique se o usuário está no role correto

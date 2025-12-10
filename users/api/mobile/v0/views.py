@@ -605,7 +605,7 @@ class UserPermissionsView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        """Retorna as permissões e grupo do usuário atual"""
+        """Retorna as permissões e role do usuário atual"""
         try:
             user = request.user
             profile = user.profile
@@ -616,7 +616,7 @@ class UserPermissionsView(APIView):
                 "is_system_admin": profile.is_system_admin(),
                 "is_office_admin": profile.is_office_admin(),
                 "is_regular_user": profile.is_regular_user(),
-                "groups": [group.name for group in user.groups.all()],
+                "roles": [group.name for group in user.groups.all()],
                 "permissions": list(user.get_all_permissions()),
                 "can_manage_users": profile.can_manage_users(),
                 "can_view_all_users": profile.can_view_all_users(),

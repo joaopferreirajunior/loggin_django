@@ -198,7 +198,7 @@ class UserPermissionsSerializer(serializers.Serializer):
     
     def to_representation(self, instance):
         """Converte o usuário em dados de permissões"""
-        # Determina o role baseado nos grupos
+        # Determina o role baseado nos roles do usuário
         user_role = 'regular_user'
         if instance.groups.filter(name='system_admin').exists():
             user_role = 'system_admin'
@@ -228,17 +228,17 @@ class RoleAssignmentSerializer(serializers.Serializer):
         # Verifica se o usuário atual pode alterar roles
         if not (current_user.groups.filter(name='system_admin').exists() or 
                current_user.has_perm('auth.change_user')):
-            raise PermissionError("Você não tem permissão para alterar grupos de usuário")
+            raise PermissionError("Você não tem permissão para alterar roles de usuário")
         
         try:
             target_user = User.objects.get(id=user_id)
         except User.DoesNotExist:
             raise ValueError("Usuário não encontrado")
         
-        # Remove grupos anteriores
+        # Remove roles anteriores
         target_user.groups.clear()
         
-        # Adiciona novo grupo se não for regular_user
+        # Adiciona novo role se não for regular_user
         if role != 'regular_user':
             group, _ = Group.objects.get_or_create(name=role)
             target_user.groups.add(group)
