@@ -79,14 +79,30 @@ class UserSerializer(serializers.ModelSerializer):
     profile = ProfileSerializer(read_only=True)
     # Campos adicionais para exibição
     full_name = serializers.SerializerMethodField()
+    permissions = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ("id", "username", "email", "first_name", "last_name", "full_name", "profile")
+        fields = ("id", "username", "email", "first_name", "last_name", "full_name", "profile", "permissions")
     
     def get_full_name(self, obj):
         """Retorna nome completo baseado nos campos first_name e last_name do User"""
         return obj.get_full_name() or obj.username
+    
+    def get_permissions(self, obj):
+        """Retorna permissões completas do usuário"""
+        profile = obj.profile
+        return {
+            'user_role': profile.get_user_role(),
+            'is_system_admin': profile.is_system_admin(),
+            'is_office_admin': profile.is_office_admin(),
+            'is_regular_user': profile.is_regular_user(),
+            'roles': [group.name for group in obj.groups.all()],
+            'permissions': list(obj.get_all_permissions()),
+            'can_manage_users': profile.can_manage_users(),
+            'can_view_all_users': profile.can_view_all_users(),
+            'can_access_admin': profile.can_access_admin(),
+        }
 
 
 @extend_schema_serializer(component_name="MobileUserRegisterRequest")

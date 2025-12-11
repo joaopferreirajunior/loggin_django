@@ -13,15 +13,48 @@ from .serializers import PatientSerializer, MedicalRecordSerializer, DetailSeria
 
 @extend_schema(
     summary="Listar pacientes",
-    description="Retorna lista paginada de pacientes para aplicação mobile",
+    description="Retorna lista paginada de pacientes do grupo do usuário logado para aplicação mobile",
     tags=["Mobile - Patients"],
     responses={200: PatientSerializer(many=True)}
 )
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
 def list_patients(request):
-    """Lista todos os pacientes ativos"""
-    patients = Patient.objects.filter(is_active=True).order_by('-created_at')
+    """Lista todos os pacientes ativos do grupo do usuário"""
+    user = request.user
+    
+    # System admin pode ver todos
+    if user.groups.filter(name='system_admin').exists():
+        patients = Patient.objects.filter(is_active=True).order_by('-created_at')
+    else:
+        # Buscar grupos do usuário via UserClinic ou GroupAdmin
+        from groups.models import UserClinic, GroupAdmin
+        
+        user_groups = []
+        
+        # Grupos via clínicas
+        user_clinics = UserClinic.objects.filter(
+            user=user,
+            is_active=True
+        ).select_related('clinic__group').values_list('clinic__group_id', flat=True)
+        user_groups.extend(user_clinics)
+        
+        # Grupos via admin
+        admin_groups = GroupAdmin.objects.filter(
+            user=user,
+            is_active=True
+        ).values_list('group_id', flat=True)
+        user_groups.extend(admin_groups)
+        
+        if not user_groups:
+            return Response([], status=status.HTTP_200_OK)
+        
+        # Filtrar pacientes dos grupos do usuário
+        patients = Patient.objects.filter(
+            is_active=True,
+            group_id__in=user_groups
+        ).order_by('-created_at')
+    
     serializer = PatientSerializer(patients, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -84,11 +117,12 @@ def create_patient(request):
 
 @extend_schema(
     summary="Obter paciente",
-    description="Retorna dados de um paciente específico",
+    description="Retorna dados de um paciente específico do mesmo grupo",
     tags=["Mobile - Patients"],
     responses={
         200: PatientSerializer,
-        404: DetailSerializer
+        404: DetailSerializer,
+        403: DetailSerializer
     }
 )
 @api_view(['GET'])
@@ -96,6 +130,32 @@ def create_patient(request):
 def get_patient(request, patient_id):
     """Obtém dados de um paciente específico"""
     patient = get_object_or_404(Patient, id=patient_id, is_active=True)
+    user = request.user
+    
+    # System admin pode ver todos
+    if not user.groups.filter(name='system_admin').exists():
+        from groups.models import UserClinic, GroupAdmin
+        
+        # Verificar se usuário pertence ao mesmo grupo do paciente
+        user_in_group = (
+            UserClinic.objects.filter(
+                user=user,
+                clinic__group=patient.group,
+                is_active=True
+            ).exists() or
+            GroupAdmin.objects.filter(
+                user=user,
+                group=patient.group,
+                is_active=True
+            ).exists()
+        )
+        
+        if not user_in_group:
+            return Response(
+                {"detail": "Você não tem permissão para visualizar este paciente."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+    
     serializer = PatientSerializer(patient)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -121,17 +181,24 @@ def update_patient(request, patient_id):
     # Verificar se é system_admin
     if not user.groups.filter(name='system_admin').exists():
         # Verificar se o usuário pertence ao mesmo grupo do paciente
-        from groups.models import UserClinic
+        from groups.models import UserClinic, GroupAdmin
         
-        user_in_patient_group = UserClinic.objects.filter(
-            user=user,
-            clinic__group=patient.group,
-            is_active=True
-        ).exists()
+        user_in_patient_group = (
+            UserClinic.objects.filter(
+                user=user,
+                clinic__group=patient.group,
+                is_active=True
+            ).exists() or
+            GroupAdmin.objects.filter(
+                user=user,
+                group=patient.group,
+                is_active=True
+            ).exists()
+        )
         
         if not user_in_patient_group:
             return Response(
-                {"detail": "Você não tem permissão para editar este paciente. Apenas usuários do mesmo grupo podem editar pacientes."},
+                {"detail": "Você não tem permissão para editar este paciente."},
                 status=status.HTTP_403_FORBIDDEN
             )
     
@@ -149,7 +216,8 @@ def update_patient(request, patient_id):
     tags=["Mobile - Patients"],
     responses={
         200: DetailSerializer,
-        404: DetailSerializer
+        404: DetailSerializer,
+        403: DetailSerializer
     }
 )
 @api_view(['DELETE'])
@@ -157,6 +225,32 @@ def update_patient(request, patient_id):
 def delete_patient(request, patient_id):
     """Remove um paciente (soft delete)"""
     patient = get_object_or_404(Patient, id=patient_id, is_active=True)
+    user = request.user
+    
+    # Verificar se é system_admin
+    if not user.groups.filter(name='system_admin').exists():
+        from groups.models import UserClinic, GroupAdmin
+        
+        # Verificar se usuário pertence ao mesmo grupo do paciente
+        user_in_patient_group = (
+            UserClinic.objects.filter(
+                user=user,
+                clinic__group=patient.group,
+                is_active=True
+            ).exists() or
+            GroupAdmin.objects.filter(
+                user=user,
+                group=patient.group,
+                is_active=True
+            ).exists()
+        )
+        
+        if not user_in_patient_group:
+            return Response(
+                {"detail": "Você não tem permissão para deletar este paciente."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+    
     patient.is_active = False
     patient.save()
     return Response({'detail': 'Paciente removido com sucesso'}, status=status.HTTP_200_OK)
@@ -166,13 +260,42 @@ def delete_patient(request, patient_id):
     summary="Listar prontuários",
     description="Retorna todos os prontuários de um paciente",
     tags=["Mobile - Patients"],
-    responses={200: MedicalRecordSerializer(many=True)}
+    responses={
+        200: MedicalRecordSerializer(many=True),
+        403: DetailSerializer
+    }
 )
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
 def list_medical_records(request, patient_id):
     """Lista todos os prontuários de um paciente"""
     patient = get_object_or_404(Patient, id=patient_id, is_active=True)
+    user = request.user
+    
+    # Verificar se é system_admin
+    if not user.groups.filter(name='system_admin').exists():
+        from groups.models import UserClinic, GroupAdmin
+        
+        # Verificar se usuário pertence ao mesmo grupo do paciente
+        user_in_patient_group = (
+            UserClinic.objects.filter(
+                user=user,
+                clinic__group=patient.group,
+                is_active=True
+            ).exists() or
+            GroupAdmin.objects.filter(
+                user=user,
+                group=patient.group,
+                is_active=True
+            ).exists()
+        )
+        
+        if not user_in_patient_group:
+            return Response(
+                {"detail": "Você não tem permissão para visualizar prontuários deste paciente."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+    
     records = patient.medical_records.order_by('-created_at')
     serializer = MedicalRecordSerializer(records, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
@@ -185,7 +308,8 @@ def list_medical_records(request, patient_id):
     request=MedicalRecordSerializer,
     responses={
         201: MedicalRecordSerializer,
-        400: DetailSerializer
+        400: DetailSerializer,
+        403: DetailSerializer
     }
 )
 @api_view(['POST'])
@@ -194,6 +318,34 @@ def create_medical_record(request):
     """Cria um novo prontuário médico"""
     serializer = MedicalRecordSerializer(data=request.data)
     if serializer.is_valid():
+        user = request.user
+        patient_id = serializer.validated_data.get('patient_id')
+        patient = get_object_or_404(Patient, id=patient_id, is_active=True)
+        
+        # Verificar se é system_admin
+        if not user.groups.filter(name='system_admin').exists():
+            from groups.models import UserClinic, GroupAdmin
+            
+            # Verificar se usuário pertence ao mesmo grupo do paciente
+            user_in_patient_group = (
+                UserClinic.objects.filter(
+                    user=user,
+                    clinic__group=patient.group,
+                    is_active=True
+                ).exists() or
+                GroupAdmin.objects.filter(
+                    user=user,
+                    group=patient.group,
+                    is_active=True
+                ).exists()
+            )
+            
+            if not user_in_patient_group:
+                return Response(
+                    {"detail": "Você não tem permissão para criar prontuário para este paciente."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        
         record = serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -207,7 +359,8 @@ def create_medical_record(request):
     responses={
         200: MedicalRecordSerializer,
         400: DetailSerializer,
-        404: DetailSerializer
+        404: DetailSerializer,
+        403: DetailSerializer
     }
 )
 @api_view(['PUT', 'PATCH'])
@@ -215,6 +368,33 @@ def create_medical_record(request):
 def update_medical_record(request, record_id):
     """Atualiza um prontuário médico"""
     record = get_object_or_404(MedicalRecord, id=record_id)
+    user = request.user
+    patient = record.patient
+    
+    # Verificar se é system_admin
+    if not user.groups.filter(name='system_admin').exists():
+        from groups.models import UserClinic, GroupAdmin
+        
+        # Verificar se usuário pertence ao mesmo grupo do paciente
+        user_in_patient_group = (
+            UserClinic.objects.filter(
+                user=user,
+                clinic__group=patient.group,
+                is_active=True
+            ).exists() or
+            GroupAdmin.objects.filter(
+                user=user,
+                group=patient.group,
+                is_active=True
+            ).exists()
+        )
+        
+        if not user_in_patient_group:
+            return Response(
+                {"detail": "Você não tem permissão para atualizar este prontuário."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+    
     serializer = MedicalRecordSerializer(record, data=request.data, partial=(request.method == 'PATCH'))
     if serializer.is_valid():
         serializer.save()

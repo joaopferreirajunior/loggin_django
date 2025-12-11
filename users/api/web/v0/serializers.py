@@ -139,14 +139,30 @@ class UserSerializer(serializers.ModelSerializer):
     """Serializer completo do usuário com perfil"""
     profile = ProfileSerializer(read_only=True)
     full_name = serializers.SerializerMethodField()
+    permissions = serializers.SerializerMethodField()
     
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'full_name', 'profile')
+        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'full_name', 'profile', 'permissions')
     
     def get_full_name(self, obj):
         """Retorna nome completo baseado nos campos first_name e last_name do User"""
         return obj.get_full_name() or obj.username
+    
+    def get_permissions(self, obj):
+        """Retorna permissões completas do usuário"""
+        profile = obj.profile
+        return {
+            'user_role': profile.get_user_role(),
+            'is_system_admin': profile.is_system_admin(),
+            'is_office_admin': profile.is_office_admin(),
+            'is_regular_user': profile.is_regular_user(),
+            'roles': [group.name for group in obj.groups.all()],
+            'permissions': list(obj.get_all_permissions()),
+            'can_manage_users': profile.can_manage_users(),
+            'can_view_all_users': profile.can_view_all_users(),
+            'can_access_admin': profile.can_access_admin(),
+        }
 
 class LoginSerializer(serializers.Serializer):
     """Serializer para login"""
@@ -193,26 +209,29 @@ class TokenValidationSerializer(serializers.Serializer):
 class UserPermissionsSerializer(serializers.Serializer):
     """Serializer para permissões do usuário"""
     user_role = serializers.CharField()
-    can_manage_users = serializers.BooleanField()
     is_system_admin = serializers.BooleanField()
+    is_office_admin = serializers.BooleanField()
+    is_regular_user = serializers.BooleanField()
+    roles = serializers.ListField(child=serializers.CharField())
+    permissions = serializers.ListField(child=serializers.CharField())
+    can_manage_users = serializers.BooleanField()
+    can_view_all_users = serializers.BooleanField()
+    can_access_admin = serializers.BooleanField()
     
     def to_representation(self, instance):
         """Converte o usuário em dados de permissões"""
-        # Determina o role baseado nos roles do usuário
-        user_role = 'regular_user'
-        if instance.groups.filter(name='system_admin').exists():
-            user_role = 'system_admin'
-        elif instance.groups.filter(name='office_admin').exists():
-            user_role = 'office_admin'
-        
-        # Verifica permissões
-        can_manage_users = instance.has_perm('auth.change_user') or user_role in ['system_admin', 'office_admin']
-        is_system_admin = user_role == 'system_admin'
+        profile = instance.profile
         
         return {
-            'user_role': user_role,
-            'can_manage_users': can_manage_users,
-            'is_system_admin': is_system_admin
+            'user_role': profile.get_user_role(),
+            'is_system_admin': profile.is_system_admin(),
+            'is_office_admin': profile.is_office_admin(),
+            'is_regular_user': profile.is_regular_user(),
+            'roles': [group.name for group in instance.groups.all()],
+            'permissions': list(instance.get_all_permissions()),
+            'can_manage_users': profile.can_manage_users(),
+            'can_view_all_users': profile.can_view_all_users(),
+            'can_access_admin': profile.can_access_admin(),
         }
 
 class RoleAssignmentSerializer(serializers.Serializer):
