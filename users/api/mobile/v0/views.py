@@ -18,7 +18,8 @@ from django.utils import timezone
 from django.conf import settings
 from django.shortcuts import redirect
 from datetime import timedelta
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, inline_serializer
+from rest_framework import serializers
 from users.models import Profile
 import secrets
 import string
