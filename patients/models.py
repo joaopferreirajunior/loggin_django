@@ -3,8 +3,6 @@ from django.db import models
 
 
 class Patient(models.Model):
-    # No Dart o id é String; aqui vou usar UUID, mas você pode trocar
-    # por CharField se quiser manter totalmente livre.
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     # Relacionamento com grupo (obrigatório)

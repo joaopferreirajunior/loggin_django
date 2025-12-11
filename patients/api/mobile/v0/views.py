@@ -50,7 +50,7 @@ def create_patient(request):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         
         # Para usuários não-admin, associar automaticamente ao grupo do usuário
-        from groups.models import UserClinic
+        from groups.models import UserClinic, GroupAdmin
         
         # Buscar clínica do usuário (primeira clínica ativa)
         user_clinic = UserClinic.objects.filter(
@@ -58,15 +58,27 @@ def create_patient(request):
             is_active=True
         ).select_related('clinic', 'clinic__group').first()
         
-        if not user_clinic:
-            return Response(
-                {"detail": "Você não está vinculado a nenhuma clínica. Apenas usuários vinculados a clínicas podem criar pacientes."},
-                status=status.HTTP_403_FORBIDDEN
-            )
+        if user_clinic:
+            # Usuário está vinculado a uma clínica -> associar ao grupo da clínica
+            patient = serializer.save(group=user_clinic.clinic.group)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
         
-        # Associar automaticamente ao grupo da clínica do usuário
-        patient = serializer.save(group=user_clinic.clinic.group)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        # Se não está vinculado a clínica, verificar se é admin de algum grupo
+        group_admin = GroupAdmin.objects.filter(
+            user=user,
+            is_active=True
+        ).select_related('group').first()
+        
+        if group_admin:
+            # Usuário é admin de um grupo -> associar ao grupo
+            patient = serializer.save(group=group_admin.group)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        
+        # Não está vinculado a nenhuma clínica nem é admin de grupo
+        return Response(
+            {"detail": "Você não está vinculado a nenhuma clínica ou grupo. Apenas usuários vinculados podem criar pacientes."},
+            status=status.HTTP_403_FORBIDDEN
+        )
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
