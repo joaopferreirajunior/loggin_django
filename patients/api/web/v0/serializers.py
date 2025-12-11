@@ -35,7 +35,7 @@ class PatientSerializer(serializers.ModelSerializer):
     fullAddress = serializers.CharField(source="full_address", allow_null=True, required=False)
     createdAt = serializers.DateTimeField(source="created_at", read_only=True)
     updatedAt = serializers.DateTimeField(source="updated_at", read_only=True)
-    isActive = serializers.BooleanField(source="is_active")
+    isActive = serializers.BooleanField(source="is_active", default=True, required=False)
     # photo, cpf, phone, email, city, region, cep, gender mapeiam direto
 
     # medicalRecord: o Dart espera UM objeto ou null -> vamos devolver o mais recente
