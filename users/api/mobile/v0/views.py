@@ -843,34 +843,31 @@ class MobileProfileImageDeleteView(APIView):
 
 
 @extend_schema(
-    summary="Servir imagem de perfil",
-    description="Serve a imagem de perfil como proxy do S3 para mobile",
+    summary="Obter URL da imagem de perfil",
+    description="Retorna a URL presigned da imagem de perfil do S3 para mobile (válida por 1 hora)",
     tags=["Mobile - User"],
     responses={
-        200: {
-            'description': 'Imagem servida com sucesso',
-            'content': {
-                'image/jpeg': {},
-                'image/png': {},
-                'image/webp': {}
-            }
-        },
+        200: inline_serializer(
+            name="MobileProfileImageURLResponse",
+            fields={
+                "profile_image_url": serializers.URLField(),
+                "expires_in": serializers.IntegerField(),
+            },
+        ),
         404: DetailSerializer
     }
 )
 class MobileServeProfileImageView(APIView):
     """
-    Serve imagem de perfil como proxy do S3 para mobile
+    Retorna URL presigned da imagem de perfil para mobile
     """
     authentication_classes = [JWTAuthentication]
     permission_classes = [permissions.IsAuthenticated]
     
     def get(self, request, user_id):
-        """Serve a imagem"""
+        """Retorna URL presigned da imagem"""
         try:
-            from django.http import HttpResponse
             from users.services import S3ImageService
-            import mimetypes
             
             # Buscar profile do usuário
             profile = Profile.objects.get(user_id=user_id)
@@ -881,32 +878,23 @@ class MobileServeProfileImageView(APIView):
                     status=status.HTTP_404_NOT_FOUND
                 )
             
-            # Baixar imagem do S3
+            # Gerar URL presigned
             s3_service = S3ImageService()
             
             try:
-                response = s3_service.s3_client.get_object(
-                    Bucket=s3_service.bucket_name,
-                    Key=profile.profile_image
+                presigned_url = s3_service.generate_presigned_url(profile.profile_image)
+                
+                return Response(
+                    {
+                        "profile_image_url": presigned_url,
+                        "expires_in": 3600  # 1 hora em segundos
+                    },
+                    status=status.HTTP_200_OK
                 )
-                
-                # Determinar content type baseado na extensão
-                content_type, _ = mimetypes.guess_type(profile.profile_image)
-                if not content_type:
-                    content_type = 'image/jpeg'  # fallback
-                
-                # Retornar imagem como resposta HTTP
-                image_data = response['Body'].read()
-                
-                http_response = HttpResponse(image_data, content_type=content_type)
-                http_response['Cache-Control'] = 'public, max-age=3600'  # Cache de 1 hora
-                http_response['Content-Length'] = len(image_data)
-                
-                return http_response
                 
             except Exception as e:
                 return Response(
-                    {"detail": f"Erro ao buscar imagem no S3: {str(e)}"},
+                    {"detail": f"Erro ao gerar URL da imagem: {str(e)}"},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
             
