@@ -786,7 +786,6 @@ class AssignUserRoleView(APIView):
     }
 )
 @api_view(['POST', 'DELETE'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([permissions.IsAuthenticated])
 def manage_profile_image(request):
     """
@@ -869,7 +868,6 @@ def manage_profile_image(request):
     }
 )
 @api_view(['GET'])
-@authentication_classes([JWTAuthentication])
 @permission_classes([permissions.IsAuthenticated])
 def serve_profile_image(request, user_id):
     """Retorna URL presigned da imagem de perfil para mobile"""

@@ -4,7 +4,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from drf_spectacular.utils import extend_schema, extend_schema_view
 
-from groups.models import Group, Clinic, DeviceClinic, GroupAdmin
+from groups.models import Group, Clinic, DeviceClinic, GroupAdmin, UserClinic
 from devices.models import Device
 from .serializers import (
     MobileGroupSerializer, MobileClinicSerializer, MobileDeviceSerializer,
