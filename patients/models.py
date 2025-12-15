@@ -46,6 +46,31 @@ class Patient(models.Model):
     def __str__(self):
         return self.full_name
     
+    def get_patient_photo_url(self):
+        """Retorna URL presigned da foto do paciente se existir"""
+        if not self.photo:
+            return None
+        
+        from users.services import S3ImageService
+        s3_service = S3ImageService()
+        return s3_service.generate_presigned_url(self.photo)
+    
+    def delete_patient_photo(self):
+        """Remove a foto do paciente do S3"""
+        if not self.photo:
+            return False
+        
+        try:
+            from users.services import S3ImageService
+            s3_service = S3ImageService()
+            s3_service.delete_image(self.photo)
+            self.photo = None
+            self.save()
+            return True
+        except Exception as e:
+            print(f"Erro ao deletar foto do paciente {self.id}: {e}")
+            return False
+    
     def get_my_doctors(self, active_only=True):
         """Retorna todos os usuários que atendem este paciente"""
         from users.models import UserPatientRelation

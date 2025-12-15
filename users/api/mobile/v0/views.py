@@ -956,7 +956,7 @@ def my_patients(request):
 
 
 @extend_schema(
-    summary="Adicionar paciente aos meus cuidados",
+    summary="Adicionar paciente existente aos meus cuidados",
     description="Adiciona um paciente à lista de pacientes atendidos pelo usuário",
     tags=["Mobile - User"],
     request={"application/json": {
