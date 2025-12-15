@@ -752,15 +752,48 @@ class AssignUserRoleView(APIView):
         401: DetailSerializer
     }
 )
-class MobileProfileImageUploadView(APIView):
+@extend_schema(
+    summary="Upload de imagem de perfil",
+    description="Faz upload de uma nova imagem de perfil para mobile",
+    tags=["Mobile - User"],
+    methods=['POST'],
+    responses={
+        200: {
+            'type': 'object',
+            'properties': {
+                'detail': {'type': 'string'},
+                'profile_image_url': {'type': 'string'},
+                'user': {'type': 'object'}
+            }
+        },
+        400: DetailSerializer
+    }
+)
+@extend_schema(
+    summary="Remover imagem de perfil",
+    description="Remove a imagem de perfil atual do usuário mobile",
+    tags=["Mobile - User"],
+    methods=['DELETE'],
+    responses={
+        200: {
+            'type': 'object',
+            'properties': {
+                'detail': {'type': 'string'},
+                'user': {'type': 'object'}
+            }
+        },
+        404: DetailSerializer
+    }
+)
+@api_view(['POST', 'DELETE'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([permissions.IsAuthenticated])
+def manage_profile_image(request):
     """
-    Upload de imagem de perfil para mobile
+    Gerencia upload e remoção da imagem de perfil para mobile
     """
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [permissions.IsAuthenticated]
-    
-    def post(self, request):
-        """Upload da imagem"""
+    if request.method == 'POST':
+        # Upload da imagem
         from .serializers import MobileProfileImageUploadSerializer, MobileUserWithImageSerializer
         
         serializer = MobileProfileImageUploadSerializer(data=request.data)
@@ -785,32 +818,9 @@ class MobileProfileImageUploadView(APIView):
                 }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-@extend_schema(
-    summary="Remover imagem de perfil",
-    description="Remove a imagem de perfil atual do usuário mobile",
-    tags=["Mobile - User"],
-    responses={
-        200: {
-            'type': 'object',
-            'properties': {
-                'detail': {'type': 'string'},
-                'user': {'type': 'object'}
-            }
-        },
-        404: DetailSerializer
-    }
-)
-class MobileProfileImageDeleteView(APIView):
-    """
-    Remoção de imagem de perfil para mobile
-    """
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [permissions.IsAuthenticated]
     
-    def delete(self, request):
-        """Remove a imagem"""
+    elif request.method == 'DELETE':
+        # Remoção da imagem
         from .serializers import MobileUserWithImageSerializer
         
         try:
@@ -858,52 +868,48 @@ class MobileProfileImageDeleteView(APIView):
         404: DetailSerializer
     }
 )
-class MobileServeProfileImageView(APIView):
-    """
-    Retorna URL presigned da imagem de perfil para mobile
-    """
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [permissions.IsAuthenticated]
-    
-    def get(self, request, user_id):
-        """Retorna URL presigned da imagem"""
-        try:
-            from users.services import S3ImageService
-            
-            # Buscar profile do usuário
-            profile = Profile.objects.get(user_id=user_id)
-            
-            if not profile.profile_image:
-                return Response(
-                    {"detail": "Usuário não possui imagem de perfil"},
-                    status=status.HTTP_404_NOT_FOUND
-                )
-            
-            # Gerar URL presigned
-            s3_service = S3ImageService()
-            
-            try:
-                presigned_url = s3_service.generate_presigned_url(profile.profile_image)
-                
-                return Response(
-                    {
-                        "profile_image_url": presigned_url,
-                        "expires_in": 3600  # 1 hora em segundos
-                    },
-                    status=status.HTTP_200_OK
-                )
-                
-            except Exception as e:
-                return Response(
-                    {"detail": f"Erro ao gerar URL da imagem: {str(e)}"},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
-            
-        except Profile.DoesNotExist:
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([permissions.IsAuthenticated])
+def serve_profile_image(request, user_id):
+    """Retorna URL presigned da imagem de perfil para mobile"""
+    try:
+        from users.services import S3ImageService
+        
+        # Buscar profile do usuário
+        profile = Profile.objects.get(user_id=user_id)
+        
+        if not profile.profile_image:
             return Response(
-                {"detail": "Usuário não encontrado"},
+                {"detail": "Usuário não possui imagem de perfil"},
                 status=status.HTTP_404_NOT_FOUND
             )
+        
+        # Gerar URL presigned
+        s3_service = S3ImageService()
+        
+        try:
+            presigned_url = s3_service.generate_presigned_url(profile.profile_image)
+            
+            return Response(
+                {
+                    "profile_image_url": presigned_url,
+                    "expires_in": 3600  # 1 hora em segundos
+                },
+                status=status.HTTP_200_OK
+            )
+            
+        except Exception as e:
+            return Response(
+                {"detail": f"Erro ao gerar URL da imagem: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+    except Profile.DoesNotExist:
+        return Response(
+            {"detail": "Usuário não encontrado"},
+            status=status.HTTP_404_NOT_FOUND
+        )
 
 
 @extend_schema(

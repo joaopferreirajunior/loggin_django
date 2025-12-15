@@ -11,13 +11,11 @@ urlpatterns = [
     # Clinics
     path('clinics/', views.ClinicCreateView.as_view(), name='clinic_create'),
     path('clinics/<uuid:pk>/', views.ClinicDetailView.as_view(), name='clinic_detail'),
-    path('clinics/<uuid:pk>/update/', views.ClinicUpdateView.as_view(), name='clinic_update'),
-    path('clinics/<uuid:pk>/delete/', views.ClinicDeleteView.as_view(), name='clinic_delete'),
     path('clinics/<uuid:clinic_id>/devices/', views.ClinicDevicesView.as_view(), name='clinic_devices'),
     path('clinics/<uuid:clinic_id>/users/', views.ClinicUsersView.as_view(), name='clinic_users'),
     
     # User-Clinic associations
-    path('user-clinics/create/', views.UserClinicCreateView.as_view(), name='user_clinic_create'),
-    path('user-clinics/<uuid:pk>/delete/', views.UserClinicDeleteView.as_view(), name='user_clinic_delete'),
+    path('user-clinics/', views.UserClinicCreateView.as_view(), name='user_clinic_create'),
+    path('user-clinics/<uuid:pk>/', views.UserClinicDeleteView.as_view(), name='user_clinic_delete'),
     path('users/<int:user_id>/clinics/', views.UserClinicsView.as_view(), name='user_clinics'),
 ]

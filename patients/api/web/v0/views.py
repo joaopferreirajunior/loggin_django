@@ -270,13 +270,17 @@ def list_medical_records(request, patient_id):
 )
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
-def create_medical_record(request):
+def create_medical_record(request, patient_id):
     """Cria um novo prontuário médico"""
-    serializer = MedicalRecordSerializer(data=request.data)
+    patient = get_object_or_404(Patient, id=patient_id, is_active=True)
+    
+    # Adiciona o patient_id aos dados antes de validar
+    data = request.data.copy()
+    data['patientId'] = str(patient_id)
+    
+    serializer = MedicalRecordSerializer(data=data)
     if serializer.is_valid():
         user = request.user
-        patient_id = serializer.validated_data.get('patient_id')
-        patient = get_object_or_404(Patient, id=patient_id, is_active=True)
         
         # Verificar se é system_admin
         if not user.groups.filter(name='system_admin').exists():

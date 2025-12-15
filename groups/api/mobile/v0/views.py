@@ -216,12 +216,105 @@ class GroupDevicesView(APIView):
         }
     )
 )
-class ClinicDetailView(generics.RetrieveAPIView):
-    """Detalhe de uma clínica com seus devices para mobile"""
+@extend_schema_view(
+    get=extend_schema(
+        tags=["Mobile - Groups"],
+        summary="Detalhe de uma clínica",
+        description="Retorna os detalhes de uma clínica com seus devices"
+    ),
+    put=extend_schema(
+        tags=["Mobile - Groups"],
+        summary="Atualizar clínica",
+        description="Atualiza uma clínica existente. Apenas Group Admins do grupo podem atualizar.",
+        responses={
+            200: MobileClinicSerializer,
+            403: MobileDetailResponseSerializer,
+            404: MobileDetailResponseSerializer
+        }
+    ),
+    patch=extend_schema(
+        tags=["Mobile - Groups"],
+        summary="Atualizar clínica parcialmente",
+        description="Atualiza parcialmente uma clínica. Apenas Group Admins do grupo podem atualizar.",
+        responses={
+            200: MobileClinicSerializer,
+            403: MobileDetailResponseSerializer,
+            404: MobileDetailResponseSerializer
+        }
+    ),
+    delete=extend_schema(
+        tags=["Mobile - Groups"],
+        summary="Deletar clínica (soft delete)",
+        description="Desativa uma clínica. Apenas Group Admins do grupo podem deletar.",
+        responses={
+            204: None,
+            403: MobileDetailResponseSerializer,
+            404: MobileDetailResponseSerializer
+        }
+    )
+)
+class ClinicDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """Gerencia operações GET/PUT/PATCH/DELETE de uma clínica"""
     queryset = Clinic.objects.filter(is_active=True)
-    serializer_class = MobileClinicWithDevicesSerializer
     authentication_classes = [JWTAuthentication]
     permission_classes = [permissions.IsAuthenticated]
+    
+    def get_serializer_class(self):
+        if self.request.method == 'GET':
+            return MobileClinicWithDevicesSerializer
+        return MobileClinicSerializer
+    
+    def perform_update(self, serializer):
+        clinic = self.get_object()
+        user = self.request.user
+        
+        # Verificar se o usuário é system_admin
+        if user.groups.filter(name='system_admin').exists():
+            serializer.save()
+            return
+        
+        # Verificar se o usuário é group_admin deste grupo
+        is_group_admin = GroupAdmin.objects.filter(
+            user=user,
+            group=clinic.group,
+            is_active=True
+        ).exists()
+        
+        if not is_group_admin:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied(
+                "Você não tem permissão para atualizar clínicas neste grupo. "
+                "Apenas Group Admins do grupo podem atualizar clínicas."
+            )
+        
+        serializer.save()
+    
+    def perform_destroy(self, instance):
+        user = self.request.user
+        
+        # Verificar se o usuário é system_admin
+        if user.groups.filter(name='system_admin').exists():
+            instance.is_active = False
+            instance.save()
+            return
+        
+        # Verificar se o usuário é group_admin deste grupo
+        is_group_admin = GroupAdmin.objects.filter(
+            user=user,
+            group=instance.group,
+            is_active=True
+        ).exists()
+        
+        if not is_group_admin:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied(
+                "Você não tem permissão para deletar clínicas neste grupo. "
+                "Apenas Group Admins do grupo podem deletar clínicas."
+            )
+        
+        # Soft delete
+        instance.is_active = False
+        instance.save()
 
 
 @extend_schema_view(
@@ -267,35 +360,38 @@ class ClinicCreateView(generics.CreateAPIView):
         serializer.save()
 
 
+# ============================================================================
+# USER-CLINIC ENDPOINTS
+# ============================================================================
+
 @extend_schema_view(
-    patch=extend_schema(
+    post=extend_schema(
         tags=["Mobile - Groups"],
-        summary="Atualizar clínica",
-        description="Atualiza uma clínica existente. Apenas Group Admins do grupo podem atualizar.",
+        summary="Vincular usuário a clínica",
+        description="Cria vínculo entre usuário e clínica. Apenas Group Admins e System Admins.",
         responses={
-            200: MobileClinicSerializer,
-            403: MobileDetailResponseSerializer,
-            404: MobileDetailResponseSerializer
+            201: None,
+            403: MobileDetailResponseSerializer
         }
     )
 )
-class ClinicUpdateView(generics.UpdateAPIView):
-    """Atualizar uma clínica (apenas para Group Admins do grupo)"""
-    queryset = Clinic.objects.filter(is_active=True)
-    serializer_class = MobileClinicSerializer
+class UserClinicCreateView(generics.CreateAPIView):
+    """Criar vínculo usuário-clínica (apenas para Group Admins)"""
+    from groups.api.web.v0.user_clinic_serializers import UserClinicCreateSerializer
+    serializer_class = UserClinicCreateSerializer
     authentication_classes = [JWTAuthentication]
     permission_classes = [permissions.IsAuthenticated]
     
-    def perform_update(self, serializer):
-        clinic = self.get_object()
+    def perform_create(self, serializer):
+        clinic = serializer.validated_data.get('clinic')
         user = self.request.user
         
-        # Verificar se o usuário é system_admin
+        # Verificar se é system_admin
         if user.groups.filter(name='system_admin').exists():
             serializer.save()
             return
         
-        # Verificar se o usuário é group_admin deste grupo
+        # Verificar se é group_admin do grupo da clínica
         is_group_admin = GroupAdmin.objects.filter(
             user=user,
             group=clinic.group,
@@ -305,8 +401,8 @@ class ClinicUpdateView(generics.UpdateAPIView):
         if not is_group_admin:
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied(
-                "Você não tem permissão para atualizar clínicas neste grupo. "
-                "Apenas Group Admins do grupo podem atualizar clínicas."
+                "Você não tem permissão para vincular usuários a esta clínica. "
+                "Apenas Group Admins do grupo podem fazer isso."
             )
         
         serializer.save()
@@ -315,8 +411,8 @@ class ClinicUpdateView(generics.UpdateAPIView):
 @extend_schema_view(
     delete=extend_schema(
         tags=["Mobile - Groups"],
-        summary="Deletar clínica (soft delete)",
-        description="Desativa uma clínica. Apenas Group Admins do grupo podem deletar.",
+        summary="Desvincular usuário de clínica",
+        description="Remove vínculo entre usuário e clínica (soft delete). Apenas Group Admins e System Admins.",
         responses={
             204: None,
             403: MobileDetailResponseSerializer,
@@ -324,35 +420,61 @@ class ClinicUpdateView(generics.UpdateAPIView):
         }
     )
 )
-class ClinicDeleteView(generics.DestroyAPIView):
-    """Deletar uma clínica (soft delete - apenas para Group Admins do grupo)"""
-    queryset = Clinic.objects.filter(is_active=True)
+class UserClinicDeleteView(generics.DestroyAPIView):
+    """Deletar vínculo usuário-clínica (apenas para Group Admins)"""
+    queryset = UserClinic.objects.filter(is_active=True)
     authentication_classes = [JWTAuthentication]
     permission_classes = [permissions.IsAuthenticated]
     
     def perform_destroy(self, instance):
         user = self.request.user
         
-        # Verificar se o usuário é system_admin
+        # Verificar se é system_admin
         if user.groups.filter(name='system_admin').exists():
+            from django.utils import timezone
             instance.is_active = False
+            instance.end_date = timezone.now()
             instance.save()
             return
         
-        # Verificar se o usuário é group_admin deste grupo
+        # Verificar se é group_admin do grupo da clínica
         is_group_admin = GroupAdmin.objects.filter(
             user=user,
-            group=instance.group,
+            group=instance.clinic.group,
             is_active=True
         ).exists()
         
         if not is_group_admin:
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied(
-                "Você não tem permissão para deletar clínicas neste grupo. "
-                "Apenas Group Admins do grupo podem deletar clínicas."
+                "Você não tem permissão para desvincular usuários desta clínica. "
+                "Apenas Group Admins do grupo podem fazer isso."
             )
         
         # Soft delete
+        from django.utils import timezone
         instance.is_active = False
+        instance.end_date = timezone.now()
         instance.save()
+
+
+@extend_schema_view(
+    get=extend_schema(
+        tags=["Mobile - Groups"],
+        summary="Listar clínicas de um usuário",
+        description="Lista todas as clínicas associadas a um usuário específico"
+    )
+)
+class UserClinicsView(generics.ListAPIView):
+    """Listar clínicas associadas a um usuário"""
+    from groups.api.web.v0.user_clinic_serializers import UserClinicSerializer
+    serializer_class = UserClinicSerializer
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        user_id = self.kwargs.get('user_id')
+        return UserClinic.objects.filter(
+            user_id=user_id,
+            is_active=True
+        ).select_related('user', 'clinic', 'clinic__group')

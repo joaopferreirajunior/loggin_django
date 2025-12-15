@@ -39,19 +39,14 @@ urlpatterns = [
     # Gerenciamento de imagens de perfil para mobile
     path(
         "profile/image/",
-        views.MobileProfileImageUploadView.as_view(),
+        views.manage_profile_image,
         name="api_mobile_profile_image",
-    ),
+    ),  # POST/DELETE - gerenciar imagem
     path(
-        "profile/image/delete/",
-        views.MobileProfileImageDeleteView.as_view(),
-        name="api_mobile_profile_image_delete",
-    ),
-    path(
-        "profile/image/serve/<int:user_id>/",
-        views.MobileServeProfileImageView.as_view(),
-        name="api_mobile_profile_image_serve",
-    ),
+        "profile/image/<int:user_id>/",
+        views.serve_profile_image,
+        name="api_mobile_serve_profile_image",
+    ),  # GET - servir imagem como proxy
     # Patient relationship management
     path(
         "my-patients/",
