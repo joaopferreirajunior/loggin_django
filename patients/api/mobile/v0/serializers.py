@@ -154,7 +154,6 @@ class PatientWithPhotoSerializer(serializers.ModelSerializer):
             "id",
             "groupId",
             "fullName",
-            "photo",
             "photo_url",
             "birthDate",
             "gender",
