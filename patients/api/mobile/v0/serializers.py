@@ -37,6 +37,7 @@ class PatientSerializer(serializers.ModelSerializer):
     updatedAt = serializers.DateTimeField(source="updated_at", read_only=True)
     isActive = serializers.BooleanField(source="is_active", default=True, required=False)
     # photo, cpf, phone, email, city, region, cep, gender mapeiam direto
+    photo_url = serializers.SerializerMethodField()
 
     # medicalRecord: o Dart espera UM objeto ou null -> vamos devolver o mais recente
     medicalRecord = serializers.SerializerMethodField()
@@ -48,6 +49,7 @@ class PatientSerializer(serializers.ModelSerializer):
             "groupId",
             "fullName",
             "photo",
+            "photo_url",
             "birthDate",
             "gender",
             "cpf",
@@ -63,6 +65,10 @@ class PatientSerializer(serializers.ModelSerializer):
             "medicalRecord",
         )
 
+    def get_photo_url(self, obj: Patient) -> Optional[str]:
+        """Retorna URL presigned temporária da foto no S3 (válida por 1 hora)"""
+        return obj.get_patient_photo_url()
+    
     @extend_schema_field(MedicalRecordSerializer(allow_null=True))
     def get_medicalRecord(self, obj: Patient) -> Optional[Dict[str, Any]]:
         record = obj.medical_records.order_by("-created_at").first()

@@ -159,30 +159,13 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 
         user = User.objects.create_user(**validated_data)
 
-        # aguarda o signal criar o profile, então atualiza com os dados extras
-        try:
-            # usa get_or_create para evitar conflitos com o signal
-            profile, created = Profile.objects.get_or_create(
-                user=user,
-                defaults={
-                    "cpf": cpf,
-                    "birth": birth,
-                    "phone": phone,
-                },
-            )
-            # se o profile já existia (criado pelo signal), atualiza os campos
-            if not created:
-                if cpf:
-                    profile.cpf = cpf
-                if birth:
-                    profile.birth = birth
-                if phone:
-                    profile.phone = phone
-                profile.save()
-        except Exception as e:
-            # log do erro para debug
-            print(f"Erro ao criar/atualizar perfil do usuário {user.username}: {e}")
-            # se falhar, o usuário ainda existe, só não terá o perfil completo
+        # Atualizar profile criado pelo signal com dados adicionais
+        # Usa get_or_create para garantir que o profile existe (proteção contra race condition)
+        profile, _ = Profile.objects.get_or_create(user=user)
+        profile.cpf = cpf
+        profile.birth = birth
+        profile.phone = phone
+        profile.save()
 
         return user
 

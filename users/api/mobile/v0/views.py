@@ -69,10 +69,14 @@ from drf_spectacular.utils import (
 @permission_classes([AllowAny])
 @csrf_exempt
 def register(request):
+    from django.db import transaction
+    
     try:
         serializer = UserRegisterSerializer(data=request.data)
         if serializer.is_valid():
-            user = serializer.save()
+            # Usar transação atômica para garantir que User e Profile são criados juntos
+            with transaction.atomic():
+                user = serializer.save()
             print(f"DEBUG MOBILE: Usuário {user.username} criado com sucesso")
 
             # Gera tokens JWT para o novo usuário

@@ -269,10 +269,14 @@ def assign_role(request):
 @permission_classes([AllowAny])
 def register(request):
     """Cadastro de novos usuários na web"""
+    from django.db import transaction
+    
     try:
         serializer = UserRegisterSerializer(data=request.data)
         if serializer.is_valid():
-            user = serializer.save()
+            # Usar transação atômica para garantir que User e Profile são criados juntos
+            with transaction.atomic():
+                user = serializer.save()
             
             # Para web, retorna sucesso simples
             return Response({

@@ -52,7 +52,8 @@ class UserRegisterSerializer(serializers.ModelSerializer):
     
     def validate_cpf(self, value):
         """Validação customizada para CPF único"""
-        if Profile.objects.filter(cpf=value).exists():
+        # Só valida unicidade se CPF foi informado
+        if value and Profile.objects.filter(cpf=value).exists():
             raise serializers.ValidationError("Este CPF já está em uso.")
         return value
 
@@ -66,13 +67,13 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         password = validated_data.pop('password')
         user = User.objects.create_user(password=password, **validated_data)
         
-        # Criar profile automaticamente com dados do perfil
-        Profile.objects.create(
-            user=user,
-            cpf=cpf,
-            birth=birth,
-            phone=phone
-        )
+        # Atualizar profile criado pelo signal com dados adicionais
+        # Usa get_or_create para garantir que o profile existe (proteção contra race condition)
+        profile, _ = Profile.objects.get_or_create(user=user)
+        profile.cpf = cpf
+        profile.birth = birth
+        profile.phone = phone
+        profile.save()
         
         return user
 

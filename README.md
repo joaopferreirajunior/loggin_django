@@ -518,6 +518,18 @@ pip install -r requirements.txt
 python manage.py makemigrations
 ```
 
+### Comandos de Manutenção
+
+**Limpar perfis órfãos (profiles sem usuário):**
+```bash
+python manage.py cleanup_orphan_profiles
+```
+
+**Configurar grupos de usuários e permissões:**
+```bash
+python manage.py setup_user_groups
+```
+
 ### Execução do Deploy
 
 **Opção 1: Deploy a partir da máquina local (recomendado):**
@@ -565,3 +577,12 @@ source loggin_venv/bin/activate
 curl -X POST http://3.236.36.55:8000/users/api/web/v0/login/   -H "Content-Type: application/json"   -d '{"username": "juanherrera", "password": "ju33257194ju"}'
 
 
+
+
+# Web - Produção
+curl -X GET http://3.236.36.55:8000/patients/api/web/v0/image/3e9a04e5-a149-4ef4-be38-a120155f9907/ \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzY1ODkxMjkwLCJpYXQiOjE3NjU4OTA5OTAsImp0aSI6Ijc2NGI5Y2ZiNzM3MTRjZmI4ZmQ3OTY3OTI5MjM4ODA3IiwidXNlcl9pZCI6IjIifQ.KhuQY2Vg-OEIB1fBFW0CydSoq1WHDnb3K27civ3Lh58"
+
+# Mobile
+curl -X GET http://3.236.36.55:8000/patients/api/mobile/v0/image/3e9a04e5-a149-4ef4-be38-a120155f9907/ \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzY1ODkxMjkwLCJpYXQiOjE3NjU4OTA5OTAsImp0aSI6Ijc2NGI5Y2ZiNzM3MTRjZmI4ZmQ3OTY3OTI5MjM4ODA3IiwidXNlcl9pZCI6IjIifQ.KhuQY2Vg-OEIB1fBFW0CydSoq1WHDnb3K27civ3Lh58"
