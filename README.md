@@ -399,6 +399,60 @@ curl -X PUT http://localhost:8000/patients/api/mobile/v0/mrecords/660e8400-e29b-
   }'
 ```
 
+### Gerenciamento de Fotos de Pacientes
+
+**Upload de foto do paciente:**
+```bash
+# Web
+curl -X POST http://localhost:8000/patients/api/web/v0/image/550e8400-e29b-41d4-a716-446655440000/ \
+  -H "Authorization: Bearer SEU_ACCESS_TOKEN_AQUI" \
+  -F "photo=@/caminho/para/foto.jpg"
+
+# Mobile
+curl -X POST http://localhost:8000/patients/api/mobile/v0/image/550e8400-e29b-41d4-a716-446655440000/ \
+  -H "Authorization: Bearer SEU_ACCESS_TOKEN_AQUI" \
+  -F "photo=@/caminho/para/foto.jpg"
+```
+
+**Obter URL da foto do paciente:**
+```bash
+# Web - Desenvolvimento
+curl -X GET http://localhost:8000/patients/api/web/v0/image/550e8400-e29b-41d4-a716-446655440000/ \
+  -H "Authorization: Bearer SEU_ACCESS_TOKEN_AQUI"
+
+# Web - Produção
+curl -X GET http://3.236.36.55:8000/patients/api/web/v0/image/550e8400-e29b-41d4-a716-446655440000/ \
+  -H "Authorization: Bearer SEU_ACCESS_TOKEN_AQUI"
+
+# Mobile
+curl -X GET http://localhost:8000/patients/api/mobile/v0/image/550e8400-e29b-41d4-a716-446655440000/ \
+  -H "Authorization: Bearer SEU_ACCESS_TOKEN_AQUI"
+
+# Resposta:
+# {
+#   "photo_url": "https://loggin-media.s3.amazonaws.com/profiles/patient_550e8400.../photo.jpg?X-Amz-Algorithm=...",
+#   "expires_in": 3600
+# }
+```
+
+**Remover foto do paciente:**
+```bash
+# Web
+curl -X DELETE http://localhost:8000/patients/api/web/v0/image/550e8400-e29b-41d4-a716-446655440000/ \
+  -H "Authorization: Bearer SEU_ACCESS_TOKEN_AQUI"
+
+# Mobile
+curl -X DELETE http://localhost:8000/patients/api/mobile/v0/image/550e8400-e29b-41d4-a716-446655440000/ \
+  -H "Authorization: Bearer SEU_ACCESS_TOKEN_AQUI"
+```
+
+**Notas sobre fotos de pacientes:**
+1. **URL presigned**: Retorna link temporário válido por 1 hora (3600 segundos)
+2. **Formato**: Mesmo padrão das fotos de perfil de usuários
+3. **Tamanho máximo**: 5MB
+4. **Formatos suportados**: JPG, PNG, WebP
+5. **Redimensionamento**: Automático para 800x800px
+
 ### Fluxo de Recuperação de Senha
 
 1. **Solicitação**: Usuário acessa `/recovery-password/` e informa email

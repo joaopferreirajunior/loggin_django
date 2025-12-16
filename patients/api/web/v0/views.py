@@ -547,23 +547,3 @@ def manage_patient_photo(request, patient_id):
                 {"detail": f"Erro ao gerar URL da foto: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
-
-@extend_schema(
-    operation_id="get_patient_photo_url",
-    summary="Obter URL da foto do paciente",
-    description="Retorna a URL presigned da foto do paciente no S3 (válida por 1 hora)",
-    tags=["Web - Patients"],
-    responses={
-        200: inline_serializer(
-            name="PatientPhotoURLResponse",
-            fields={
-                "photo_url": serializers.URLField(),
-                "expires_in": serializers.IntegerField(),
-            },
-        ),
-        403: DetailSerializer,
-        404: DetailSerializer
-    }
-)
-@api_view(["GET"])
