@@ -417,13 +417,31 @@ def update_medical_record(request, record_id):
         404: DetailSerializer
     }
 )
+@extend_schema(
+    operation_id="get_patient_photo_url_web",
+    summary="Obter URL da foto do paciente",
+    description="Retorna a URL presigned da foto do paciente",
+    tags=["Web - Patients"],
+    methods=['GET'],
+    responses={
+        200: inline_serializer(
+            name="PatientPhotoURLResponse",
+            fields={
+                "photo_url": serializers.URLField(),
+                "expires_in": serializers.IntegerField(),
+            },
+        ),
+        403: DetailSerializer,
+        404: DetailSerializer
+    }
+)
 @csrf_exempt
-@api_view(['POST', 'DELETE'])
+@api_view(['POST', 'DELETE', 'GET'])
 @permission_classes([permissions.IsAuthenticated])
 @parser_classes([parsers.MultiPartParser, parsers.FormParser])
 def manage_patient_photo(request, patient_id):
     """
-    Gerencia upload e remoção da foto do paciente
+    Gerencia upload, remoção e obtenção de URL da foto do paciente
     """
     patient = get_object_or_404(Patient, id=patient_id, is_active=True)
     user = request.user
@@ -504,6 +522,31 @@ def manage_patient_photo(request, patient_id):
             return Response({
                 'detail': f'Erro ao remover foto: {str(e)}'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    elif request.method == 'GET':
+        # Obter URL da foto
+        if not patient.photo:
+            return Response(
+                {"detail": "Paciente não possui foto"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        try:
+            photo_url = patient.get_patient_photo_url()
+            
+            return Response(
+                {
+                    "photo_url": photo_url,
+                    "expires_in": 3600  # 1 hora em segundos
+                },
+                status=status.HTTP_200_OK
+            )
+            
+        except Exception as e:
+            return Response(
+                {"detail": f"Erro ao gerar URL da foto: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 @extend_schema(
@@ -524,57 +567,3 @@ def manage_patient_photo(request, patient_id):
     }
 )
 @api_view(["GET"])
-@permission_classes([permissions.IsAuthenticated])
-def get_patient_photo_url(request, patient_id):
-    """
-    Retorna URL presigned da foto do paciente
-    A URL é válida por 1 hora e permite acesso direto à foto no S3
-    """
-    patient = get_object_or_404(Patient, id=patient_id, is_active=True)
-    user = request.user
-    
-    # Verificar permissão para visualizar este paciente
-    if not user.groups.filter(name='system_admin').exists():
-        from groups.models import UserClinic, GroupAdmin
-        
-        user_in_patient_group = (
-            UserClinic.objects.filter(
-                user=user,
-                clinic__group=patient.group,
-                is_active=True
-            ).exists() or
-            GroupAdmin.objects.filter(
-                user=user,
-                group=patient.group,
-                is_active=True
-            ).exists()
-        )
-        
-        if not user_in_patient_group:
-            return Response(
-                {"detail": "Você não tem permissão para visualizar este paciente."},
-                status=status.HTTP_403_FORBIDDEN
-            )
-    
-    if not patient.photo:
-        return Response(
-            {"detail": "Paciente não possui foto"},
-            status=status.HTTP_404_NOT_FOUND
-        )
-    
-    try:
-        photo_url = patient.get_patient_photo_url()
-        
-        return Response(
-            {
-                "photo_url": photo_url,
-                "expires_in": 3600  # 1 hora em segundos
-            },
-            status=status.HTTP_200_OK
-        )
-        
-    except Exception as e:
-        return Response(
-            {"detail": f"Erro ao gerar URL da foto: {str(e)}"},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
