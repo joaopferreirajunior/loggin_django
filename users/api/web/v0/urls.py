@@ -23,6 +23,6 @@ urlpatterns = [
     path("profile/image/<int:user_id>/", views.serve_profile_image, name="api_web_serve_profile_image"),  # GET - servir imagem como proxy
     
     # Patient relationship management
-    path("me/patient-association/", views.manage_patient_association, name="api_web_patient_association"),  # GET/POST - gerenciar associações
-    path("me/patient-association/<uuid:patient_id>/", views.manage_patient_association, name="api_web_patient_association_delete"),  # DELETE - remover associação
+    path("me/patient-association/", views.list_patient_associations, name="api_web_list_patient_associations"),  # GET - listar pacientes
+    path("me/patient-association/<uuid:patient_id>/", views.manage_patient_association, name="api_web_manage_patient_association"),  # POST/DELETE - adicionar/remover
 ]

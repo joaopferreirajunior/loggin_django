@@ -108,13 +108,52 @@ class MedicalRecord(models.Model):
         related_name="medical_records",
     )
 
-    created_at = models.DateTimeField()  # vem do createdAt do front
-    doctor_name = models.CharField(max_length=255)
+    user = models.ForeignKey(
+        'auth.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=False,
+        related_name="medical_records",
+        help_text="Doutor que criou o prontuário"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
     complaint = models.TextField()
     clinical_notes = models.TextField()
 
-    # Não temos o modelo de Anamnese -> JSON genérico
-    anamnese = models.JSONField(null=True, blank=True)
-
     def __str__(self):
         return f"{self.patient.full_name} - {self.created_at:%Y-%m-%d}"
+
+
+class Anamnesis(models.Model):
+    """Modelo para armazenar anamneses dos pacientes"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    patients = models.ManyToManyField(
+        Patient,
+        related_name="anamneses",
+        help_text="Pacientes associados a esta anamnese"
+    )
+
+    user = models.ForeignKey(
+        'auth.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=False,
+        related_name="anamneses",
+        help_text="Médico que criou a anamnese"
+    )
+
+    metadata = models.TextField(help_text="Dados da anamnese em formato de texto/JSON")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    modified_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Anamnesis"
+        verbose_name_plural = "Anamneses"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        patient_names = ", ".join([p.full_name for p in self.patients.all()[:3]])
+        return f"Anamnesis - {patient_names} - {self.created_at:%Y-%m-%d}"

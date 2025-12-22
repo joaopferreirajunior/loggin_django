@@ -55,12 +55,12 @@ urlpatterns = [
     # Patient relationship management
     path(
         "me/patient-association/",
-        views.manage_patient_association,
-        name="api_mobile_patient_association",
-    ),  # GET/POST - gerenciar associações
+        views.list_patient_associations,
+        name="api_mobile_list_patient_associations",
+    ),  # GET - listar pacientes
     path(
         "me/patient-association/<uuid:patient_id>/",
         views.manage_patient_association,
-        name="api_mobile_patient_association_delete",
-    ),  # DELETE - remover associação
+        name="api_mobile_manage_patient_association",
+    ),  # POST/DELETE - adicionar/remover
 ]

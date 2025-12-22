@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Patient, MedicalRecord
+from .models import Patient, MedicalRecord, Anamnesis
 
 
 @admin.register(Patient)
@@ -37,9 +37,9 @@ class PatientAdmin(admin.ModelAdmin):
 class MedicalRecordAdmin(admin.ModelAdmin):
     list_display = ('patient', 'doctor_name', 'created_at', 'complaint_preview')
     list_filter = ('created_at', 'doctor_name')
-    search_fields = ('patient__full_name', 'doctor_name', 'complaint')
+    search_fields = ('patient__full_name', 'user__first_name', 'user__last_name', 'complaint')
     ordering = ('-created_at',)
-    readonly_fields = ('id',)
+    readonly_fields = ('id', 'created_at')
     
     def complaint_preview(self, obj):
         return obj.complaint[:50] + '...' if len(obj.complaint) > 50 else obj.complaint
@@ -47,17 +47,40 @@ class MedicalRecordAdmin(admin.ModelAdmin):
     
     fieldsets = (
         ('Informações do Atendimento', {
-            'fields': ('patient', 'doctor_name', 'created_at')
+            'fields': ('patient', 'user', 'created_at')
         }),
         ('Dados Clínicos', {
             'fields': ('complaint', 'clinical_notes')
         }),
-        ('Anamnese', {
-            'fields': ('anamnese',),
-            'classes': ('collapse',)
-        }),
         ('Metadados', {
             'fields': ('id',),
+            'classes': ('collapse',)
+        })
+    )
+
+
+@admin.register(Anamnesis)
+class AnamnesisAdmin(admin.ModelAdmin):
+    list_display = ('id', 'get_patients', 'user', 'created_at', 'modified_at')
+    list_filter = ('created_at', 'modified_at')
+    search_fields = ('patients__full_name', 'user__first_name', 'user__last_name', 'metadata')
+    ordering = ('-created_at',)
+    readonly_fields = ('id', 'created_at', 'modified_at')
+    filter_horizontal = ('patients',)
+    
+    def get_patients(self, obj):
+        return ", ".join([p.full_name for p in obj.patients.all()[:3]])
+    get_patients.short_description = 'Pacientes'
+    
+    fieldsets = (
+        ('Informações da Anamnese', {
+            'fields': ('user', 'patients')
+        }),
+        ('Dados', {
+            'fields': ('metadata',)
+        }),
+        ('Metadados', {
+            'fields': ('id', 'created_at', 'modified_at'),
             'classes': ('collapse',)
         })
     )

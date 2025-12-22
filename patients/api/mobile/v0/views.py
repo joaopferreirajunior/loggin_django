@@ -10,7 +10,8 @@ from django.shortcuts import get_object_or_404
 from patients.models import Patient, MedicalRecord
 from .serializers import (
     PatientSerializer, MedicalRecordSerializer, DetailSerializer,
-    PatientPhotoUploadSerializer, PatientWithPhotoSerializer
+    PatientPhotoUploadSerializer, PatientWithPhotoSerializer,
+    AnamnesisSerializer, AnamnesisDetailSerializer
 )
 
 
@@ -276,7 +277,8 @@ def manage_medical_records(request, patient_id):
         
         serializer = MedicalRecordSerializer(data=data)
         if serializer.is_valid():
-            record = serializer.save()
+            # Salvar automaticamente o user_id do usuário autenticado
+            record = serializer.save(user=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -535,3 +537,176 @@ def get_patient_doctors(request, patient_id):
         return Response({
             'detail': 'Paciente não encontrado'
         }, status=status.HTTP_404_NOT_FOUND)
+
+
+# ============================================================================
+# ANAMNESIS ENDPOINTS
+# ============================================================================
+
+@extend_schema(
+    summary="Listar anamneses de um paciente",
+    description="Lista todas as anamneses associadas a um paciente específico",
+    tags=["Mobile - Patients"],
+    responses={
+        200: AnamnesisDetailSerializer(many=True),
+        404: {'type': 'object', 'properties': {'detail': {'type': 'string'}}},
+        403: {'type': 'object', 'properties': {'detail': {'type': 'string'}}}
+    }
+)
+@extend_schema(
+    summary="Criar nova anamnese",
+    description="Cria uma nova anamnese para um ou mais pacientes",
+    tags=["Mobile - Patients"],
+    methods=['POST'],
+    request=AnamnesisSerializer,
+    responses={
+        201: AnamnesisDetailSerializer,
+        400: {'type': 'object', 'properties': {'detail': {'type': 'string'}}},
+        403: {'type': 'object', 'properties': {'detail': {'type': 'string'}}}
+    }
+)
+@api_view(['GET', 'POST'])
+@permission_classes([permissions.IsAuthenticated])
+def manage_anamnesis_by_patient(request, patient_id):
+    """Lista anamneses (GET) ou cria nova anamnese (POST) para um paciente"""
+    from patients.models import Anamnesis
+    from .serializers import AnamnesisSerializer, AnamnesisDetailSerializer
+    
+    patient = get_object_or_404(Patient, id=patient_id, is_active=True)
+    user = request.user
+    
+    # Verificar permissões
+    if not user.groups.filter(name='system_admin').exists():
+        from groups.models import UserClinic, GroupAdmin
+        
+        user_in_patient_group = (
+            UserClinic.objects.filter(
+                user=user,
+                clinic__group=patient.group,
+                is_active=True
+            ).exists() or
+            GroupAdmin.objects.filter(
+                user=user,
+                group=patient.group,
+                is_active=True
+            ).exists()
+        )
+        
+        if not user_in_patient_group:
+            action = "visualizar" if request.method == 'GET' else "criar"
+            return Response(
+                {"detail": f"Você não tem permissão para {action} anamneses deste paciente."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+    
+    if request.method == 'GET':
+        # Listar anamneses do paciente
+        anamneses = Anamnesis.objects.filter(patients=patient).order_by('-created_at')
+        serializer = AnamnesisDetailSerializer(anamneses, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    elif request.method == 'POST':
+        # Criar nova anamnese
+        serializer = AnamnesisSerializer(data=request.data)
+        if serializer.is_valid():
+            # Salvar automaticamente o user_id do usuário autenticado
+            anamnesis = serializer.save(user=request.user)
+            return Response(
+                AnamnesisDetailSerializer(anamnesis).data,
+                status=status.HTTP_201_CREATED
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@extend_schema(
+    summary="Atualizar anamnese",
+    description="Atualiza o metadata de uma anamnese específica (patient_id e user_id não podem ser modificados)",
+    tags=["Mobile - Patients"],
+    methods=['PUT', 'PATCH'],
+    request={"application/json": {
+        "type": "object",
+        "properties": {
+            "metadata": {"type": "string"}
+        },
+        "required": ["metadata"]
+    }},
+    responses={
+        200: AnamnesisDetailSerializer,
+        400: {'type': 'object', 'properties': {'detail': {'type': 'string'}}},
+        404: {'type': 'object', 'properties': {'detail': {'type': 'string'}}},
+        403: {'type': 'object', 'properties': {'detail': {'type': 'string'}}}
+    }
+)
+@extend_schema(
+    summary="Deletar anamnese",
+    description="Remove uma anamnese específica",
+    tags=["Mobile - Patients"],
+    methods=['DELETE'],
+    responses={
+        200: {'type': 'object', 'properties': {'detail': {'type': 'string'}}},
+        404: {'type': 'object', 'properties': {'detail': {'type': 'string'}}},
+        403: {'type': 'object', 'properties': {'detail': {'type': 'string'}}}
+    }
+)
+@api_view(['PUT', 'PATCH', 'DELETE'])
+@permission_classes([permissions.IsAuthenticated])
+def manage_anamnesis_by_id(request, anamnesis_id):
+    """Atualiza (PUT/PATCH) ou deleta (DELETE) uma anamnese específica"""
+    from patients.models import Anamnesis
+    from .serializers import AnamnesisSerializer, AnamnesisDetailSerializer
+    
+    anamnesis = get_object_or_404(Anamnesis, id=anamnesis_id)
+    user = request.user
+    
+    # Pegar qualquer paciente da anamnese para verificar permissões
+    first_patient = anamnesis.patients.first()
+    if not first_patient:
+        return Response(
+            {"detail": "Anamnese sem pacientes associados"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # Verificar permissões
+    if not user.groups.filter(name='system_admin').exists():
+        from groups.models import UserClinic, GroupAdmin
+        
+        user_in_patient_group = (
+            UserClinic.objects.filter(
+                user=user,
+                clinic__group=first_patient.group,
+                is_active=True
+            ).exists() or
+            GroupAdmin.objects.filter(
+                user=user,
+                group=first_patient.group,
+                is_active=True
+            ).exists()
+        )
+        
+        if not user_in_patient_group:
+            action = "atualizar" if request.method in ['PUT', 'PATCH'] else "deletar"
+            return Response(
+                {"detail": f"Você não tem permissão para {action} esta anamnese."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+    
+    if request.method in ['PUT', 'PATCH']:
+        # Atualizar anamnese (apenas metadata pode ser modificado)
+        data = {'metadata': request.data.get('metadata')}
+        serializer = AnamnesisSerializer(anamnesis, data=data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                AnamnesisDetailSerializer(anamnesis).data,
+                status=status.HTTP_200_OK
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    elif request.method == 'DELETE':
+        # Deletar anamnese
+        anamnesis.delete()
+        return Response(
+            {"detail": "Anamnese deletada com sucesso"},
+            status=status.HTTP_200_OK
+        )
+

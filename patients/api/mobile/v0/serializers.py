@@ -1,7 +1,7 @@
 # patients/api/mobile/v0/serializers.py
 
 from rest_framework import serializers
-from patients.models import Patient, MedicalRecord
+from patients.models import Patient, MedicalRecord, Anamnesis
 from drf_spectacular.utils import extend_schema_serializer, extend_schema_field
 from typing import Optional, Dict, Any
 
@@ -10,8 +10,8 @@ from typing import Optional, Dict, Any
 class MedicalRecordSerializer(serializers.ModelSerializer):
     # patientId no JSON -> patient_id no model (FK)
     patientId = serializers.UUIDField(source="patient_id")
-    createdAt = serializers.DateTimeField(source="created_at")
-    doctorName = serializers.CharField(source="doctor_name")
+    userId = serializers.IntegerField(source="user_id", read_only=True)
+    createdAt = serializers.DateTimeField(source="created_at", read_only=True)
     clinicalNotes = serializers.CharField(source="clinical_notes")
 
     class Meta:
@@ -19,12 +19,74 @@ class MedicalRecordSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "patientId",
+            "userId",
             "createdAt",
-            "doctorName",
             "complaint",
             "clinicalNotes",
-            "anamnese",  # JSON cru, estrutura igual à que o front manda
         )
+        read_only_fields = ('userId', 'createdAt')
+
+
+@extend_schema_serializer(component_name="MobileAnamnesis")
+class AnamnesisSerializer(serializers.ModelSerializer):
+    """Serializer para Anamnesis na API Mobile"""
+    userId = serializers.IntegerField(source="user_id", read_only=True)
+    patientIds = serializers.ListField(
+        child=serializers.UUIDField(),
+        source="patients",
+        write_only=True,
+        required=True
+    )
+    createdAt = serializers.DateTimeField(source="created_at", read_only=True)
+    modifiedAt = serializers.DateTimeField(source="modified_at", read_only=True)
+
+    class Meta:
+        model = Anamnesis
+        fields = (
+            "id",
+            "userId",
+            "patientIds",
+            "metadata",
+            "createdAt",
+            "modifiedAt",
+        )
+        read_only_fields = ('userId', 'createdAt', 'modifiedAt')
+
+    def create(self, validated_data):
+        patient_ids = validated_data.pop('patients')
+        anamnesis = Anamnesis.objects.create(**validated_data)
+        anamnesis.patients.set(Patient.objects.filter(id__in=patient_ids))
+        return anamnesis
+
+    def update(self, instance, validated_data):
+        # patient_ids não podem ser modificados
+        validated_data.pop('patients', None)
+        instance.metadata = validated_data.get('metadata', instance.metadata)
+        instance.save()
+        return instance
+
+
+@extend_schema_serializer(component_name="MobileAnamnesisDetail")
+class AnamnesisDetailSerializer(serializers.ModelSerializer):
+    """Serializer detalhado para Anamnesis incluindo lista de pacientes"""
+    userId = serializers.IntegerField(source="user_id", read_only=True)
+    patients = serializers.SerializerMethodField()
+    createdAt = serializers.DateTimeField(source="created_at", read_only=True)
+    modifiedAt = serializers.DateTimeField(source="modified_at", read_only=True)
+
+    class Meta:
+        model = Anamnesis
+        fields = (
+            "id",
+            "userId",
+            "patients",
+            "metadata",
+            "createdAt",
+            "modifiedAt",
+        )
+
+    def get_patients(self, obj):
+        return [{"id": p.id, "fullName": p.full_name} for p in obj.patients.all()]
 
 
 @extend_schema_serializer(component_name="MobilePatient")

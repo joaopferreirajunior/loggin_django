@@ -601,9 +601,21 @@ class WebTokenRefreshView(TokenRefreshView):
         }
     }
 )
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def list_patient_associations(request):
+    """Lista todos os pacientes do usuário autenticado"""
+    from users.models import UserPatientRelation
+    from .patient_relations_serializers import UserPatientsWebListSerializer
+    
+    relations = UserPatientRelation.get_user_patients(request.user, active_only=True)
+    serializer = UserPatientsWebListSerializer(relations, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 @extend_schema(
-    summary="Adicionar paciente existente aos meus cuidados",
-    description="Adiciona um paciente à lista de pacientes atendidos pelo usuário",
+    summary="Adicionar paciente aos meus cuidados",
+    description="Cria um vínculo entre o usuário logado e um paciente",
     tags=["Web - User"],
     methods=['POST'],
     request={"application/json": {
@@ -634,7 +646,7 @@ class WebTokenRefreshView(TokenRefreshView):
 )
 @extend_schema(
     summary="Remover paciente dos meus cuidados",
-    description="Remove um paciente da lista de pacientes atendidos (soft delete)",
+    description="Remove o vínculo entre o usuário logado e um paciente",
     tags=["Web - User"],
     methods=['DELETE'],
     responses={
@@ -642,22 +654,16 @@ class WebTokenRefreshView(TokenRefreshView):
         404: {'type': 'object', 'properties': {'detail': {'type': 'string'}}}
     }
 )
-@api_view(['GET', 'POST', 'DELETE'])
+@api_view(['POST', 'DELETE'])
 @permission_classes([permissions.IsAuthenticated])
-def manage_patient_association(request, patient_id=None):
-    """Gerencia associação entre usuário e pacientes (GET/POST/DELETE)"""
+def manage_patient_association(request, patient_id):
+    """Adiciona (POST) ou remove (DELETE) associação entre usuário e paciente"""
     from users.models import UserPatientRelation
-    from .patient_relations_serializers import UserPatientsListSerializer, CreateUserPatientRelationSerializer
+    from .patient_relations_serializers import CreateUserPatientWebRelationSerializer
     
-    if request.method == 'GET':
-        # Listar pacientes do usuário
-        relations = UserPatientRelation.get_user_patients(request.user, active_only=True)
-        serializer = UserPatientsListSerializer(relations, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    
-    elif request.method == 'POST':
-        # Adicionar paciente
-        serializer = CreateUserPatientRelationSerializer(data=request.data, context={'request': request})
+    if request.method == 'POST':
+        # Adicionar paciente - usa patient_id do body, não da URL
+        serializer = CreateUserPatientWebRelationSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             relation = serializer.save()
             return Response({
@@ -671,12 +677,7 @@ def manage_patient_association(request, patient_id=None):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     elif request.method == 'DELETE':
-        # Remover paciente
-        if not patient_id:
-            return Response({
-                'detail': 'patient_id é obrigatório para remoção'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
+        # Remover paciente - usa patient_id da URL
         try:
             relation = UserPatientRelation.objects.get(
                 patient_id=patient_id, 
