@@ -35,8 +35,8 @@ class PatientAdmin(admin.ModelAdmin):
 
 @admin.register(MedicalRecord)
 class MedicalRecordAdmin(admin.ModelAdmin):
-    list_display = ('patient', 'doctor_name', 'created_at', 'complaint_preview')
-    list_filter = ('created_at', 'doctor_name')
+    list_display = ('patient', 'user', 'created_at', 'complaint_preview')
+    list_filter = ('created_at',)
     search_fields = ('patient__full_name', 'user__first_name', 'user__last_name', 'complaint')
     ordering = ('-created_at',)
     readonly_fields = ('id', 'created_at')
