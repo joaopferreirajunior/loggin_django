@@ -951,22 +951,11 @@ class MobileTokenRefreshView(TokenRefreshView):
         }
     }
 )
-@api_view(['GET'])
-@permission_classes([permissions.IsAuthenticated])
-def my_patients(request):
-    """Lista todos os pacientes do usuário autenticado"""
-    from users.models import UserPatientRelation
-    from .patient_relations_serializers import UserPatientsListSerializer
-    
-    relations = UserPatientRelation.get_user_patients(request.user, active_only=True)
-    serializer = UserPatientsListSerializer(relations, many=True)
-    return Response(serializer.data, status=status.HTTP_200_OK)
-
-
 @extend_schema(
     summary="Adicionar paciente existente aos meus cuidados",
     description="Adiciona um paciente à lista de pacientes atendidos pelo usuário",
     tags=["Mobile - User"],
+    methods=['POST'],
     request={"application/json": {
         "type": "object",
         "properties": {
@@ -993,55 +982,65 @@ def my_patients(request):
         400: {"type": "object", "properties": {"detail": {"type": "string"}}}
     }
 )
-@api_view(['POST'])
-@permission_classes([permissions.IsAuthenticated])
-def add_patient_to_care(request):
-    """Adiciona um paciente aos cuidados do usuário autenticado"""
-    from .patient_relations_serializers import CreateUserPatientRelationSerializer
-    
-    serializer = CreateUserPatientRelationSerializer(data=request.data, context={'request': request})
-    if serializer.is_valid():
-        relation = serializer.save()
-        return Response({
-            'detail': 'Paciente adicionado aos seus cuidados com sucesso',
-            'relation': {
-                'id': relation.id,
-                'patientName': relation.patient.full_name,
-                'startDate': relation.start_date
-            }
-        }, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
 @extend_schema(
     summary="Remover paciente dos meus cuidados",
     description="Remove um paciente da lista de pacientes atendidos (soft delete)",
     tags=["Mobile - User"],
+    methods=['DELETE'],
     responses={
         200: {'type': 'object', 'properties': {'detail': {'type': 'string'}}},
         404: {'type': 'object', 'properties': {'detail': {'type': 'string'}}}
     }
 )
-@api_view(['DELETE'])
+@api_view(['GET', 'POST', 'DELETE'])
 @permission_classes([permissions.IsAuthenticated])
-def remove_patient_from_care(request, patient_id):
-    """Remove um paciente dos cuidados do usuário autenticado"""
+def manage_patient_association(request, patient_id=None):
+    """Gerencia associação entre usuário e pacientes (GET/POST/DELETE)"""
     from users.models import UserPatientRelation
+    from .patient_relations_serializers import UserPatientsListSerializer, CreateUserPatientRelationSerializer
     
-    try:
-        relation = UserPatientRelation.objects.get(
-            patient_id=patient_id, 
-            user=request.user, 
-            is_active=True
-        )
-        relation.deactivate()
-        return Response({
-            'detail': f'Paciente {relation.patient.full_name} removido dos seus cuidados'
-        }, status=status.HTTP_200_OK)
-    except UserPatientRelation.DoesNotExist:
-        return Response({
-            'detail': 'Relacionamento não encontrado ou já inativo'
-        }, status=status.HTTP_404_NOT_FOUND)
+    if request.method == 'GET':
+        # Listar pacientes do usuário
+        relations = UserPatientRelation.get_user_patients(request.user, active_only=True)
+        serializer = UserPatientsListSerializer(relations, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    elif request.method == 'POST':
+        # Adicionar paciente
+        serializer = CreateUserPatientRelationSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            relation = serializer.save()
+            return Response({
+                'detail': 'Paciente adicionado aos seus cuidados com sucesso',
+                'relation': {
+                    'id': relation.id,
+                    'patientName': relation.patient.full_name,
+                    'startDate': relation.start_date
+                }
+            }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    elif request.method == 'DELETE':
+        # Remover paciente
+        if not patient_id:
+            return Response({
+                'detail': 'patient_id é obrigatório para remoção'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            relation = UserPatientRelation.objects.get(
+                patient_id=patient_id, 
+                user=request.user, 
+                is_active=True
+            )
+            relation.deactivate()
+            return Response({
+                'detail': f'Paciente {relation.patient.full_name} removido dos seus cuidados'
+            }, status=status.HTTP_200_OK)
+        except UserPatientRelation.DoesNotExist:
+            return Response({
+                'detail': 'Relacionamento não encontrado ou já inativo'
+            }, status=status.HTTP_404_NOT_FOUND)
 
 
 # ============================================================================

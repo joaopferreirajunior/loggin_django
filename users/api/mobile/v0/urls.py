@@ -54,18 +54,13 @@ urlpatterns = [
     ),  # GET - servir imagem como proxy
     # Patient relationship management
     path(
-        "me/patients/",
-        views.my_patients,
-        name="api_mobile_my_patients",
-    ),  # GET - listar meus pacientes
+        "me/patient-association/",
+        views.manage_patient_association,
+        name="api_mobile_patient_association",
+    ),  # GET/POST - gerenciar associações
     path(
-        "me/patients/add/",
-        views.add_patient_to_care,
-        name="api_mobile_add_patient",
-    ),  # POST - adicionar paciente existente aos cuidados
-    path(
-        "me/patients/<uuid:patient_id>/remove/",
-        views.remove_patient_from_care,
-        name="api_mobile_remove_patient",
-    ),  # DELETE - remover paciente
+        "me/patient-association/<uuid:patient_id>/",
+        views.manage_patient_association,
+        name="api_mobile_patient_association_delete",
+    ),  # DELETE - remover associação
 ]
