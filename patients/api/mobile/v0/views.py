@@ -219,14 +219,26 @@ def manage_patient_detail(request, patient_id):
         403: DetailSerializer
     }
 )
-@api_view(['GET'])
+@extend_schema(
+    summary="Criar prontuário",
+    description="Cria um novo prontuário médico",
+    tags=["Mobile - Patients"],
+    methods=['POST'],
+    request=MedicalRecordSerializer,
+    responses={
+        201: MedicalRecordSerializer,
+        400: DetailSerializer,
+        403: DetailSerializer
+    }
+)
+@api_view(['GET', 'POST'])
 @permission_classes([permissions.IsAuthenticated])
-def list_medical_records(request, patient_id):
-    """Lista todos os prontuários de um paciente"""
+def manage_medical_records(request, patient_id):
+    """Lista prontuários (GET) ou cria novo prontuário (POST)"""
     patient = get_object_or_404(Patient, id=patient_id, is_active=True)
     user = request.user
     
-    # Verificar se é system_admin
+    # Verificar permissões
     if not user.groups.filter(name='system_admin').exists():
         from groups.models import UserClinic, GroupAdmin
         
@@ -245,68 +257,28 @@ def list_medical_records(request, patient_id):
         )
         
         if not user_in_patient_group:
+            action = "visualizar" if request.method == 'GET' else "criar"
             return Response(
-                {"detail": "Você não tem permissão para visualizar prontuários deste paciente."},
+                {"detail": f"Você não tem permissão para {action} prontuários deste paciente."},
                 status=status.HTTP_403_FORBIDDEN
             )
     
-    records = patient.medical_records.order_by('-created_at')
-    serializer = MedicalRecordSerializer(records, many=True)
-    return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-@extend_schema(
-    summary="Criar prontuário",
-    description="Cria um novo prontuário médico",
-    tags=["Mobile - Patients"],
-    request=MedicalRecordSerializer,
-    responses={
-        201: MedicalRecordSerializer,
-        400: DetailSerializer,
-        403: DetailSerializer
-    }
-)
-@api_view(['POST'])
-@permission_classes([permissions.IsAuthenticated])
-def create_medical_record(request, patient_id):
-    """Cria um novo prontuário médico"""
-    patient = get_object_or_404(Patient, id=patient_id, is_active=True)
+    if request.method == 'GET':
+        # Listar prontuários
+        records = patient.medical_records.order_by('-created_at')
+        serializer = MedicalRecordSerializer(records, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
     
-    # Adiciona o patient_id aos dados antes de validar
-    data = request.data.copy()
-    data['patientId'] = str(patient_id)
-    
-    serializer = MedicalRecordSerializer(data=data)
-    if serializer.is_valid():
-        user = request.user
+    elif request.method == 'POST':
+        # Criar novo prontuário
+        data = request.data.copy()
+        data['patientId'] = str(patient_id)
         
-        # Verificar se é system_admin
-        if not user.groups.filter(name='system_admin').exists():
-            from groups.models import UserClinic, GroupAdmin
-            
-            # Verificar se usuário pertence ao mesmo grupo do paciente
-            user_in_patient_group = (
-                UserClinic.objects.filter(
-                    user=user,
-                    clinic__group=patient.group,
-                    is_active=True
-                ).exists() or
-                GroupAdmin.objects.filter(
-                    user=user,
-                    group=patient.group,
-                    is_active=True
-                ).exists()
-            )
-            
-            if not user_in_patient_group:
-                return Response(
-                    {"detail": "Você não tem permissão para criar prontuário para este paciente."},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-        
-        record = serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer = MedicalRecordSerializer(data=data)
+        if serializer.is_valid():
+            record = serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @extend_schema(
@@ -518,3 +490,48 @@ def manage_patient_photo(request, patient_id):
                 {"detail": f"Erro ao gerar URL da foto: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+# ============================================================================
+# PATIENT DOCTORS ENDPOINT
+# ============================================================================
+
+@extend_schema(
+    operation_id="get_patient_doctors_mobile",
+    summary="Listar profissionais de um paciente",
+    description="Retorna todos os profissionais que atendem um paciente específico",
+    tags=["Mobile - Patients"],
+    responses={
+        200: {
+            'type': 'array',
+            'items': {
+                'type': 'object',
+                'properties': {
+                    'relationId': {'type': 'string', 'format': 'uuid'},
+                    'userId': {'type': 'integer'},
+                    'userName': {'type': 'string'},
+                    'userEmail': {'type': 'string'},
+                    'startDate': {'type': 'string', 'format': 'date-time'},
+                    'isActive': {'type': 'boolean'}
+                }
+            }
+        },
+        404: {'type': 'object', 'properties': {'detail': {'type': 'string'}}}
+    }
+)
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def get_patient_doctors(request, patient_id):
+    """Lista todos os profissionais que atendem um paciente específico"""
+    from users.models import UserPatientRelation
+    from users.api.mobile.v0.patient_relations_serializers import PatientDoctorsListSerializer
+    
+    try:
+        patient = Patient.objects.get(id=patient_id, is_active=True)
+        relations = UserPatientRelation.get_patient_users(patient, active_only=True)
+        serializer = PatientDoctorsListSerializer(relations, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except Patient.DoesNotExist:
+        return Response({
+            'detail': 'Paciente não encontrado'
+        }, status=status.HTTP_404_NOT_FOUND)

@@ -16,5 +16,4 @@ urlpatterns = [
     # User-Clinic associations
     path('user-clinics/', views.UserClinicCreateView.as_view(), name='mobile_user_clinic_create'),
     path('user-clinics/<uuid:pk>/', views.UserClinicDeleteView.as_view(), name='mobile_user_clinic_delete'),
-    path('users/<int:user_id>/clinics/', views.UserClinicsView.as_view(), name='mobile_user_clinics'),
 ]

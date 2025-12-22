@@ -32,6 +32,11 @@ urlpatterns = [
         name="api_mobile_me_permissions",
     ),
     path(
+        "me/group/",
+        views.MeGroupView.as_view(),
+        name="api_mobile_me_group",
+    ),
+    path(
         "assign-role/",
         views.AssignUserRoleView.as_view(),
         name="api_mobile_assign_role",
@@ -49,23 +54,18 @@ urlpatterns = [
     ),  # GET - servir imagem como proxy
     # Patient relationship management
     path(
-        "my-patients/",
+        "me/patients/",
         views.my_patients,
         name="api_mobile_my_patients",
     ),  # GET - listar meus pacientes
     path(
-        "add-patient/",
+        "me/patients/add/",
         views.add_patient_to_care,
         name="api_mobile_add_patient",
     ),  # POST - adicionar paciente existente aos cuidados
     path(
-        "remove-patient/<uuid:relation_id>/",
+        "me/patients/<uuid:relation_id>/remove/",
         views.remove_patient_from_care,
         name="api_mobile_remove_patient",
     ),  # DELETE - remover paciente
-    path(
-        "patient-doctors/<uuid:patient_id>/",
-        views.patient_doctors,
-        name="api_mobile_patient_doctors",
-    ),  # GET - profissionais que atendem um paciente
 ]

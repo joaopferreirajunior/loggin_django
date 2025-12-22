@@ -1044,42 +1044,101 @@ def remove_patient_from_care(request, relation_id):
         }, status=status.HTTP_404_NOT_FOUND)
 
 
-@extend_schema(
-    summary="Listar profissionais que atendem um paciente",
-    description="Lista todos os usuários que atendem um paciente específico",
-    tags=["Mobile - User"],
-    responses={
-        200: {
-            'type': 'array',
-            'items': {
-                'type': 'object',
-                'properties': {
-                    'relationId': {'type': 'string', 'format': 'uuid'},
-                    'userId': {'type': 'integer'},
-                    'userName': {'type': 'string'},
-                    'userEmail': {'type': 'string'},
-                    'startDate': {'type': 'string', 'format': 'date-time'},
-                    'isActive': {'type': 'boolean'}
+# ============================================================================
+# ME GROUP ENDPOINT
+# ============================================================================
+
+@extend_schema_view(
+    get=extend_schema(
+        tags=["Mobile - User"],
+        summary="Obter grupo e clínicas do usuário logado",
+        description="Retorna os dados do grupo ao qual o usuário está associado e todas as clínicas relacionadas ao grupo",
+        responses={
+            200: {
+                "type": "object",
+                "properties": {
+                    "group": {
+                        "type": "object",
+                        "properties": {
+                            "id": {"type": "string", "format": "uuid"},
+                            "name": {"type": "string"},
+                            "description": {"type": "string"}
+                        }
+                    },
+                    "clinic_count": {"type": "integer"},
+                    "clinics": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {"type": "string", "format": "uuid"},
+                                "name": {"type": "string"},
+                                "address": {"type": "string"},
+                                "phone": {"type": "string"},
+                                "device_count": {"type": "integer"}
+                            }
+                        }
+                    }
                 }
-            }
-        },
-        404: {'type': 'object', 'properties': {'detail': {'type': 'string'}}}
-    }
+            },
+            404: DetailSerializer
+        }
+    )
 )
-@api_view(['GET'])
-@permission_classes([permissions.IsAuthenticated])
-def patient_doctors(request, patient_id):
-    """Lista todos os profissionais que atendem um paciente específico"""
-    from users.models import UserPatientRelation
-    from patients.models import Patient
-    from .patient_relations_serializers import PatientDoctorsListSerializer
-    
-    try:
-        patient = Patient.objects.get(id=patient_id, is_active=True)
-        relations = UserPatientRelation.get_patient_users(patient, active_only=True)
-        serializer = PatientDoctorsListSerializer(relations, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    except Patient.DoesNotExist:
+class MeGroupView(APIView):
+    """Retorna o grupo e clínicas do usuário logado"""
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        """Retorna grupo e clínicas associadas ao usuário logado"""
+        from groups.models import UserClinic, GroupAdmin, Group
+        from groups.api.mobile.v0.serializers import MobileClinicSerializer
+        
+        user = request.user
+        group = None
+        
+        # Verificar se é system_admin - system_admin não tem grupo específico
+        if user.groups.filter(name='system_admin').exists():
+            return Response(
+                {"detail": "Usuários system_admin não estão associados a um grupo específico"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Buscar grupo via GroupAdmin
+        group_admin = GroupAdmin.objects.filter(
+            user=user,
+            is_active=True
+        ).select_related('group').first()
+        
+        if group_admin:
+            group = group_admin.group
+        else:
+            # Buscar grupo via UserClinic
+            user_clinic = UserClinic.objects.filter(
+                user=user,
+                is_active=True
+            ).select_related('clinic__group').first()
+            
+            if user_clinic:
+                group = user_clinic.clinic.group
+        
+        if not group:
+            return Response(
+                {"detail": "Usuário não está associado a nenhum grupo"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Buscar todas as clínicas do grupo
+        clinics = group.clinics.filter(is_active=True)
+        serializer = MobileClinicSerializer(clinics, many=True)
+        
         return Response({
-            'detail': 'Paciente não encontrado'
-        }, status=status.HTTP_404_NOT_FOUND)
+            "group": {
+                "id": group.id,
+                "name": group.name,
+                "description": group.description
+            },
+            "clinic_count": clinics.count(),
+            "clinics": serializer.data
+        }, status=status.HTTP_200_OK)

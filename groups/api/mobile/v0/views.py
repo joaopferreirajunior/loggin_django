@@ -458,23 +458,3 @@ class UserClinicDeleteView(generics.DestroyAPIView):
         instance.save()
 
 
-@extend_schema_view(
-    get=extend_schema(
-        tags=["Mobile - Groups"],
-        summary="Listar clínicas de um usuário",
-        description="Lista todas as clínicas associadas a um usuário específico"
-    )
-)
-class UserClinicsView(generics.ListAPIView):
-    """Listar clínicas associadas a um usuário"""
-    from groups.api.web.v0.user_clinic_serializers import UserClinicSerializer
-    serializer_class = UserClinicSerializer
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [permissions.IsAuthenticated]
-    
-    def get_queryset(self):
-        user_id = self.kwargs.get('user_id')
-        return UserClinic.objects.filter(
-            user_id=user_id,
-            is_active=True
-        ).select_related('user', 'clinic', 'clinic__group')

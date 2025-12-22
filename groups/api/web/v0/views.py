@@ -315,24 +315,7 @@ class ClinicUsersView(generics.ListAPIView):
         ).select_related('user', 'clinic', 'clinic__group')
 
 
-@extend_schema_view(
-    get=extend_schema(
-        tags=["Web - Groups"],
-        summary="Listar clínicas de um usuário",
-        description="Retorna todas as clínicas onde um usuário está vinculado"
-    )
-)
-class UserClinicsView(generics.ListAPIView):
-    """Lista todas as clínicas de um usuário"""
-    serializer_class = UserClinicSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    
-    def get_queryset(self):
-        user_id = self.kwargs['user_id']
-        return UserClinic.objects.filter(
-            user_id=user_id,
-            is_active=True
-        ).select_related('user', 'clinic', 'clinic__group')
+
 
 
 @extend_schema_view(

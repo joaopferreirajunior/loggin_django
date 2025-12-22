@@ -7,10 +7,12 @@ urlpatterns = [
     path('<uuid:patient_id>/', views.manage_patient_detail, name='api_web_patient_detail'),
     
     # Medical Records endpoints
-    path('<uuid:patient_id>/records/', views.list_medical_records, name='api_web_medical_records_list'),
-    path('<uuid:patient_id>/mrecords/', views.create_medical_record, name='api_web_medical_records_create'),
+    path('mrecords/<uuid:patient_id>/', views.manage_medical_records, name='api_web_medical_records'),
     path('mrecords/<uuid:record_id>/', views.update_medical_record, name='api_web_medical_records_update'),
     
     # Patient Photo endpoints
     path('image/<uuid:patient_id>/', views.manage_patient_photo, name='api_web_patient_image'),
+    
+    # Patient Doctors endpoints
+    path('doctors/<uuid:patient_id>/', views.get_patient_doctors, name='api_web_patient_doctors'),
 ]
