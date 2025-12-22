@@ -25,5 +25,5 @@ urlpatterns = [
     # Patient relationship management
     path("me/patients/", views.my_patients, name="api_web_my_patients"),  # GET - listar meus pacientes
     path("me/patients/add/", views.add_patient_to_care, name="api_web_add_patient"),  # POST - adicionar paciente existente aos cuidados
-    path("me/patients/<uuid:relation_id>/remove/", views.remove_patient_from_care, name="api_web_remove_patient"),  # DELETE - remover paciente
+    path("me/patients/<uuid:patient_id>/remove/", views.remove_patient_from_care, name="api_web_remove_patient"),  # DELETE - remover paciente
 ]

@@ -1024,13 +1024,13 @@ def add_patient_to_care(request):
 )
 @api_view(['DELETE'])
 @permission_classes([permissions.IsAuthenticated])
-def remove_patient_from_care(request, relation_id):
+def remove_patient_from_care(request, patient_id):
     """Remove um paciente dos cuidados do usuário autenticado"""
     from users.models import UserPatientRelation
     
     try:
         relation = UserPatientRelation.objects.get(
-            id=relation_id, 
+            patient_id=patient_id, 
             user=request.user, 
             is_active=True
         )

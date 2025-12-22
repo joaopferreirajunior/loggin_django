@@ -64,7 +64,7 @@ urlpatterns = [
         name="api_mobile_add_patient",
     ),  # POST - adicionar paciente existente aos cuidados
     path(
-        "me/patients/<uuid:relation_id>/remove/",
+        "me/patients/<uuid:patient_id>/remove/",
         views.remove_patient_from_care,
         name="api_mobile_remove_patient",
     ),  # DELETE - remover paciente
