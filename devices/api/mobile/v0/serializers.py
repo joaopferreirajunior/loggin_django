@@ -6,8 +6,8 @@ from drf_spectacular.utils import extend_schema_serializer
 @extend_schema_serializer(component_name="MobileDevice")
 class MobileDeviceSerializer(serializers.ModelSerializer):
     """Serializer simplificado para Device mobile"""
-    createdAt = serializers.DateTimeField(source='created_at', read_only=True)
-    updatedAt = serializers.DateTimeField(source='updated_at', read_only=True)
+    createdAt = serializers.DateTimeField(source='created', read_only=True)
+    updatedAt = serializers.DateTimeField(source='modified', read_only=True)
     lockedAt = serializers.DateTimeField(source='locked_at', read_only=True)
     testedAt = serializers.DateTimeField(source='tested_at', read_only=True)
     soldAt = serializers.DateTimeField(source='sold_at', read_only=True)
@@ -41,8 +41,8 @@ class MobileTelemetryModuleSerializer(serializers.ModelSerializer):
     currentDevice = serializers.SerializerMethodField()
     iccId = serializers.CharField(source='icc_id', read_only=True)
     isActive = serializers.BooleanField(source='is_active', read_only=True)
-    createdAt = serializers.DateTimeField(source='created_at', read_only=True)
-    updatedAt = serializers.DateTimeField(source='updated_at', read_only=True)
+    createdAt = serializers.DateTimeField(source='created', read_only=True)
+    updatedAt = serializers.DateTimeField(source='modified', read_only=True)
     
     class Meta:
         model = TelemetryModule

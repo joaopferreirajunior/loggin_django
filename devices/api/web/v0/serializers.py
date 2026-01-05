@@ -13,7 +13,7 @@ class DeviceSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'serial', 'model', 'locked', 'locked_at', 
             'tested', 'tested_at', 'sold', 'sold_at', 
-            'is_active', 'created_at', 'updated_at', 'telemetry_module'
+            'is_active', 'created', 'modified', 'telemetry_module'
         ]
     
     def get_telemetry_module(self, obj):
@@ -38,7 +38,7 @@ class TelemetryModuleSerializer(serializers.ModelSerializer):
         model = TelemetryModule
         fields = [
             'id', 'imei', 'icc_id', 'modelo', 'current_device',
-            'is_active', 'created_at', 'updated_at'
+            'is_active', 'created', 'modified'
         ]
     
     def get_current_device(self, obj):
