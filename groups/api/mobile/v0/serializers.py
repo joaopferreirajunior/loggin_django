@@ -1,17 +1,8 @@
 from rest_framework import serializers
 from groups.models import Group, Clinic, DeviceClinic
-from devices.models import Device
+from devices.api.mobile.v0.serializers import MobileDeviceSerializer
 from drf_spectacular.utils import extend_schema_serializer
 
-
-@extend_schema_serializer(component_name="MobileDevice")
-class MobileDeviceSerializer(serializers.ModelSerializer):
-    """Serializer simplificado para Device mobile"""
-    origin_display = serializers.CharField(source='get_origin_display', read_only=True)
-    
-    class Meta:
-        model = Device
-        fields = ['id', 'serial', 'origin', 'origin_display', 'model_name', 'sold', 'is_active']
 
 
 @extend_schema_serializer(component_name="MobileGroup")
@@ -26,16 +17,21 @@ class MobileGroupSerializer(serializers.ModelSerializer):
 @extend_schema_serializer(component_name="MobileClinic")
 class MobileClinicSerializer(serializers.ModelSerializer):
     """Serializer simplificado para Clinic mobile"""
-    group_name = serializers.CharField(source='group.name', read_only=True)
-    device_count = serializers.SerializerMethodField()
+    groupName = serializers.CharField(source='group.name', read_only=True)
+    deviceCount = serializers.SerializerMethodField()
+    clinicImageUrl = serializers.SerializerMethodField()
     
     class Meta:
         model = Clinic
-        fields = ['id', 'name', 'group_name', 'address', 'phone', 'device_count']
+        fields = ['id', 'name', 'groupName', 'address', 'phone', 'deviceCount', 'clinicImageUrl']
     
-    def get_device_count(self, obj):
+    def get_deviceCount(self, obj):
         """Retorna o número de devices ativos na clínica"""
         return obj.clinic_devices.filter(is_active=True).count()
+    
+    def get_clinicImageUrl(self, obj):
+        """Retorna a URL da imagem da clínica"""
+        return obj.get_clinic_image_url()
 
 
 @extend_schema_serializer(component_name="MobileGroupWithClinics")
@@ -121,3 +117,63 @@ class MobileGroupCreateSerializer(serializers.ModelSerializer):
         )
         
         return group
+
+
+@extend_schema_serializer(component_name="MobileClinicImageUpload")
+class MobileClinicImageUploadSerializer(serializers.Serializer):
+    """
+    Serializer mobile para upload de imagem de clínica
+    """
+    clinicImage = serializers.ImageField(
+        required=True,
+        help_text="Imagem da clínica (JPEG, PNG, WebP - máximo 5MB)"
+    )
+    
+    def validate_clinicImage(self, value):
+        """
+        Valida a imagem usando o serviço S3ImageService
+        """
+        from users.services import S3ImageService
+        s3_service = S3ImageService()
+        is_valid, error_message = s3_service.validate_image(value)
+        
+        if not is_valid:
+            raise serializers.ValidationError(error_message)
+        
+        return value
+    
+    def save(self, clinic):
+        """
+        Processa e salva a imagem no S3
+        """
+        try:
+            from users.services import S3ImageService
+            clinic_image = self.validated_data['clinicImage']
+            s3_service = S3ImageService()
+            
+            # Remove imagem anterior se existir
+            if clinic.clinic_image:
+                clinic.delete_clinic_image()
+            
+            # Upload nova imagem
+            success, message, s3_key = s3_service.process_and_upload_clinic_image(
+                str(clinic.id), clinic_image
+            )
+            
+            if not success:
+                raise serializers.ValidationError(f"Erro no upload: {message}")
+            
+            # Atualiza a clínica com o novo path
+            clinic.clinic_image = s3_key
+            clinic.save()
+            
+            return clinic
+            
+        except serializers.ValidationError:
+            # Re-raise validation errors
+            raise
+        except Exception as e:
+            # Log the full error for debugging
+            import traceback
+            print(f"Erro completo no upload da imagem da clínica: {traceback.format_exc()}")
+            raise serializers.ValidationError(f"Erro interno no upload: {str(e)}")

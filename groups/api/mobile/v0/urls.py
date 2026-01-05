@@ -13,6 +13,7 @@ urlpatterns = [
     path('clinics/', views.ClinicCreateView.as_view(), name='mobile_clinic_create'),
     path('clinics/<uuid:pk>/', views.ClinicDetailView.as_view(), name='mobile_clinic_detail'),
     path('clinics/<uuid:clinic_id>/devices/', views.ClinicDevicesView.as_view(), name='mobile_clinic_devices'),
+    path('clinics/<uuid:clinicId>/uploadImage/', views.MobileClinicImageUploadView.as_view(), name='mobile_clinic_image_upload'),
     
     # User-Clinic associations
     path('user-clinics/', views.UserClinicCreateView.as_view(), name='mobile_user_clinic_create'),

@@ -1,0 +1,165 @@
+from rest_framework import serializers
+from devices.models import Device, TelemetryModule, DeviceTelemetryModule
+from drf_spectacular.utils import extend_schema_serializer
+
+
+@extend_schema_serializer(component_name="MobileDevice")
+class MobileDeviceSerializer(serializers.ModelSerializer):
+    """Serializer simplificado para Device mobile"""
+    createdAt = serializers.DateTimeField(source='created_at', read_only=True)
+    updatedAt = serializers.DateTimeField(source='updated_at', read_only=True)
+    lockedAt = serializers.DateTimeField(source='locked_at', read_only=True)
+    testedAt = serializers.DateTimeField(source='tested_at', read_only=True)
+    soldAt = serializers.DateTimeField(source='sold_at', read_only=True)
+    isActive = serializers.BooleanField(source='is_active', read_only=True)
+    telemetryModule = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Device
+        fields = [
+            'id', 'serial', 'model', 'locked', 'lockedAt', 
+            'tested', 'testedAt', 'sold', 'soldAt', 
+            'isActive', 'createdAt', 'updatedAt', 'telemetryModule'
+        ]
+    
+    def get_telemetryModule(self, obj):
+        """Retorna informações do módulo de telemetria vinculado"""
+        module = obj.get_current_telemetry_module()
+        if module:
+            return {
+                'id': module.id,
+                'imei': module.imei,
+                'iccId': module.icc_id,
+                'modelo': module.modelo
+            }
+        return None
+
+
+@extend_schema_serializer(component_name="MobileTelemetryModule")
+class MobileTelemetryModuleSerializer(serializers.ModelSerializer):
+    """Serializer mobile para TelemetryModule"""
+    currentDevice = serializers.SerializerMethodField()
+    iccId = serializers.CharField(source='icc_id', read_only=True)
+    isActive = serializers.BooleanField(source='is_active', read_only=True)
+    createdAt = serializers.DateTimeField(source='created_at', read_only=True)
+    updatedAt = serializers.DateTimeField(source='updated_at', read_only=True)
+    
+    class Meta:
+        model = TelemetryModule
+        fields = [
+            'id', 'imei', 'iccId', 'modelo', 'currentDevice',
+            'isActive', 'createdAt', 'updatedAt'
+        ]
+    
+    def get_currentDevice(self, obj):
+        """Retorna informações básicas do device atual"""
+        device = obj.get_current_device()
+        if device:
+            return {
+                'id': device.id,
+                'serial': device.serial,
+                'model': device.model
+            }
+        return None
+
+
+@extend_schema_serializer(component_name="MobileDeviceTelemetryModule")
+class MobileDeviceTelemetryModuleSerializer(serializers.ModelSerializer):
+    """Serializer mobile para relacionamento Device-TelemetryModule"""
+    deviceInfo = serializers.SerializerMethodField()
+    moduleInfo = serializers.SerializerMethodField()
+    linkedAt = serializers.DateTimeField(source='linked_at', read_only=True)
+    unlinkedAt = serializers.DateTimeField(source='unlinked_at', read_only=True)
+    isLinked = serializers.BooleanField(source='is_linked', read_only=True)
+    
+    class Meta:
+        model = DeviceTelemetryModule
+        fields = [
+            'id', 'device', 'module', 'deviceInfo', 'moduleInfo',
+            'linkedAt', 'unlinkedAt', 'isLinked'
+        ]
+    
+    def get_deviceInfo(self, obj):
+        """Informações básicas do device"""
+        return {
+            'id': obj.device.id,
+            'serial': obj.device.serial,
+            'model': obj.device.model
+        }
+    
+    def get_moduleInfo(self, obj):
+        """Informações básicas do módulo"""
+        return {
+            'id': obj.module.id,
+            'imei': obj.module.imei,
+            'modelo': obj.module.modelo
+        }
+
+
+@extend_schema_serializer(component_name="MobileDeviceCreate")
+class MobileDeviceCreateSerializer(serializers.ModelSerializer):
+    """Serializer mobile para criação de Device"""
+    
+    class Meta:
+        model = Device
+        fields = ['serial', 'model']
+    
+    def validate_serial(self, value):
+        """Validação customizada para serial único"""
+        if Device.objects.filter(serial=value, is_active=True).exists():
+            raise serializers.ValidationError("Já existe um device ativo com este serial.")
+        return value
+
+
+@extend_schema_serializer(component_name="MobileTelemetryModuleCreate")
+class MobileTelemetryModuleCreateSerializer(serializers.ModelSerializer):
+    """Serializer mobile para criação de TelemetryModule"""
+    iccId = serializers.CharField(source='icc_id')
+    
+    class Meta:
+        model = TelemetryModule
+        fields = ['imei', 'iccId', 'modelo']
+    
+    def validate_imei(self, value):
+        """Validação customizada para IMEI único"""
+        if TelemetryModule.objects.filter(imei=value, is_active=True).exists():
+            raise serializers.ValidationError("Já existe um módulo ativo com este IMEI.")
+        return value
+
+
+@extend_schema_serializer(component_name="MobileDeviceTelemetryModuleLink")
+class MobileDeviceTelemetryModuleLinkSerializer(serializers.ModelSerializer):
+    """Serializer mobile para vinculação Device-TelemetryModule"""
+    
+    class Meta:
+        model = DeviceTelemetryModule
+        fields = ['device', 'module']
+    
+    def validate(self, data):
+        """Validar se já existe vínculo ativo"""
+        device = data.get('device')
+        module = data.get('module')
+        
+        # Verificar se o device já tem um módulo vinculado
+        if device.has_telemetry_module():
+            current_module = device.get_current_telemetry_module()
+            raise serializers.ValidationError(
+                f"Device já possui módulo vinculado (IMEI: {current_module.imei}). "
+                "Desvincule primeiro para vincular outro."
+            )
+        
+        # Verificar se o módulo já está vinculado a outro device
+        if module.is_linked_to_device():
+            current_device = module.get_current_device()
+            raise serializers.ValidationError(
+                f"Módulo já está vinculado ao device {current_device.serial}. "
+                "Desvincule primeiro para vincular a outro device."
+            )
+        
+        return data
+    
+    def create(self, validated_data):
+        """Criar vinculação usando método do device"""
+        device = validated_data['device']
+        module = validated_data['module']
+        return device.link_telemetry_module(module)

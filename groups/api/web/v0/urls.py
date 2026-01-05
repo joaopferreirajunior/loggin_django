@@ -14,6 +14,7 @@ urlpatterns = [
     path('clinics/<uuid:pk>/', views.ClinicDetailView.as_view(), name='clinic_detail'),
     path('clinics/<uuid:clinic_id>/devices/', views.ClinicDevicesView.as_view(), name='clinic_devices'),
     path('clinics/<uuid:clinic_id>/users/', views.ClinicUsersView.as_view(), name='clinic_users'),
+    path('clinics/<uuid:clinic_id>/upload-image/', views.ClinicImageUploadView.as_view(), name='clinic_image_upload'),
     
     # User-Clinic associations
     path('user-clinics/', views.UserClinicCreateView.as_view(), name='user_clinic_create'),

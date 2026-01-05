@@ -1,39 +1,33 @@
 from django.db import models
 from app.utils import AuditModel  # created, modified, is_active
 
-class DeviceOrigin(models.IntegerChoices):
-    MEDIO     = 1, "MedIO"
-    MICROFLOW = 2, "MicroFlow"
-    NEXOUWB   = 3, "NexoUWB"
-
-class Device(AuditModel):
-    serial = models.CharField(max_length=100, null=True, blank=True, db_index=True)
-    origin = models.PositiveSmallIntegerField(choices=DeviceOrigin.choices, default=DeviceOrigin.MEDIO)
-    iccid = models.CharField(max_length=50, null=True, blank=True, db_index=True)
-    model_name = models.CharField(max_length=100, null=True, blank=True, db_index=True)
-    sold = models.BooleanField(null=True, blank=True, db_index=True)
-    sold_at = models.DateTimeField(null=True, blank=True, db_index=True)
-    sent_at = models.DateTimeField(null=True, blank=True, db_index=True)
-    lock = models.BooleanField(null=True, blank=True, db_index=True)
-    lock_at = models.DateTimeField(null=True, blank=True, db_index=True)
-    tested = models.BooleanField(null=True, blank=True, db_index=True)
-    tested_at = models.DateTimeField(null=True, blank=True, db_index=True)
-    clickhouse_id = models.CharField(max_length=255, unique=True, db_index=True)
-    # resto "cauda longa"
-    metadata = models.JSONField(default=dict, blank=True)
-
+class Device(models.Model):
+    """Modelo Device com os campos especificados"""
+    id = models.AutoField(primary_key=True)
+    serial = models.CharField(max_length=22, db_index=True)
+    model = models.CharField(max_length=24, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    locked = models.BooleanField(default=True)
+    locked_at = models.DateTimeField()
+    tested = models.BooleanField(default=True)
+    tested_at = models.DateTimeField()
+    sold = models.BooleanField(default=True)
+    sold_at = models.DateTimeField()
+    is_active = models.BooleanField(default=True)
+    
     class Meta:
         indexes = [
             models.Index(fields=["is_active"]),
-            models.Index(fields=["origin"]),
             models.Index(fields=["serial"]),
-            models.Index(fields=["iccid"]),
-            models.Index(fields=["model_name"]),
-            models.Index(fields=["sold", "sold_at"]),  # composto útil p/ relatórios
+            models.Index(fields=["model"]),
+            models.Index(fields=["sold", "sold_at"]),
+            models.Index(fields=["locked"]),
+            models.Index(fields=["tested"])
         ]
     
     def __str__(self):
-        return f"Device {self.serial or self.id} ({self.get_origin_display()})"
+        return f"Device {self.serial or self.id} ({self.model})"
     
     def get_current_clinic(self):
         """Retorna a clínica atual do device (se houver)"""
@@ -50,12 +44,149 @@ class Device(AuditModel):
         self.device_clinics.filter(is_active=True).update(is_active=False)
         
         # Cria nova atribuição
+        from groups.models import DeviceClinic
         return DeviceClinic.objects.create(
             device=self,
             clinic=clinic,
             notes=notes or "",
             is_active=True
         )
+    
+    def get_current_telemetry_module(self):
+        """Retorna o módulo de telemetria atual do device (se houver)"""
+        current_link = self.telemetry_links.filter(is_linked=True).first()
+        return current_link.module if current_link else None
+    
+    def has_telemetry_module(self):
+        """Verifica se o device tem um módulo de telemetria vinculado"""
+        return self.telemetry_links.filter(is_linked=True).exists()
+    
+    def link_telemetry_module(self, module):
+        """Vincula um módulo de telemetria ao device"""
+        # Desvincula módulos anteriores
+        self.telemetry_links.filter(is_linked=True).update(
+            is_linked=False,
+            unlinked_at=timezone.now()
+        )
+        
+        # Desvincula o módulo de outros devices
+        module.device_telemetry_links.filter(is_linked=True).update(
+            is_linked=False,
+            unlinked_at=timezone.now()
+        )
+        
+        # Cria nova vinculação
+        from django.utils import timezone
+        return DeviceTelemetryModule.objects.create(
+            device=self,
+            module=module,
+            is_linked=True
+        )
+
+
+class TelemetryModule(models.Model):
+    """Módulo de telemetria que pode ser instalado nos devices"""
+    id = models.AutoField(primary_key=True)
+    imei = models.CharField(
+        max_length=16, 
+        unique=True,
+        db_index=True,
+        help_text="Identificador único do módulo de telemetria"
+    )
+    icc_id = models.CharField(
+        max_length=20,
+        db_index=True,
+        help_text="Identificador ICC do chip SIM"
+    )
+    modelo = models.CharField(
+        max_length=12,
+        db_index=True,
+        help_text="Modelo do módulo GPS/telemetria"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        indexes = [
+            models.Index(fields=["imei"]),
+            models.Index(fields=["icc_id"]),
+            models.Index(fields=["modelo"]),
+            models.Index(fields=["is_active"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['imei'],
+                name='unique_telemetry_module_imei'
+            )
+        ]
+    
+    def __str__(self):
+        return f"TelemetryModule {self.imei} ({self.modelo})"
+    
+    def get_current_device(self):
+        """Retorna o device atual do módulo (se houver)"""
+        current_link = self.device_telemetry_links.filter(is_linked=True).first()
+        return current_link.device if current_link else None
+    
+    def is_linked_to_device(self):
+        """Verifica se o módulo está atualmente vinculado a um device"""
+        return self.device_telemetry_links.filter(is_linked=True).exists()
+
+
+class DeviceTelemetryModule(models.Model):
+    """Relaciona devices com módulos de telemetria"""
+    id = models.AutoField(primary_key=True)
+    device = models.ForeignKey(
+        Device,
+        on_delete=models.CASCADE,
+        related_name="telemetry_links",
+        help_text="Device vinculado ao módulo"
+    )
+    module = models.ForeignKey(
+        TelemetryModule,
+        on_delete=models.CASCADE,
+        related_name="device_telemetry_links",
+        help_text="Módulo de telemetria vinculado"
+    )
+    linked_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text="Data de vinculação do módulo ao device"
+    )
+    unlinked_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Data de desvinculação (se aplicável)"
+    )
+    is_linked = models.BooleanField(
+        default=True,
+        help_text="Se o vínculo está ativo"
+    )
+    
+    class Meta:
+        indexes = [
+            models.Index(fields=["device", "module"]),
+            models.Index(fields=["module", "device"]),
+            models.Index(fields=["is_linked"]),
+            models.Index(fields=["linked_at"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['device', 'module'],
+                condition=models.Q(is_linked=True),
+                name='unique_active_device_telemetry_module'
+            )
+        ]
+    
+    def __str__(self):
+        return f"Device {self.device.serial} ↔ Module {self.module.imei}"
+    
+    def unlink(self):
+        """Desvincula o módulo do device"""
+        from django.utils import timezone
+        self.is_linked = False
+        self.unlinked_at = timezone.now()
+        self.save()
     
 class DeviceLocation(models.Model):
     device   = models.ForeignKey(

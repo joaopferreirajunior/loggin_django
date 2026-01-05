@@ -259,6 +259,61 @@ class S3ImageService:
             return False, "Erro ao fazer upload da imagem", None
         
         return True, "Imagem uploaded com sucesso", s3_key
+    
+    def generate_clinic_s3_key(self, clinic_id: str, original_filename: str) -> str:
+        """
+        Gera uma chave única para imagem de clínica no S3
+        
+        Args:
+            clinic_id: ID da clínica (UUID)
+            original_filename: Nome original do arquivo
+            
+        Returns:
+            str: Chave S3 (path) para o arquivo
+        """
+        # Extrai extensão original ou usa .jpg como padrão
+        file_ext = os.path.splitext(original_filename)[1].lower()
+        if not file_ext or file_ext not in ['.jpg', '.jpeg', '.png', '.webp']:
+            file_ext = '.jpg'
+        
+        # Gera nome único
+        unique_id = str(uuid.uuid4())
+        filename = f"clinic_{unique_id}{file_ext}"
+        
+        # Organiza por pastas: clinics/clinic_{id}/filename
+        return f"clinics/clinic_{clinic_id}/{filename}"
+    
+    def process_and_upload_clinic_image(self, clinic_id: str, image_file) -> Tuple[bool, str, Optional[str]]:
+        """
+        Pipeline completo para imagens de clínicas: validação, processamento e upload
+        
+        Args:
+            clinic_id: ID da clínica (UUID)
+            image_file: Arquivo de imagem uploadado
+            
+        Returns:
+            Tuple[bool, str, Optional[str]]: (success, message, s3_key_or_none)
+        """
+        # 1. Validação
+        is_valid, error_message = self.validate_image(image_file)
+        if not is_valid:
+            return False, error_message, None
+        
+        # 2. Processamento
+        try:
+            image_buffer = self.resize_image(image_file)
+        except Exception as e:
+            return False, f"Erro ao processar imagem: {str(e)}", None
+        
+        # 3. Gerar chave S3 para clínica
+        s3_key = self.generate_clinic_s3_key(clinic_id, image_file.name)
+        
+        # 4. Upload
+        upload_success = self.upload_to_s3(image_buffer, s3_key)
+        if not upload_success:
+            return False, "Erro ao fazer upload da imagem", None
+        
+        return True, "Imagem da clínica uploaded com sucesso", s3_key
 
 
 def get_profile_image_url(s3_key: str) -> str:

@@ -7,10 +7,11 @@ from drf_spectacular.utils import extend_schema, extend_schema_view
 from groups.models import Group, Clinic, DeviceClinic, GroupAdmin, UserClinic
 from devices.models import Device
 from .serializers import (
-    MobileGroupSerializer, MobileClinicSerializer, MobileDeviceSerializer,
+    MobileGroupSerializer, MobileClinicSerializer,
     MobileGroupWithClinicsSerializer, MobileClinicWithDevicesSerializer,
-    MobileDetailResponseSerializer, MobileGroupCreateSerializer
+    MobileDetailResponseSerializer, MobileGroupCreateSerializer, MobileClinicImageUploadSerializer
 )
+from devices.api.mobile.v0.serializers import MobileDeviceSerializer
 
 
 @extend_schema_view(
@@ -485,5 +486,68 @@ class UserClinicDeleteView(generics.DestroyAPIView):
         instance.is_active = False
         instance.end_date = timezone.now()
         instance.save()
+
+
+@extend_schema(
+    operation_id="mobile_upload_clinic_image",
+    summary="Upload de imagem da clínica (Mobile)",
+    description="Faz upload de uma imagem para uma clínica específica via interface mobile",
+    request=MobileClinicImageUploadSerializer,
+    responses={
+        200: MobileClinicSerializer,
+        400: OpenApiResponse(description="Dados inválidos"),
+        403: OpenApiResponse(description="Permissão negada"),
+        404: OpenApiResponse(description="Clínica não encontrada")
+    },
+    tags=["Mobile - Groups"]
+)
+class MobileClinicImageUploadView(APIView):
+    """Upload de imagem para clínica via mobile"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, clinicId):
+        try:
+            clinic = Clinic.objects.get(id=clinicId, is_active=True)
+        except Clinic.DoesNotExist:
+            return Response(
+                {"detail": "Clínica não encontrada"}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Verificar permissões
+        user = request.user
+        has_permission = False
+        
+        # System admin pode fazer upload em qualquer clínica
+        if user.groups.filter(name='system_admin').exists():
+            has_permission = True
+        # Group admin pode fazer upload em clínicas do seu grupo
+        elif GroupAdmin.objects.filter(
+            user=user,
+            group=clinic.group,
+            is_active=True
+        ).exists():
+            has_permission = True
+
+        if not has_permission:
+            return Response(
+                {"detail": "Você não tem permissão para fazer upload de imagem nesta clínica"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Processar upload
+        serializer = MobileClinicImageUploadSerializer(data=request.data)
+        if serializer.is_valid():
+            try:
+                updated_clinic = serializer.save(clinic)
+                response_serializer = MobileClinicSerializer(updated_clinic)
+                return Response(response_serializer.data, status=status.HTTP_200_OK)
+            except Exception as e:
+                return Response(
+                    {"detail": str(e)},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

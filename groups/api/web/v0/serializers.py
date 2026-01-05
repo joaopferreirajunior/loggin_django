@@ -1,23 +1,11 @@
 from rest_framework import serializers
 from groups.models import Group, Clinic, DeviceClinic, UserClinic
-from devices.models import Device
+from devices.api.web.v0.serializers import DeviceSerializer
 from django.contrib.auth import get_user_model
 from drf_spectacular.utils import extend_schema_serializer
+from drf_spectacular.openapi import OpenApiExample
 
 User = get_user_model()
-
-
-@extend_schema_serializer(component_name="WebDevice")
-class DeviceSerializer(serializers.ModelSerializer):
-    """Serializer básico para Device"""
-    origin_display = serializers.CharField(source='get_origin_display', read_only=True)
-    
-    class Meta:
-        model = Device
-        fields = [
-            'id', 'serial', 'origin', 'origin_display', 'model_name', 
-            'clickhouse_id', 'sold', 'sold_at', 'is_active', 'created'
-        ]
 
 
 @extend_schema_serializer(component_name="WebGroup")
@@ -34,17 +22,22 @@ class ClinicSerializer(serializers.ModelSerializer):
     """Serializer básico para Clinic"""
     group_name = serializers.CharField(source='group.name', read_only=True)
     device_count = serializers.SerializerMethodField()
+    clinic_image_url = serializers.SerializerMethodField()
     
     class Meta:
         model = Clinic
         fields = [
             'id', 'name', 'group', 'group_name', 'address', 
-            'phone', 'email', 'device_count', 'is_active', 'created'
+            'phone', 'email', 'device_count', 'clinic_image_url', 'is_active', 'created'
         ]
     
     def get_device_count(self, obj):
         """Retorna o número de devices ativos na clínica"""
         return obj.clinic_devices.filter(is_active=True).count()
+    
+    def get_clinic_image_url(self, obj):
+        """Retorna a URL da imagem da clínica"""
+        return obj.get_clinic_image_url()
 
 
 @extend_schema_serializer(component_name="WebGroupWithClinics")
@@ -144,3 +137,75 @@ class GroupCreateSerializer(serializers.ModelSerializer):
         )
         
         return group
+
+
+@extend_schema_serializer(
+    component_name="WebClinicImageUpload",
+    examples=[
+        OpenApiExample(
+            "Upload de Imagem da Clínica",
+            summary="Exemplo de upload de imagem",
+            description="Upload de imagem de uma clínica",
+            value={
+                "clinic_image": "binary_image_data"
+            }
+        )
+    ]
+)
+class ClinicImageUploadSerializer(serializers.Serializer):
+    """
+    Serializer para upload de imagem de clínica
+    """
+    clinic_image = serializers.ImageField(
+        required=True,
+        help_text="Imagem da clínica (JPEG, PNG, WebP - máximo 5MB)"
+    )
+    
+    def validate_clinic_image(self, value):
+        """
+        Valida a imagem usando o serviço S3ImageService
+        """
+        from users.services import S3ImageService
+        s3_service = S3ImageService()
+        is_valid, error_message = s3_service.validate_image(value)
+        
+        if not is_valid:
+            raise serializers.ValidationError(error_message)
+        
+        return value
+    
+    def save(self, clinic):
+        """
+        Processa e salva a imagem no S3
+        """
+        try:
+            from users.services import S3ImageService
+            clinic_image = self.validated_data['clinic_image']
+            s3_service = S3ImageService()
+            
+            # Remove imagem anterior se existir
+            if clinic.clinic_image:
+                clinic.delete_clinic_image()
+            
+            # Upload nova imagem
+            success, message, s3_key = s3_service.process_and_upload_clinic_image(
+                str(clinic.id), clinic_image
+            )
+            
+            if not success:
+                raise serializers.ValidationError(f"Erro no upload: {message}")
+            
+            # Atualiza a clínica com o novo path
+            clinic.clinic_image = s3_key
+            clinic.save()
+            
+            return clinic
+            
+        except serializers.ValidationError:
+            # Re-raise validation errors
+            raise
+        except Exception as e:
+            # Log the full error for debugging
+            import traceback
+            print(f"Erro completo no upload da imagem da clínica: {traceback.format_exc()}")
+            raise serializers.ValidationError(f"Erro interno no upload: {str(e)}")

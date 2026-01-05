@@ -62,6 +62,14 @@ class Clinic(AuditModel):
         help_text="Email da clínica"
     )
     
+    # Imagem da clínica - armazena apenas o path/key do S3
+    clinic_image = models.CharField(
+        max_length=500, 
+        null=True, 
+        blank=True,
+        help_text="Path da imagem da clínica no bucket S3 (ex: clinics/clinic_123/image.jpg)"
+    )
+    
     class Meta:
         verbose_name = "Clinic"
         verbose_name_plural = "Clinics"
@@ -91,6 +99,43 @@ class Clinic(AuditModel):
     def has_device(self, device):
         """Verifica se um device específico está atribuído a esta clínica"""
         return self.clinic_devices.filter(device=device, is_active=True).exists()
+    
+    def get_clinic_image_url(self) -> str:
+        """Retorna URL assinada temporária da imagem da clínica do S3"""
+        if self.clinic_image:
+            try:
+                from users.services import S3ImageService
+                s3_service = S3ImageService()
+                presigned_url = s3_service.generate_presigned_url(self.clinic_image)
+                return presigned_url
+            except Exception as e:
+                print(f"Erro ao gerar presigned URL para clínica: {e}")
+                return None
+        return None
+    
+    def delete_clinic_image(self):
+        """Remove a imagem do S3 e limpa o campo no banco"""
+        if self.clinic_image:
+            try:
+                import boto3
+                from django.conf import settings
+                
+                # Usa IAM Role da instância EC2 automaticamente
+                s3_client = boto3.client(
+                    's3',
+                    region_name=getattr(settings, 'AWS_S3_REGION_NAME', 'us-east-1')
+                )
+                
+                bucket_name = getattr(settings, 'AWS_STORAGE_BUCKET_NAME', 'medicalsan-uploads')
+                s3_client.delete_object(Bucket=bucket_name, Key=self.clinic_image)
+                
+                self.clinic_image = None
+                self.save()
+                return True
+            except Exception as e:
+                print(f"Erro ao deletar imagem da clínica do S3: {e}")
+                return False
+        return True
 
 
 class GroupAdmin(AuditModel):
