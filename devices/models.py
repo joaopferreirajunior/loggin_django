@@ -1,20 +1,17 @@
 from django.db import models
 from app.utils import AuditModel  # created, modified, is_active
 
-class Device(models.Model):
+class Device(AuditModel):
     """Modelo Device com os campos especificados"""
     id = models.AutoField(primary_key=True)
     serial = models.CharField(max_length=22, db_index=True)
-    model = models.CharField(max_length=24, db_index=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    locked = models.BooleanField(default=True)
-    locked_at = models.DateTimeField()
-    tested = models.BooleanField(default=True)
-    tested_at = models.DateTimeField()
-    sold = models.BooleanField(default=True)
-    sold_at = models.DateTimeField()
-    is_active = models.BooleanField(default=True)
+    model = models.CharField(max_length=24, db_index=True, default="undefined")
+    locked = models.BooleanField(default=False)
+    locked_at = models.DateTimeField(null=True, blank=True)
+    tested = models.BooleanField(default=False)
+    tested_at = models.DateTimeField(null=True, blank=True)
+    sold = models.BooleanField(default=False)
+    sold_at = models.DateTimeField(null=True, blank=True)
     
     class Meta:
         indexes = [
@@ -23,7 +20,8 @@ class Device(models.Model):
             models.Index(fields=["model"]),
             models.Index(fields=["sold", "sold_at"]),
             models.Index(fields=["locked"]),
-            models.Index(fields=["tested"])
+            models.Index(fields=["tested"]),
+            models.Index(fields=["created"]),
         ]
     
     def __str__(self):
@@ -84,7 +82,7 @@ class Device(models.Model):
         )
 
 
-class TelemetryModule(models.Model):
+class TelemetryModule(AuditModel):
     """Módulo de telemetria que pode ser instalado nos devices"""
     id = models.AutoField(primary_key=True)
     imei = models.CharField(
@@ -103,9 +101,6 @@ class TelemetryModule(models.Model):
         db_index=True,
         help_text="Modelo do módulo GPS/telemetria"
     )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    is_active = models.BooleanField(default=True)
     
     class Meta:
         indexes = [
@@ -150,7 +145,8 @@ class DeviceTelemetryModule(models.Model):
         help_text="Módulo de telemetria vinculado"
     )
     linked_at = models.DateTimeField(
-        auto_now_add=True,
+        null=True,
+        blank=True,
         help_text="Data de vinculação do módulo ao device"
     )
     unlinked_at = models.DateTimeField(

@@ -2,6 +2,7 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema, extend_schema_view
+from drf_spectacular.openapi import OpenApiResponse
 
 from groups.models import Group, Clinic, DeviceClinic, GroupAdmin, UserClinic
 from devices.models import Device

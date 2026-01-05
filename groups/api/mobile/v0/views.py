@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from drf_spectacular.utils import extend_schema, extend_schema_view
+from drf_spectacular.openapi import OpenApiResponse
 
 from groups.models import Group, Clinic, DeviceClinic, GroupAdmin, UserClinic
 from devices.models import Device
@@ -505,9 +506,9 @@ class MobileClinicImageUploadView(APIView):
     """Upload de imagem para clínica via mobile"""
     permission_classes = [permissions.IsAuthenticated]
 
-    def post(self, request, clinicId):
+    def post(self, request, clinic_id):
         try:
-            clinic = Clinic.objects.get(id=clinicId, is_active=True)
+            clinic = Clinic.objects.get(id=clinic_id, is_active=True)
         except Clinic.DoesNotExist:
             return Response(
                 {"detail": "Clínica não encontrada"}, 
