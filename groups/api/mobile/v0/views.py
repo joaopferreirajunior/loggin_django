@@ -9,7 +9,7 @@ from devices.models import Device
 from .serializers import (
     MobileGroupSerializer, MobileClinicSerializer, MobileDeviceSerializer,
     MobileGroupWithClinicsSerializer, MobileClinicWithDevicesSerializer,
-    MobileDetailResponseSerializer
+    MobileDetailResponseSerializer, MobileGroupCreateSerializer
 )
 
 
@@ -27,6 +27,35 @@ class GroupListView(generics.ListAPIView):
     serializer_class = MobileGroupSerializer
     authentication_classes = [JWTAuthentication]
     permission_classes = [permissions.IsAuthenticated]
+
+
+@extend_schema(
+    tags=["Mobile - Groups"],
+    summary="Criar novo grupo",
+    description="Cria um novo grupo e automaticamente torna o usuário logado administrador do grupo",
+    methods=['POST'],
+    request=MobileGroupCreateSerializer,
+    responses={201: MobileGroupSerializer}
+)
+class GroupCreateView(generics.CreateAPIView):
+    """Cria um novo grupo para mobile"""
+    serializer_class = MobileGroupCreateSerializer
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def perform_create(self, serializer):
+        """Salva o grupo com o usuário atual como contexto"""
+        serializer.save()
+    
+    def create(self, request, *args, **kwargs):
+        """Override para retornar o grupo criado com o serializer mobile"""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        group = serializer.save()
+        
+        # Retornar com o serializer mobile do grupo
+        response_serializer = MobileGroupSerializer(group)
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
 
 @extend_schema_view(

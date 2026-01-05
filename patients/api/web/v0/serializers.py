@@ -143,6 +143,7 @@ class DetailSerializer(serializers.Serializer):
     detail = serializers.CharField()
 
 
+@extend_schema_serializer(component_name="WebPatientPhotoUpload")
 class PatientPhotoUploadSerializer(serializers.Serializer):
     """
     Serializer para upload de foto do paciente
@@ -199,36 +200,37 @@ class PatientPhotoUploadSerializer(serializers.Serializer):
             raise serializers.ValidationError(f"Erro inesperado ao processar foto: {str(e)}")
 
 
+@extend_schema_serializer(component_name="WebPatientWithPhoto")
 class PatientWithPhotoSerializer(serializers.ModelSerializer):
     """Serializer do paciente com URL da foto"""
-    groupId = serializers.UUIDField(source="group_id", read_only=True)
-    fullName = serializers.CharField(source="full_name", read_only=True)
-    birthDate = serializers.DateField(source="birth_date", read_only=True)
-    fullAddress = serializers.CharField(source="full_address", read_only=True)
-    createdAt = serializers.DateTimeField(source="created_at", read_only=True)
-    updatedAt = serializers.DateTimeField(source="updated_at", read_only=True)
-    isActive = serializers.BooleanField(source="is_active", read_only=True)
+    group_id = serializers.UUIDField(read_only=True)
+    full_name = serializers.CharField(read_only=True)
+    birth_date = serializers.DateField(read_only=True)
+    full_address = serializers.CharField(read_only=True)
+    created_at = serializers.DateTimeField(read_only=True)
+    updated_at = serializers.DateTimeField(read_only=True)
+    is_active = serializers.BooleanField(read_only=True)
     photo_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Patient
         fields = (
             "id",
-            "groupId",
-            "fullName",
+            "group_id",
+            "full_name",
             "photo_url",
-            "birthDate",
+            "birth_date",
             "gender",
             "cpf",
             "phone",
             "email",
-            "fullAddress",
+            "full_address",
             "city",
             "region",
             "cep",
-            "createdAt",
-            "updatedAt",
-            "isActive",
+            "created_at",
+            "updated_at",
+            "is_active",
         )
     
     def get_photo_url(self, obj):

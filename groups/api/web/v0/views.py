@@ -8,7 +8,7 @@ from devices.models import Device
 from .serializers import (
     GroupSerializer, ClinicSerializer, DeviceSerializer,
     GroupWithClinicsSerializer, ClinicWithDevicesSerializer,
-    DeviceClinicSerializer
+    DeviceClinicSerializer, GroupCreateSerializer
 )
 from .user_clinic_serializers import UserClinicSerializer, UserClinicCreateSerializer
 
@@ -25,6 +25,34 @@ class GroupListView(generics.ListAPIView):
     queryset = Group.objects.filter(is_active=True)
     serializer_class = GroupSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+
+@extend_schema(
+    tags=["Web - Groups"],
+    summary="Criar novo grupo",
+    description="Cria um novo grupo e automaticamente torna o usuário logado administrador do grupo",
+    methods=['POST'],
+    request=GroupCreateSerializer,
+    responses={201: GroupSerializer}
+)
+class GroupCreateView(generics.CreateAPIView):
+    """Cria um novo grupo"""
+    serializer_class = GroupCreateSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def perform_create(self, serializer):
+        """Salva o grupo com o usuário atual como contexto"""
+        serializer.save()
+    
+    def create(self, request, *args, **kwargs):
+        """Override para retornar o grupo criado com o serializer completo"""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        group = serializer.save()
+        
+        # Retornar com o serializer completo do grupo
+        response_serializer = GroupSerializer(group)
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
 
 @extend_schema_view(

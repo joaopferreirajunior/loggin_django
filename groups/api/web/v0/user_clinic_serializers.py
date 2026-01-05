@@ -1,10 +1,12 @@
 from rest_framework import serializers
 from groups.models import UserClinic
 from django.contrib.auth import get_user_model
+from drf_spectacular.utils import extend_schema_serializer
 
 User = get_user_model()
 
 
+@extend_schema_serializer(component_name="WebUserClinic")
 class UserClinicSerializer(serializers.ModelSerializer):
     """Serializer para listar vínculos usuário-clínica"""
     user_id = serializers.UUIDField(source='user.id', read_only=True)
@@ -29,6 +31,7 @@ class UserClinicSerializer(serializers.ModelSerializer):
         return obj.user.get_full_name() or obj.user.username
 
 
+@extend_schema_serializer(component_name="WebUserClinicCreate")
 class UserClinicCreateSerializer(serializers.ModelSerializer):
     """Serializer para criar vínculo usuário-clínica"""
     

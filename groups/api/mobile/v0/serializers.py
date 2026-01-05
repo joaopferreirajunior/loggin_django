@@ -88,3 +88,36 @@ class MobileClinicWithDevicesSerializer(serializers.ModelSerializer):
 class MobileDetailResponseSerializer(serializers.Serializer):
     """Resposta padrão com mensagem de detail"""
     detail = serializers.CharField()
+
+
+@extend_schema_serializer(component_name="MobileGroupCreate")
+class MobileGroupCreateSerializer(serializers.ModelSerializer):
+    """Serializer para criação de grupos mobile"""
+    
+    class Meta:
+        model = Group
+        fields = ['name', 'description']
+    
+    def validate_name(self, value):
+        """Validação customizada para nome único"""
+        if Group.objects.filter(name=value, is_active=True).exists():
+            raise serializers.ValidationError("Já existe um grupo ativo com este nome.")
+        return value
+    
+    def create(self, validated_data):
+        """Cria o grupo e automaticamente adiciona o usuário como admin"""
+        from groups.models import GroupAdmin
+        
+        user = self.context['request'].user
+        
+        # Criar o grupo
+        group = Group.objects.create(**validated_data)
+        
+        # Automaticamente tornar o criador admin do grupo
+        GroupAdmin.objects.create(
+            user=user,
+            group=group,
+            permissions=['full_access']  # Criador tem acesso total
+        )
+        
+        return group

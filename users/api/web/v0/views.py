@@ -606,10 +606,10 @@ class WebTokenRefreshView(TokenRefreshView):
 def list_patient_associations(request):
     """Lista todos os pacientes do usuário autenticado"""
     from users.models import UserPatientRelation
-    from .patient_relations_serializers import UserPatientsWebListSerializer
+    from .patient_relations_serializers import UserPatientsListSerializer
     
     relations = UserPatientRelation.get_user_patients(request.user, active_only=True)
-    serializer = UserPatientsWebListSerializer(relations, many=True)
+    serializer = UserPatientsListSerializer(relations, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -659,11 +659,11 @@ def list_patient_associations(request):
 def manage_patient_association(request, patient_id):
     """Adiciona (POST) ou remove (DELETE) associação entre usuário e paciente"""
     from users.models import UserPatientRelation
-    from .patient_relations_serializers import CreateUserPatientWebRelationSerializer
+    from .patient_relations_serializers import CreateUserPatientRelationSerializer
     
     if request.method == 'POST':
         # Adicionar paciente - usa patient_id do body, não da URL
-        serializer = CreateUserPatientWebRelationSerializer(data=request.data, context={'request': request})
+        serializer = CreateUserPatientRelationSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             relation = serializer.save()
             return Response({

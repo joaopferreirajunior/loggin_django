@@ -2,10 +2,12 @@ from rest_framework import serializers
 from groups.models import Group, Clinic, DeviceClinic, UserClinic
 from devices.models import Device
 from django.contrib.auth import get_user_model
+from drf_spectacular.utils import extend_schema_serializer
 
 User = get_user_model()
 
 
+@extend_schema_serializer(component_name="WebDevice")
 class DeviceSerializer(serializers.ModelSerializer):
     """Serializer básico para Device"""
     origin_display = serializers.CharField(source='get_origin_display', read_only=True)
@@ -18,6 +20,7 @@ class DeviceSerializer(serializers.ModelSerializer):
         ]
 
 
+@extend_schema_serializer(component_name="WebGroup")
 class GroupSerializer(serializers.ModelSerializer):
     """Serializer básico para Group"""
     
@@ -26,6 +29,7 @@ class GroupSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'description', 'is_active', 'created', 'modified']
 
 
+@extend_schema_serializer(component_name="WebClinic")
 class ClinicSerializer(serializers.ModelSerializer):
     """Serializer básico para Clinic"""
     group_name = serializers.CharField(source='group.name', read_only=True)
@@ -43,6 +47,7 @@ class ClinicSerializer(serializers.ModelSerializer):
         return obj.clinic_devices.filter(is_active=True).count()
 
 
+@extend_schema_serializer(component_name="WebGroupWithClinics")
 class GroupWithClinicsSerializer(serializers.ModelSerializer):
     """Serializer para Group com suas clínicas"""
     clinics = ClinicSerializer(many=True, read_only=True)
@@ -69,6 +74,7 @@ class GroupWithClinicsSerializer(serializers.ModelSerializer):
         ).count()
 
 
+@extend_schema_serializer(component_name="WebClinicWithDevices")
 class ClinicWithDevicesSerializer(serializers.ModelSerializer):
     """Serializer para Clinic com seus devices"""
     group_name = serializers.CharField(source='group.name', read_only=True)
@@ -93,6 +99,7 @@ class ClinicWithDevicesSerializer(serializers.ModelSerializer):
         return obj.clinic_devices.filter(is_active=True).count()
 
 
+@extend_schema_serializer(component_name="WebDeviceClinic")
 class DeviceClinicSerializer(serializers.ModelSerializer):
     """Serializer para DeviceClinic"""
     device = DeviceSerializer(read_only=True)
@@ -104,3 +111,36 @@ class DeviceClinicSerializer(serializers.ModelSerializer):
             'id', 'device', 'clinic', 'assigned_at', 
             'notes', 'is_active', 'created', 'modified'
         ]
+
+
+@extend_schema_serializer(component_name="WebGroupCreate")
+class GroupCreateSerializer(serializers.ModelSerializer):
+    """Serializer para criação de grupos"""
+    
+    class Meta:
+        model = Group
+        fields = ['name', 'description']
+    
+    def validate_name(self, value):
+        """Validação customizada para nome único"""
+        if Group.objects.filter(name=value, is_active=True).exists():
+            raise serializers.ValidationError("Já existe um grupo ativo com este nome.")
+        return value
+    
+    def create(self, validated_data):
+        """Cria o grupo e automaticamente adiciona o usuário como admin"""
+        from groups.models import GroupAdmin
+        
+        user = self.context['request'].user
+        
+        # Criar o grupo
+        group = Group.objects.create(**validated_data)
+        
+        # Automaticamente tornar o criador admin do grupo
+        GroupAdmin.objects.create(
+            user=user,
+            group=group,
+            permissions=['full_access']  # Criador tem acesso total
+        )
+        
+        return group

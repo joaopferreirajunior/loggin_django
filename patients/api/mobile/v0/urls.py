@@ -11,7 +11,7 @@ urlpatterns = [
     path('mrecords/<uuid:record_id>/', views.update_medical_record, name='api_mobile_medical_records_update'),
     
     # Anamnesis endpoints
-    path('anamnesis/<uuid:patient_id>/', views.manage_anamnesis_by_patient, name='api_mobile_anamnesis_by_patient'),
+    path('anamnesis/patient/<uuid:patient_id>/', views.manage_anamnesis_by_patient, name='api_mobile_anamnesis_by_patient'),
     path('anamnesis/<uuid:anamnesis_id>/', views.manage_anamnesis_by_id, name='api_mobile_anamnesis_by_id'),
     
     # Patient Photo endpoints

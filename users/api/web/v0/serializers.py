@@ -9,10 +9,12 @@ from drf_spectacular.utils import extend_schema_serializer, OpenApiExample
 
 User = get_user_model()
 
+@extend_schema_serializer(component_name="WebDetail")
 class DetailSerializer(serializers.Serializer):
     """Usado para mensagens simples: {"detail": "..."}"""
     detail = serializers.CharField()
 
+@extend_schema_serializer(component_name="WebUserRegister")
 class UserRegisterSerializer(serializers.ModelSerializer):
     """Serializer para registro de novos usuários"""
     # Campo username customizado para remover validação padrão do Django em inglês
@@ -77,6 +79,7 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         
         return user
 
+@extend_schema_serializer(component_name="WebProfile")
 class ProfileSerializer(serializers.ModelSerializer):
     """Serializer do perfil do usuário"""
     profile_image_url = serializers.SerializerMethodField()
@@ -136,6 +139,7 @@ class ProfileSerializer(serializers.ModelSerializer):
         
         return instance
 
+@extend_schema_serializer(component_name="WebUser")
 class UserSerializer(serializers.ModelSerializer):
     """Serializer completo do usuário com perfil"""
     profile = ProfileSerializer(read_only=True)
@@ -165,6 +169,7 @@ class UserSerializer(serializers.ModelSerializer):
             'can_access_admin': profile.can_access_admin(),
         }
 
+@extend_schema_serializer(component_name="WebLoginRequest")
 class LoginSerializer(serializers.Serializer):
     """Serializer para login"""
     username = serializers.CharField(
@@ -175,6 +180,7 @@ class LoginSerializer(serializers.Serializer):
         help_text="Senha do usuário"
     )
 
+@extend_schema_serializer(component_name="WebLoginResponse")
 class LoginResponseSerializer(serializers.Serializer):
     """Serializer para resposta de login"""
     detail = serializers.CharField()
@@ -182,19 +188,23 @@ class LoginResponseSerializer(serializers.Serializer):
     refresh = serializers.CharField()
     access = serializers.CharField()
 
+@extend_schema_serializer(component_name="WebAuthResponse")
 class AuthResponseSerializer(serializers.Serializer):
     """Serializer para respostas de autenticação"""
     detail = serializers.CharField()
 
+@extend_schema_serializer(component_name="WebPasswordRecoveryRequest")
 class PasswordRecoverySerializer(serializers.Serializer):
     """Serializer para recuperação de senha"""
     email = serializers.EmailField(help_text="Email para recuperação")
 
+@extend_schema_serializer(component_name="WebPasswordRecoveryResponse")
 class PasswordRecoveryResponseSerializer(serializers.Serializer):
     """Serializer para resposta de recuperação"""
     detail = serializers.CharField()
     test_token = serializers.CharField(required=False)
 
+@extend_schema_serializer(component_name="WebPasswordResetRequest")
 class PasswordResetSerializer(serializers.Serializer):
     """Serializer para reset de senha"""
     token = serializers.CharField(help_text="Token de recuperação")
@@ -203,10 +213,12 @@ class PasswordResetSerializer(serializers.Serializer):
         help_text="Nova senha (mínimo 8 caracteres)"
     )
 
+@extend_schema_serializer(component_name="WebTokenValidation")
 class TokenValidationSerializer(serializers.Serializer):
     """Serializer para validação de token"""
     valid = serializers.BooleanField()
 
+@extend_schema_serializer(component_name="WebUserPermissions")
 class UserPermissionsSerializer(serializers.Serializer):
     """Serializer para permissões do usuário"""
     user_role = serializers.CharField()
@@ -235,6 +247,7 @@ class UserPermissionsSerializer(serializers.Serializer):
             'can_access_admin': profile.can_access_admin(),
         }
 
+@extend_schema_serializer(component_name="WebRoleAssignmentRequest")
 class RoleAssignmentSerializer(serializers.Serializer):
     """Serializer para atribuição de roles"""
     user_id = serializers.IntegerField()
@@ -276,6 +289,7 @@ class RoleAssignmentSerializer(serializers.Serializer):
         )
     ]
 )
+@extend_schema_serializer(component_name="WebProfileImageUpload")
 class ProfileImageUploadSerializer(serializers.Serializer):
     """
     Serializer para upload de imagem de perfil
@@ -353,6 +367,7 @@ class ProfileImageUploadSerializer(serializers.Serializer):
         )
     ]
 )
+@extend_schema_serializer(component_name="WebUserWithImage")
 class UserWithImageSerializer(serializers.ModelSerializer):
     """
     Serializer do usuário incluindo URL da imagem de perfil
