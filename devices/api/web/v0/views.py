@@ -22,7 +22,7 @@ from .serializers import (
         201: DeviceSerializer,
         400: OpenApiResponse(description="Dados inválidos")
     },
-    tags=["Devices"]
+    tags=["Web - Devices"]
 )
 class DeviceCreateView(generics.CreateAPIView):
     """Cria um novo device"""
@@ -51,7 +51,7 @@ class DeviceCreateView(generics.CreateAPIView):
         200: DeviceSerializer,
         404: OpenApiResponse(description="Device não encontrado")
     },
-    tags=["Devices"]
+    tags=["Web - Devices"]
 )
 class DeviceTestView(APIView):
     """Marca um device como testado"""
@@ -77,7 +77,7 @@ class DeviceTestView(APIView):
         200: DeviceSerializer,
         404: OpenApiResponse(description="Device não encontrado")
     },
-    tags=["Devices"]
+    tags=["Web - Devices"]
 )
 class DeviceSoldView(APIView):
     """Marca um device como vendido"""
@@ -104,7 +104,7 @@ class DeviceSoldView(APIView):
         201: TelemetryModuleSerializer,
         400: OpenApiResponse(description="Dados inválidos")
     },
-    tags=["Telemetry"]
+    tags=["Web - Devices"]
 )
 class TelemetryModuleCreateView(generics.CreateAPIView):
     """Cria um novo módulo de telemetria"""
@@ -131,7 +131,7 @@ class TelemetryModuleCreateView(generics.CreateAPIView):
         201: DeviceTelemetryModuleSerializer,
         400: OpenApiResponse(description="Dados inválidos ou associação já existe")
     },
-    tags=["Device Telemetry"]
+    tags=["Web - Devices"]
 )
 class DeviceTelemetryModuleLinkView(APIView):
     """Associa um módulo de telemetria a um device"""

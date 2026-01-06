@@ -22,7 +22,7 @@ from .serializers import (
         201: MobileDeviceSerializer,
         400: OpenApiResponse(description="Dados inválidos")
     },
-    tags=["Mobile Devices"]
+    tags=["Mobile - Devices"]
 )
 class MobileDeviceCreateView(generics.CreateAPIView):
     """Cria um novo device via mobile"""
@@ -48,7 +48,7 @@ class MobileDeviceCreateView(generics.CreateAPIView):
         200: MobileDeviceSerializer,
         404: OpenApiResponse(description="Device não encontrado")
     },
-    tags=["Mobile Devices"]
+    tags=["Mobile - Devices"]
 )
 class MobileDeviceTestView(APIView):
     """Marca um device como testado via mobile"""
@@ -74,7 +74,7 @@ class MobileDeviceTestView(APIView):
         200: MobileDeviceSerializer,
         404: OpenApiResponse(description="Device não encontrado")
     },
-    tags=["Mobile Devices"]
+    tags=["Mobile - Devices"]
 )
 class MobileDeviceSoldView(APIView):
     """Marca um device como vendido via mobile"""
@@ -101,7 +101,7 @@ class MobileDeviceSoldView(APIView):
         201: MobileTelemetryModuleSerializer,
         400: OpenApiResponse(description="Dados inválidos")
     },
-    tags=["Mobile Telemetry"]
+    tags=["Mobile - Devices"]
 )
 class MobileTelemetryModuleCreateView(generics.CreateAPIView):
     """Cria um novo módulo de telemetria via mobile"""
@@ -128,7 +128,7 @@ class MobileTelemetryModuleCreateView(generics.CreateAPIView):
         201: MobileDeviceTelemetryModuleSerializer,
         400: OpenApiResponse(description="Dados inválidos ou associação já existe")
     },
-    tags=["Mobile Device Telemetry"]
+    tags=["Mobile - Devices"]
 )
 class MobileDeviceTelemetryModuleLinkView(APIView):
     """Associa um módulo de telemetria a um device via mobile"""
