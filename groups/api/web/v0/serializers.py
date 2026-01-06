@@ -122,7 +122,7 @@ class ClinicWithDevicesSerializer(serializers.ModelSerializer):
     class Meta:
         model = Clinic
         fields = [
-            'id', 'name', 'group', 'group_name', 'address', 'phone', 
+            'id', 'name', 'group', 'group_name', 'phone', 
             'email', 'device_count', 'devices', 'is_active', 'created'
         ]
     
