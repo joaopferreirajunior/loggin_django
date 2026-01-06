@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from devices.models import Device, TelemetryModule, DeviceTelemetryModule
+from devices.models import Device, TelemetryModule, DeviceTelemetryModule, DeviceLocation
 from drf_spectacular.utils import extend_schema_serializer
 
 
@@ -38,7 +38,7 @@ class TelemetryModuleSerializer(serializers.ModelSerializer):
         model = TelemetryModule
         fields = [
             'id', 'imei', 'icc_id', 'modelo', 'current_device',
-            'is_active', 'created', 'modified'
+            'last_online_at', 'is_active', 'created', 'modified'
         ]
     
     def get_current_device(self, obj):
@@ -149,3 +149,60 @@ class DeviceTelemetryModuleLinkSerializer(serializers.ModelSerializer):
         device = validated_data['device']
         module = validated_data['module']
         return device.link_telemetry_module(module)
+
+@extend_schema_serializer(component_name="WebDeviceLocationCreate")
+class DeviceLocationCreateSerializer(serializers.Serializer):
+    """Serializer para criação de localização de device"""
+    serial = serializers.CharField(required=False, allow_blank=True, help_text="Serial do device (opcional)")
+    imei = serializers.CharField(required=False, allow_blank=True, help_text="IMEI do módulo de telemetria (opcional)")
+    latitude = serializers.DecimalField(max_digits=9, decimal_places=6, required=True)
+    longitude = serializers.DecimalField(max_digits=9, decimal_places=6, required=True)
+    read_at = serializers.DateTimeField(required=True, help_text="Timestamp da leitura (obrigatório)")
+    
+    def validate(self, data):
+        """Validar que pelo menos serial ou imei foi informado"""
+        serial = data.get('serial', '').strip()
+        imei = data.get('imei', '').strip()
+        
+        if not serial and not imei:
+            raise serializers.ValidationError(
+                "Pelo menos um dos campos 'serial' ou 'imei' deve ser informado."
+            )
+        
+        return data
+    
+    def validate_latitude(self, value):
+        """Validar range de latitude"""
+        if value < -90 or value > 90:
+            raise serializers.ValidationError("Latitude deve estar entre -90 e 90.")
+        return value
+    
+    def validate_longitude(self, value):
+        """Validar range de longitude"""
+        if value < -180 or value > 180:
+            raise serializers.ValidationError("Longitude deve estar entre -180 e 180.")
+        return value
+
+
+@extend_schema_serializer(component_name="WebDeviceLocation")
+class DeviceLocationSerializer(serializers.ModelSerializer):
+    """Serializer para resposta de DeviceLocation"""
+    device_serial = serializers.CharField(source='device.serial', read_only=True, allow_null=True)
+    module_imei = serializers.CharField(source='module.imei', read_only=True, allow_null=True)
+    
+    class Meta:
+        model = DeviceLocation
+        fields = ['id', 'device', 'device_serial', 'module', 'module_imei', 'latitude', 'longitude', 'read_at']
+
+@extend_schema_serializer(component_name="WebDeviceGlobalLocation")
+class DeviceGlobalLocationSerializer(serializers.Serializer):
+    """Serializer para localização global de devices"""
+    serial = serializers.CharField()
+    model = serializers.CharField()
+    imei = serializers.CharField(allow_null=True)
+    latitude = serializers.DecimalField(max_digits=9, decimal_places=6)
+    longitude = serializers.DecimalField(max_digits=9, decimal_places=6)
+    last_online_at = serializers.DateTimeField(allow_null=True)
+    locked = serializers.BooleanField()
+    tested = serializers.BooleanField()
+    sold = serializers.BooleanField()

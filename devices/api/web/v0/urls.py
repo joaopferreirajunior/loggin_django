@@ -8,6 +8,10 @@ urlpatterns = [
     path('devices/<uuid:device_id>/tested/', views.DeviceTestView.as_view(), name='device_test'),
     path('devices/<uuid:device_id>/sold/', views.DeviceSoldView.as_view(), name='device_sell'),
     
+    # Device Location endpoints
+    path('devices/locations/', views.DeviceLocationCreateView.as_view(), name='device_location_create'),
+    path('devices/locations/global/', views.DeviceGlobalLocationsView.as_view(), name='device_global_locations'),
+    
     # Telemetry Module endpoints
     path('modules/', views.TelemetryModuleCreateView.as_view(), name='telemetry_module_create'),
     path('modules/<uuid:module_id>/', views.TelemetryModuleDetailView.as_view(), name='telemetry_module_detail'),

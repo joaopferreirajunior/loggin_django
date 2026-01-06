@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from devices.models import Device, TelemetryModule, DeviceTelemetryModule
+from devices.models import Device, TelemetryModule, DeviceTelemetryModule, DeviceLocation
 from drf_spectacular.utils import extend_schema_serializer
 
 
@@ -40,6 +40,7 @@ class MobileTelemetryModuleSerializer(serializers.ModelSerializer):
     """Serializer mobile para TelemetryModule"""
     currentDevice = serializers.SerializerMethodField()
     iccId = serializers.CharField(source='icc_id', read_only=True)
+    lastOnlineAt = serializers.DateTimeField(source='last_online_at', read_only=True)
     isActive = serializers.BooleanField(source='is_active', read_only=True)
     createdAt = serializers.DateTimeField(source='created', read_only=True)
     updatedAt = serializers.DateTimeField(source='modified', read_only=True)
@@ -48,7 +49,7 @@ class MobileTelemetryModuleSerializer(serializers.ModelSerializer):
         model = TelemetryModule
         fields = [
             'id', 'imei', 'iccId', 'modelo', 'currentDevice',
-            'isActive', 'createdAt', 'updatedAt'
+            'lastOnlineAt', 'isActive', 'createdAt', 'updatedAt'
         ]
     
     def get_currentDevice(self, obj):
@@ -163,3 +164,63 @@ class MobileDeviceTelemetryModuleLinkSerializer(serializers.ModelSerializer):
         device = validated_data['device']
         module = validated_data['module']
         return device.link_telemetry_module(module)
+
+@extend_schema_serializer(component_name="MobileDeviceLocationCreate")
+class MobileDeviceLocationCreateSerializer(serializers.Serializer):
+    """Serializer para criação de localização de device (mobile)"""
+    serial = serializers.CharField(required=False, allow_blank=True, help_text="Serial do device (opcional)")
+    imei = serializers.CharField(required=False, allow_blank=True, help_text="IMEI do módulo de telemetria (opcional)")
+    latitude = serializers.DecimalField(max_digits=9, decimal_places=6, required=True)
+    longitude = serializers.DecimalField(max_digits=9, decimal_places=6, required=True)
+    readAt = serializers.DateTimeField(source="read_at", required=True, help_text="Timestamp da leitura (obrigatório)")
+    
+    def validate(self, data):
+        """Validar que pelo menos serial ou imei foi informado"""
+        serial = data.get("serial", "").strip()
+        imei = data.get("imei", "").strip()
+        
+        if not serial and not imei:
+            raise serializers.ValidationError(
+                "Pelo menos um dos campos 'serial' ou 'imei' deve ser informado."
+            )
+        
+        return data
+    
+    def validate_latitude(self, value):
+        """Validar range de latitude"""
+        if value < -90 or value > 90:
+            raise serializers.ValidationError("Latitude deve estar entre -90 e 90.")
+        return value
+    
+    def validate_longitude(self, value):
+        """Validar range de longitude"""
+        if value < -180 or value > 180:
+            raise serializers.ValidationError("Longitude deve estar entre -180 e 180.")
+        return value
+
+
+@extend_schema_serializer(component_name="MobileDeviceLocation")
+class MobileDeviceLocationSerializer(serializers.ModelSerializer):
+    """Serializer para resposta de DeviceLocation (mobile)"""
+    deviceSerial = serializers.CharField(source="device.serial", read_only=True, allow_null=True)
+    moduleImei = serializers.CharField(source="module.imei", read_only=True, allow_null=True)
+    readAt = serializers.DateTimeField(source="read_at", read_only=True)
+    
+    class Meta:
+        model = DeviceLocation
+        fields = ["id", "device", "deviceSerial", "module", "moduleImei", "latitude", "longitude", "readAt"]
+
+
+@extend_schema_serializer(component_name="MobileDeviceGlobalLocation")
+class MobileDeviceGlobalLocationSerializer(serializers.Serializer):
+    """Serializer para localização global de devices (mobile)"""
+    serial = serializers.CharField()
+    model = serializers.CharField()
+    imei = serializers.CharField(allow_null=True)
+    latitude = serializers.DecimalField(max_digits=9, decimal_places=6)
+    longitude = serializers.DecimalField(max_digits=9, decimal_places=6)
+    lastOnlineAt = serializers.DateTimeField(source="last_online_at", allow_null=True)
+    locked = serializers.BooleanField()
+    tested = serializers.BooleanField()
+    sold = serializers.BooleanField()
+

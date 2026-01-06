@@ -101,6 +101,12 @@ class TelemetryModule(AuditModel):
         db_index=True,
         help_text="Modelo do módulo GPS/telemetria"
     )
+    last_online_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="Última vez que o módulo esteve online"
+    )
     
     class Meta:
         indexes = [
@@ -108,6 +114,7 @@ class TelemetryModule(AuditModel):
             models.Index(fields=["icc_id"]),
             models.Index(fields=["modelo"]),
             models.Index(fields=["is_active"]),
+            models.Index(fields=["last_online_at"]),
         ]
         constraints = [
             models.UniqueConstraint(
@@ -189,6 +196,17 @@ class DeviceLocation(models.Model):
         "devices.Device",
         on_delete=models.CASCADE,
         related_name="locations",
+        null=True,
+        blank=True,
+        help_text="Device que possui esta localização"
+    )
+    module = models.ForeignKey(
+        TelemetryModule,
+        on_delete=models.SET_NULL,
+        related_name="locations",
+        null=True,
+        blank=True,
+        help_text="Módulo de telemetria que enviou esta localização"
     )
     read_at  = models.DateTimeField(db_index=True)
     # 6 casas decimais ≈ ~0,11 m — suficiente para limiar de 100 m
@@ -200,6 +218,7 @@ class DeviceLocation(models.Model):
         ordering = ["device", "-read_at"]
         indexes = [
             models.Index(fields=["device", "-read_at"], name="idx_devloc_dev_readat_desc"),
+            models.Index(fields=["module", "-read_at"]),
         ]
         constraints = [
             models.CheckConstraint(

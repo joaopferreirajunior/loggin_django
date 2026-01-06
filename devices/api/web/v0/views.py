@@ -5,11 +5,12 @@ from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema, OpenApiResponse
-from devices.models import Device, TelemetryModule, DeviceTelemetryModule
+from devices.models import Device, TelemetryModule, DeviceTelemetryModule, DeviceLocation
 from .serializers import (
     DeviceSerializer, DeviceCreateSerializer, TelemetryModuleSerializer, 
     TelemetryModuleCreateSerializer, DeviceTelemetryModuleSerializer,
-    DeviceTelemetryModuleLinkSerializer
+    DeviceTelemetryModuleLinkSerializer, DeviceLocationCreateSerializer,
+    DeviceLocationSerializer, DeviceGlobalLocationSerializer
 )
 
 
@@ -221,3 +222,162 @@ class DeviceTelemetryModuleLinkView(APIView):
         
         response_serializer = DeviceTelemetryModuleSerializer(link)
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+
+@extend_schema(
+    operation_id="create_device_location",
+    summary="Criar registro de localização",
+    description=(
+        "Cria um registro de localização para um device. "
+        "Serial e IMEI são opcionais, mas pelo menos um deve ser informado. "
+        "Se apenas serial: busca device e pega módulo linkado. "
+        "Se apenas imei: busca módulo e pega device linkado. "
+        "Se ambos: usa ambos diretamente."
+    ),
+    request=DeviceLocationCreateSerializer,
+    responses={
+        201: DeviceLocationSerializer,
+        400: OpenApiResponse(description="Dados inválidos ou read_at não informado")
+    },
+    tags=["Web - Devices"]
+)
+class DeviceLocationCreateView(APIView):
+    """Cria um registro de localização de device"""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = DeviceLocationCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        serial = serializer.validated_data.get('serial', '').strip()
+        imei = serializer.validated_data.get('imei', '').strip()
+        latitude = serializer.validated_data['latitude']
+        longitude = serializer.validated_data['longitude']
+        read_at = serializer.validated_data['read_at']
+        
+        device = None
+        module = None
+        
+        # Caso 1: Ambos informados
+        if serial and imei:
+            try:
+                device = Device.objects.get(serial=serial, is_active=True)
+            except Device.DoesNotExist:
+                return Response(
+                    {"detail": f"Device com serial '{serial}' não encontrado."},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            try:
+                module = TelemetryModule.objects.get(imei=imei, is_active=True)
+            except TelemetryModule.DoesNotExist:
+                return Response(
+                    {"detail": f"Módulo com IMEI '{imei}' não encontrado."},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        
+        # Caso 2: Apenas serial informado
+        elif serial and not imei:
+            try:
+                device = Device.objects.get(serial=serial, is_active=True)
+            except Device.DoesNotExist:
+                return Response(
+                    {"detail": f"Device com serial '{serial}' não encontrado."},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Buscar módulo linkado ao device (mais recente)
+            module = device.get_current_telemetry_module()
+        
+        # Caso 3: Apenas imei informado
+        elif imei and not serial:
+            try:
+                module = TelemetryModule.objects.get(imei=imei, is_active=True)
+            except TelemetryModule.DoesNotExist:
+                return Response(
+                    {"detail": f"Módulo com IMEI '{imei}' não encontrado."},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Buscar device linkado ao módulo (mais recente)
+            device = module.get_current_device()
+        
+        # Criar localização
+        location = DeviceLocation.objects.create(
+            device=device,
+            module=module,
+            latitude=latitude,
+            longitude=longitude,
+            read_at=read_at
+        )
+        
+        response_serializer = DeviceLocationSerializer(location)
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+
+
+@extend_schema(
+    operation_id="get_devices_global_locations",
+    summary="Listar localização global de devices",
+    description=(
+        "Retorna a localização mais recente de cada device ativo que possui localização registrada. "
+        "Inclui informações do device, módulo linkado e última localização conhecida."
+    ),
+    responses={
+        200: DeviceGlobalLocationSerializer(many=True)
+    },
+    tags=["Web - Devices"]
+)
+class DeviceGlobalLocationsView(APIView):
+    """Lista localização global de todos os devices ativos com localização"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from django.db.models import Prefetch, Max
+        
+        # Buscar devices ativos que possuem localizações
+        devices = Device.objects.filter(
+            is_active=True,
+            locations__isnull=False
+        ).distinct().prefetch_related(
+            'locations',
+            'telemetry_links',
+            'telemetry_links__module'
+        )
+        
+        result = []
+        
+        for device in devices:
+            # Pegar localização mais recente
+            latest_location = device.locations.order_by('-read_at').first()
+            
+            if not latest_location:
+                continue
+            
+            # Pegar módulo linkado atualmente
+            current_module = device.get_current_telemetry_module()
+            
+            imei = None
+            last_online_at = None
+            
+            if current_module:
+                imei = current_module.imei
+                last_online_at = current_module.last_online_at
+            else:
+                # Buscar último link (mais recente)
+                last_link = device.telemetry_links.order_by('-linked_at').first()
+                if last_link and last_link.module:
+                    last_online_at = last_link.module.last_online_at
+            
+            result.append({
+                'serial': device.serial,
+                'model': device.model,
+                'imei': imei,
+                'latitude': latest_location.latitude,
+                'longitude': latest_location.longitude,
+                'last_online_at': last_online_at,
+                'locked': device.locked,
+                'tested': device.tested,
+                'sold': device.sold
+            })
+        
+        serializer = DeviceGlobalLocationSerializer(result, many=True)
+        return Response(serializer.data)
