@@ -4,7 +4,7 @@ from app.utils import AuditModel  # created, modified, is_active
 class Device(AuditModel):
     """Modelo Device com os campos especificados"""
     id = models.AutoField(primary_key=True)
-    serial = models.CharField(max_length=22, db_index=True)
+    serial = models.CharField(max_length=22, db_index=True, default="")
     model = models.CharField(max_length=24, db_index=True, default="undefined")
     locked = models.BooleanField(default=False)
     locked_at = models.DateTimeField(null=True, blank=True)
