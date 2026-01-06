@@ -23,15 +23,51 @@ class MobileClinicSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Clinic
-        fields = ['id', 'name', 'groupName', 'address', 'phone', 'deviceCount', 'clinicImageUrl']
+        fields = ['id', 'name', 'group', 'groupName', 'address', 'phone', 'deviceCount', 'clinicImageUrl']
+    
+    def validate_name(self, value):
+        """Validação do nome da clínica"""
+        if not value or not value.strip():
+            raise serializers.ValidationError("O nome da clínica não pode estar vazio.")
+        return value.strip()
+    
+    def validate_group(self, value):
+        """Validação do grupo"""
+        if not value:
+            raise serializers.ValidationError("O grupo é obrigatório.")
+        if not value.is_active:
+            raise serializers.ValidationError("O grupo informado não está ativo.")
+        return value
+    
+    def validate(self, attrs):
+        """Validação de duplicidade de nome no grupo"""
+        name = attrs.get('name')
+        group = attrs.get('group')
+        
+        # Verifica se já existe uma clínica com este nome neste grupo
+        # Exclui a própria clínica se for uma atualização
+        queryset = Clinic.objects.filter(name=name, group=group)
+        if self.instance:
+            queryset = queryset.exclude(pk=self.instance.pk)
+        
+        if queryset.exists():
+            raise serializers.ValidationError({
+                "name": f"Já existe uma clínica com o nome '{name}' neste grupo."
+            })
+        
+        return attrs
     
     def get_deviceCount(self, obj):
         """Retorna o número de devices ativos na clínica"""
-        return obj.clinic_devices.filter(is_active=True).count()
+        if obj.pk:  # Verifica se o objeto já foi salvo
+            return obj.clinic_devices.filter(is_active=True).count()
+        return 0
     
     def get_clinicImageUrl(self, obj):
         """Retorna a URL da imagem da clínica"""
-        return obj.get_clinic_image_url()
+        if obj.pk:  # Verifica se o objeto já foi salvo
+            return obj.get_clinic_image_url()
+        return None
 
 
 @extend_schema_serializer(component_name="MobileGroupWithClinics")

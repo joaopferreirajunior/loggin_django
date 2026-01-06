@@ -366,7 +366,12 @@ class ClinicCreateView(generics.CreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
     
     def perform_create(self, serializer):
-        group_id = serializer.validated_data.get('group').id
+        group = serializer.validated_data.get('group')
+        if not group:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({"group": "O grupo é obrigatório."})
+        
+        group_id = group.id
         user = self.request.user
         
         # Verificar se o usuário é system_admin
