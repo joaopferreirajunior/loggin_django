@@ -17,13 +17,41 @@ class MobileGroupSerializer(serializers.ModelSerializer):
 @extend_schema_serializer(component_name="MobileClinic")
 class MobileClinicSerializer(serializers.ModelSerializer):
     """Serializer simplificado para Clinic mobile"""
+    group = serializers.PrimaryKeyRelatedField(read_only=True)
     groupName = serializers.CharField(source='group.name', read_only=True)
     deviceCount = serializers.SerializerMethodField()
     clinicImageUrl = serializers.SerializerMethodField()
     
+    # ClinicData - obrigatórios
+    cpfCnpj = serializers.CharField(source='cpf_cnpj')
+    tradeName = serializers.CharField(source='trade_name')
+    
+    # Address - opcionais
+    zipCode = serializers.CharField(source='zip_code', required=False, allow_blank=True, allow_null=True)
+    timeZone = serializers.CharField(source='time_zone', required=False, allow_blank=True, allow_null=True)
+    
+    # BankData - opcionais
+    bankCode = serializers.CharField(source='bank_code', required=False, allow_blank=True, allow_null=True)
+    branchDigit = serializers.CharField(source='branch_digit', required=False, allow_blank=True, allow_null=True)
+    accountNumber = serializers.CharField(source='account_number', required=False, allow_blank=True, allow_null=True)
+    accountDigit = serializers.CharField(source='account_digit', required=False, allow_blank=True, allow_null=True)
+    accountType = serializers.CharField(source='account_type', required=False, allow_blank=True, allow_null=True)
+    
     class Meta:
         model = Clinic
-        fields = ['id', 'name', 'group', 'groupName', 'address', 'phone', 'deviceCount', 'clinicImageUrl']
+        fields = [
+            'id', 'name', 'group', 'groupName',
+            # ClinicData - obrigatórios
+            'cpfCnpj', 'tradeName', 'phone', 'email',
+            # Address - opcionais
+            'country', 'zipCode', 'street', 'number', 'district',
+            'city', 'state', 'timeZone',
+            # BankData - opcionais
+            'bankCode', 'branch', 'branchDigit', 'accountNumber',
+            'accountDigit', 'accountType',
+            # Outros
+            'deviceCount', 'clinicImageUrl'
+        ]
     
     def validate_name(self, value):
         """Validação do nome da clínica"""
@@ -31,31 +59,29 @@ class MobileClinicSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("O nome da clínica não pode estar vazio.")
         return value.strip()
     
-    def validate_group(self, value):
-        """Validação do grupo"""
-        if not value:
-            raise serializers.ValidationError("O grupo é obrigatório.")
-        if not value.is_active:
-            raise serializers.ValidationError("O grupo informado não está ativo.")
-        return value
+    def validate_cpf_cnpj(self, value):
+        """Validação do CPF/CNPJ"""
+        if not value or not value.strip():
+            raise serializers.ValidationError("O CPF/CNPJ é obrigatório.")
+        return value.strip()
     
-    def validate(self, attrs):
-        """Validação de duplicidade de nome no grupo"""
-        name = attrs.get('name')
-        group = attrs.get('group')
-        
-        # Verifica se já existe uma clínica com este nome neste grupo
-        # Exclui a própria clínica se for uma atualização
-        queryset = Clinic.objects.filter(name=name, group=group)
-        if self.instance:
-            queryset = queryset.exclude(pk=self.instance.pk)
-        
-        if queryset.exists():
-            raise serializers.ValidationError({
-                "name": f"Já existe uma clínica com o nome '{name}' neste grupo."
-            })
-        
-        return attrs
+    def validate_trade_name(self, value):
+        """Validação do nome fantasia"""
+        if not value or not value.strip():
+            raise serializers.ValidationError("O nome fantasia é obrigatório.")
+        return value.strip()
+    
+    def validate_phone(self, value):
+        """Validação do telefone"""
+        if not value or not value.strip():
+            raise serializers.ValidationError("O telefone é obrigatório.")
+        return value.strip()
+    
+    def validate_email(self, value):
+        """Validação do email"""
+        if not value or not value.strip():
+            raise serializers.ValidationError("O email é obrigatório.")
+        return value.strip().lower()
     
     def get_deviceCount(self, obj):
         """Retorna o número de devices ativos na clínica"""

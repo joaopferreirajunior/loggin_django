@@ -20,6 +20,7 @@ class GroupSerializer(serializers.ModelSerializer):
 @extend_schema_serializer(component_name="WebClinic")
 class ClinicSerializer(serializers.ModelSerializer):
     """Serializer básico para Clinic"""
+    group = serializers.PrimaryKeyRelatedField(read_only=True)
     group_name = serializers.CharField(source='group.name', read_only=True)
     device_count = serializers.SerializerMethodField()
     clinic_image_url = serializers.SerializerMethodField()
@@ -27,8 +28,17 @@ class ClinicSerializer(serializers.ModelSerializer):
     class Meta:
         model = Clinic
         fields = [
-            'id', 'name', 'group', 'group_name', 'address', 
-            'phone', 'email', 'device_count', 'clinic_image_url', 'is_active', 'created'
+            'id', 'name', 'group', 'group_name', 
+            # ClinicData - obrigatórios
+            'cpf_cnpj', 'trade_name', 'phone', 'email',
+            # Address - opcionais
+            'country', 'zip_code', 'street', 'number', 'district', 
+            'city', 'state', 'time_zone',
+            # BankData - opcionais
+            'bank_code', 'branch', 'branch_digit', 'account_number', 
+            'account_digit', 'account_type',
+            # Outros
+            'device_count', 'clinic_image_url', 'is_active', 'created'
         ]
     
     def validate_name(self, value):
@@ -37,31 +47,29 @@ class ClinicSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("O nome da clínica não pode estar vazio.")
         return value.strip()
     
-    def validate_group(self, value):
-        """Validação do grupo"""
-        if not value:
-            raise serializers.ValidationError("O grupo é obrigatório.")
-        if not value.is_active:
-            raise serializers.ValidationError("O grupo informado não está ativo.")
-        return value
+    def validate_cpf_cnpj(self, value):
+        """Validação do CPF/CNPJ"""
+        if not value or not value.strip():
+            raise serializers.ValidationError("O CPF/CNPJ é obrigatório.")
+        return value.strip()
     
-    def validate(self, attrs):
-        """Validação de duplicidade de nome no grupo"""
-        name = attrs.get('name')
-        group = attrs.get('group')
-        
-        # Verifica se já existe uma clínica com este nome neste grupo
-        # Exclui a própria clínica se for uma atualização
-        queryset = Clinic.objects.filter(name=name, group=group)
-        if self.instance:
-            queryset = queryset.exclude(pk=self.instance.pk)
-        
-        if queryset.exists():
-            raise serializers.ValidationError({
-                "name": f"Já existe uma clínica com o nome '{name}' neste grupo."
-            })
-        
-        return attrs
+    def validate_trade_name(self, value):
+        """Validação do nome fantasia"""
+        if not value or not value.strip():
+            raise serializers.ValidationError("O nome fantasia é obrigatório.")
+        return value.strip()
+    
+    def validate_phone(self, value):
+        """Validação do telefone"""
+        if not value or not value.strip():
+            raise serializers.ValidationError("O telefone é obrigatório.")
+        return value.strip()
+    
+    def validate_email(self, value):
+        """Validação do email"""
+        if not value or not value.strip():
+            raise serializers.ValidationError("O email é obrigatório.")
+        return value.strip().lower()
     
     def get_device_count(self, obj):
         """Retorna o número de devices ativos na clínica"""

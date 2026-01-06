@@ -48,18 +48,121 @@ class Clinic(AuditModel):
         related_name="clinics",
         help_text="Grupo ao qual a clínica pertence"
     )
-    address = models.TextField(
-        blank=True,
-        help_text="Endereço da clínica"
+    
+    # ClinicData - Campos obrigatórios da clínica
+    cpf_cnpj = models.CharField(
+        max_length=20,
+        default="",
+        help_text="CPF ou CNPJ da clínica"
+    )
+    trade_name = models.CharField(
+        default="",
+        max_length=255,
+        help_text="Nome fantasia da clínica"
     )
     phone = models.CharField(
+        default="",
         max_length=20,
-        blank=True,
         help_text="Telefone da clínica"
     )
     email = models.EmailField(
-        blank=True,
+        default="",
         help_text="Email da clínica"
+    )
+    
+    # Address - Campos opcionais de endereço
+    country = models.CharField(
+        max_length=2,
+        blank=True,
+        null=True,
+        help_text="Código do país (ex: BR)"
+    )
+    zip_code = models.CharField(
+        max_length=10,
+        blank=True,
+        null=True,
+        help_text="CEP"
+    )
+    street = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Rua/Avenida"
+    )
+    number = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        help_text="Número"
+    )
+    district = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="Bairro"
+    )
+    city = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="Cidade"
+    )
+    state = models.CharField(
+        max_length=2,
+        blank=True,
+        null=True,
+        help_text="Estado (sigla)"
+    )
+    time_zone = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        default='America/Sao_Paulo',
+        help_text="Fuso horário (ex: America/Sao_Paulo)"
+    )
+    
+    # BankData - Campos opcionais de dados bancários
+    bank_code = models.CharField(
+        max_length=10,
+        blank=True,
+        null=True,
+        help_text="Código do banco (ex: 001 para Banco do Brasil)"
+    )
+    branch = models.CharField(
+        max_length=10,
+        blank=True,
+        null=True,
+        help_text="Agência bancária"
+    )
+    branch_digit = models.CharField(
+        max_length=2,
+        blank=True,
+        null=True,
+        help_text="Dígito verificador da agência"
+    )
+    account_number = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        help_text="Número da conta bancária"
+    )
+    account_digit = models.CharField(
+        max_length=2,
+        blank=True,
+        null=True,
+        help_text="Dígito verificador da conta"
+    )
+    
+    class AccountType(models.TextChoices):
+        CHECKING = "CHECKING", "Conta Corrente"
+        SAVINGS = "SAVINGS", "Conta Poupança"
+    
+    account_type = models.CharField(
+        max_length=10,
+        choices=AccountType.choices,
+        blank=True,
+        null=True,
+        help_text="Tipo da conta bancária"
     )
     
     # Imagem da clínica - armazena apenas o path/key do S3

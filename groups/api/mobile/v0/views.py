@@ -366,34 +366,38 @@ class ClinicCreateView(generics.CreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
     
     def perform_create(self, serializer):
-        group = serializer.validated_data.get('group')
-        if not group:
-            from rest_framework.exceptions import ValidationError
-            raise ValidationError({"group": "O grupo é obrigatório."})
-        
-        group_id = group.id
         user = self.request.user
         
-        # Verificar se o usuário é system_admin
-        if user.groups.filter(name='system_admin').exists():
-            serializer.save()
-            return
-        
-        # Verificar se o usuário é group_admin deste grupo específico
-        is_group_admin = GroupAdmin.objects.filter(
+        # Buscar o grupo do usuário através de GroupAdmin
+        group_admin = GroupAdmin.objects.filter(
             user=user,
-            group_id=group_id,
             is_active=True
-        ).exists()
+        ).select_related('group').first()
         
-        if not is_group_admin:
+        if not group_admin:
+            # Se não for group_admin, verificar se é system_admin
+            if user.groups.filter(name='system_admin').exists():
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError({
+                    "detail": "System admins devem especificar o grupo ao criar clínicas via admin."
+                })
+            
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied(
-                "Você não tem permissão para criar clínicas neste grupo. "
-                "Apenas Group Admins do grupo podem criar clínicas."
+                "Você não está associado a nenhum grupo como administrador. "
+                "Apenas Group Admins podem criar clínicas."
             )
         
-        serializer.save()
+        # Verificar duplicidade de nome no grupo
+        clinic_name = serializer.validated_data.get('name')
+        if Clinic.objects.filter(name=clinic_name, group=group_admin.group).exists():
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({
+                "name": f"Já existe uma clínica com o nome '{clinic_name}' neste grupo."
+            })
+        
+        # Associar o grupo automaticamente
+        serializer.save(group=group_admin.group)
 
 
 # ============================================================================
