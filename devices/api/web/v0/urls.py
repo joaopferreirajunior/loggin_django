@@ -3,13 +3,15 @@ from . import views
 
 urlpatterns = [
     # Device endpoints
-    path('devices/create/', views.DeviceCreateView.as_view(), name='device_create'),
+    path('devices/', views.DeviceCreateView.as_view(), name='device_create'),
+    path('devices/<uuid:device_id>/', views.DeviceDetailView.as_view(), name='device_detail'),
     path('devices/<uuid:device_id>/tested/', views.DeviceTestView.as_view(), name='device_test'),
     path('devices/<uuid:device_id>/sold/', views.DeviceSoldView.as_view(), name='device_sell'),
     
     # Telemetry Module endpoints
-    path('telemetry-modules/create/', views.TelemetryModuleCreateView.as_view(), name='telemetry_module_create'),
+    path('modules/', views.TelemetryModuleCreateView.as_view(), name='telemetry_module_create'),
+    path('modules/<uuid:module_id>/', views.TelemetryModuleDetailView.as_view(), name='telemetry_module_detail'),
     
     # Device-Telemetry Module relationship endpoints
-    path('device-telemetry/link/', views.DeviceTelemetryModuleLinkView.as_view(), name='device_telemetry_link'),
+    path('devices/link-module/', views.DeviceTelemetryModuleLinkView.as_view(), name='device_telemetry_link'),
 ]

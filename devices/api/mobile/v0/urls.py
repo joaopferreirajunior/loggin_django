@@ -3,13 +3,15 @@ from . import views
 
 urlpatterns = [
     # Device endpoints (mobile format with camelCase)
-    path('devices/create/', views.MobileDeviceCreateView.as_view(), name='mobile_device_create'),
+    path('devices/', views.MobileDeviceCreateView.as_view(), name='mobile_device_create'),
+    path('devices/<uuid:deviceId>/', views.MobileDeviceDetailView.as_view(), name='mobile_device_detail'),
     path('devices/<uuid:deviceId>/tested/', views.MobileDeviceTestView.as_view(), name='mobile_device_test'),
     path('devices/<uuid:deviceId>/sold/', views.MobileDeviceSoldView.as_view(), name='mobile_device_sell'),
     
     # Telemetry Module endpoints (mobile)
-    path('telemetryModules/create/', views.MobileTelemetryModuleCreateView.as_view(), name='mobile_telemetry_module_create'),
+    path('modules/', views.MobileTelemetryModuleCreateView.as_view(), name='mobile_telemetry_module_create'),
+    path('modules/<uuid:moduleId>/', views.MobileTelemetryModuleDetailView.as_view(), name='mobile_telemetry_module_detail'),
     
     # Device-Telemetry Module relationship endpoints (mobile)
-    path('deviceTelemetry/link/', views.MobileDeviceTelemetryModuleLinkView.as_view(), name='mobile_device_telemetry_link'),
+    path('devices/link-module/', views.MobileDeviceTelemetryModuleLinkView.as_view(), name='mobile_device_telemetry_link'),
 ]

@@ -123,6 +123,46 @@ class TelemetryModuleCreateView(generics.CreateAPIView):
 
 
 @extend_schema(
+    operation_id="get_device_detail",
+    summary="Consultar device específico",
+    description="Retorna os detalhes de um device específico pelo device_id",
+    responses={
+        200: DeviceSerializer,
+        404: OpenApiResponse(description="Device não encontrado")
+    },
+    tags=["Web - Devices"]
+)
+class DeviceDetailView(APIView):
+    """Consulta os detalhes de um device específico"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, device_id):
+        device = get_object_or_404(Device, id=device_id, is_active=True)
+        serializer = DeviceSerializer(device)
+        return Response(serializer.data)
+
+
+@extend_schema(
+    operation_id="get_telemetry_module_detail",
+    summary="Consultar módulo de telemetria específico",
+    description="Retorna os detalhes de um módulo de telemetria específico pelo module_id",
+    responses={
+        200: TelemetryModuleSerializer,
+        404: OpenApiResponse(description="Módulo não encontrado")
+    },
+    tags=["Web - Devices"]
+)
+class TelemetryModuleDetailView(APIView):
+    """Consulta os detalhes de um módulo de telemetria específico"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, module_id):
+        module = get_object_or_404(TelemetryModule, id=module_id, is_active=True)
+        serializer = TelemetryModuleSerializer(module)
+        return Response(serializer.data)
+
+
+@extend_schema(
     operation_id="link_device_telemetry_module",
     summary="Associar módulo ao device",
     description="Cria uma associação entre um device e um módulo de telemetria",
