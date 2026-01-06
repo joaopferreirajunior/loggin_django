@@ -381,3 +381,29 @@ class DeviceGlobalLocationsView(APIView):
         
         serializer = DeviceGlobalLocationSerializer(result, many=True)
         return Response(serializer.data)
+
+
+@extend_schema(
+    operation_id="get_device_locations",
+    summary="Listar últimas localizações de um device",
+    description="Retorna as 10 últimas localizações de um device específico ordenadas por data (mais recente primeiro)",
+    responses={
+        200: DeviceLocationSerializer(many=True),
+        404: OpenApiResponse(description="Device não encontrado")
+    },
+    tags=["Web - Devices"]
+)
+class DeviceLocationsListView(APIView):
+    """Lista as 10 últimas localizações de um device específico"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, device_id):
+        device = get_object_or_404(Device, id=device_id, is_active=True)
+        
+        # Buscar as 10 últimas localizações do device
+        locations = DeviceLocation.objects.filter(
+            device=device
+        ).order_by('-read_at')[:10]
+        
+        serializer = DeviceLocationSerializer(locations, many=True)
+        return Response(serializer.data)

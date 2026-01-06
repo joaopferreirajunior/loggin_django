@@ -11,6 +11,7 @@ urlpatterns = [
     # Device Location endpoints (mobile)
     path('devices/locations/', views.MobileDeviceLocationCreateView.as_view(), name='mobile_device_location_create'),
     path('devices/locations/global/', views.MobileDeviceGlobalLocationsView.as_view(), name='mobile_device_global_locations'),
+    path('devices/locations/<uuid:deviceId>/', views.MobileDeviceLocationsListView.as_view(), name='mobile_device_locations_list'),
     
     # Telemetry Module endpoints (mobile)
     path('modules/', views.MobileTelemetryModuleCreateView.as_view(), name='mobile_telemetry_module_create'),
