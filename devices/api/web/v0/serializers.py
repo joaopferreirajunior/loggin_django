@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from devices.models import Device, TelemetryModule, DeviceTelemetryModule, DeviceLocation
+from devices.models import Device, TelemetryModule, DeviceTelemetryModule, DeviceLocation, DeviceEvent
 from drf_spectacular.utils import extend_schema_serializer
 
 
@@ -7,14 +7,38 @@ from drf_spectacular.utils import extend_schema_serializer
 class DeviceSerializer(serializers.ModelSerializer):
     """Serializer básico para Device"""
     telemetry_module = serializers.SerializerMethodField()
+    locked_at = serializers.SerializerMethodField()
+    tested_at = serializers.SerializerMethodField()
+    sent_at = serializers.SerializerMethodField()
+    sold_at = serializers.SerializerMethodField()
     
     class Meta:
         model = Device
         fields = [
             'id', 'serial', 'model', 'locked', 'locked_at', 
-            'tested', 'tested_at', 'sold', 'sold_at', 
+            'tested', 'tested_at', 'sent', 'sent_at', 'sold', 'sold_at', 
             'is_active', 'created', 'modified', 'telemetry_module'
         ]
+    
+    def get_locked_at(self, obj):
+        """Retorna created_at do último evento de locked"""
+        event = obj.events.filter(event='locked').first()
+        return event.created_at if event else None
+    
+    def get_tested_at(self, obj):
+        """Retorna created_at do último evento de tested"""
+        event = obj.events.filter(event='tested').first()
+        return event.created_at if event else None
+    
+    def get_sent_at(self, obj):
+        """Retorna created_at do último evento de sent"""
+        event = obj.events.filter(event='sent').first()
+        return event.created_at if event else None
+    
+    def get_sold_at(self, obj):
+        """Retorna created_at do último evento de sold"""
+        event = obj.events.filter(event='sold').first()
+        return event.created_at if event else None
     
     def get_telemetry_module(self, obj):
         """Retorna informações do módulo de telemetria vinculado"""
@@ -205,4 +229,35 @@ class DeviceGlobalLocationSerializer(serializers.Serializer):
     last_online_at = serializers.DateTimeField(allow_null=True)
     locked = serializers.BooleanField()
     tested = serializers.BooleanField()
+    sent = serializers.BooleanField()
     sold = serializers.BooleanField()
+
+
+@extend_schema_serializer(component_name="WebDeviceEventCreate")
+class DeviceEventCreateSerializer(serializers.ModelSerializer):
+    """Serializer para criação de eventos de device"""
+    
+    class Meta:
+        model = DeviceEvent
+        fields = ['event']
+    
+    def validate_event(self, value):
+        """Valida se o tipo de evento é permitido"""
+        allowed_events = ['sold', 'sent', 'tested', 'locked', 'unlocked']
+        if value not in allowed_events:
+            raise serializers.ValidationError(
+                f"Evento inválido. Valores permitidos: {', '.join(allowed_events)}"
+            )
+        return value
+
+
+@extend_schema_serializer(component_name="WebDeviceEvent")
+class DeviceEventSerializer(serializers.ModelSerializer):
+    """Serializer para resposta de DeviceEvent"""
+    user_email = serializers.CharField(source='user.email', read_only=True, allow_null=True)
+    device_serial = serializers.CharField(source='device.serial', read_only=True)
+    
+    class Meta:
+        model = DeviceEvent
+        fields = ['id', 'device', 'device_serial', 'event', 'created_at', 'user_email']
+        read_only_fields = ['id', 'device', 'device_serial', 'created_at', 'user_email']

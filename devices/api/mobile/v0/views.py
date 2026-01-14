@@ -4,13 +4,15 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from drf_spectacular.utils import extend_schema, OpenApiResponse
-from devices.models import Device, TelemetryModule, DeviceTelemetryModule, DeviceLocation
+from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
+from drf_spectacular.types import OpenApiTypes
+from devices.models import Device, TelemetryModule, DeviceTelemetryModule, DeviceLocation, DeviceEvent
 from .serializers import (
     MobileDeviceSerializer, MobileDeviceCreateSerializer, MobileTelemetryModuleSerializer,
     MobileTelemetryModuleCreateSerializer, MobileDeviceTelemetryModuleSerializer,
     MobileDeviceTelemetryModuleLinkSerializer, MobileDeviceLocationCreateSerializer,
-    MobileDeviceLocationSerializer, MobileDeviceGlobalLocationSerializer
+    MobileDeviceLocationSerializer, MobileDeviceGlobalLocationSerializer,
+    MobileDeviceEventCreateSerializer, MobileDeviceEventSerializer
 )
 
 
@@ -42,55 +44,55 @@ class MobileDeviceCreateView(generics.CreateAPIView):
 
 
 @extend_schema(
-    operation_id="mobile_test_device",
-    summary="Marcar device como testado (Mobile)",
-    description="Marca um device como testado via interface mobile",
+    operation_id="mobile_create_device_event",
+    summary="Criar evento de device (Mobile)",
+    description="Cria um evento de device (sold, sent, tested, locked, unlocked) e atualiza automaticamente o status do device",
+    request=MobileDeviceEventCreateSerializer,
     responses={
-        200: MobileDeviceSerializer,
+        201: MobileDeviceEventSerializer,
+        400: OpenApiResponse(description="Dados inválidos"),
         404: OpenApiResponse(description="Device não encontrado")
     },
     tags=["Mobile - Devices"]
 )
-class MobileDeviceTestView(APIView):
-    """Marca um device como testado via mobile"""
+class MobileDeviceEventCreateView(APIView):
+    """Cria eventos de device via mobile"""
     permission_classes = [IsAuthenticated]
 
-    def patch(self, request, deviceId):
+    def post(self, request, deviceId):
         device = get_object_or_404(Device, id=deviceId)
         
-        # Marcar como testado
-        device.tested = True
-        device.tested_at = timezone.now()
-        device.save()
+        serializer = MobileDeviceEventCreateSerializer(data=request.data)
+        if serializer.is_valid():
+            # Criar evento vinculado ao device e ao usuário
+            event = serializer.save(device=device, user=request.user)
+            
+            # Retornar evento criado
+            response_serializer = MobileDeviceEventSerializer(event)
+            return Response(response_serializer.data, status=status.HTTP_201_CREATED)
         
-        serializer = MobileDeviceSerializer(device)
-        return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @extend_schema(
-    operation_id="mobile_sell_device",
-    summary="Marcar device como vendido (Mobile)",
-    description="Marca um device como vendido via interface mobile",
+    operation_id="mobile_list_device_events",
+    summary="Listar eventos de device (Mobile)",
+    description="Lista todos os eventos de um device específico ordenados por data (mais recente primeiro)",
     responses={
-        200: MobileDeviceSerializer,
+        200: MobileDeviceEventSerializer(many=True),
         404: OpenApiResponse(description="Device não encontrado")
     },
     tags=["Mobile - Devices"]
 )
-class MobileDeviceSoldView(APIView):
-    """Marca um device como vendido via mobile"""
+class MobileDeviceEventListView(generics.ListAPIView):
+    """Lista eventos de um device via mobile"""
+    serializer_class = MobileDeviceEventSerializer
     permission_classes = [IsAuthenticated]
 
-    def patch(self, request, deviceId):
-        device = get_object_or_404(Device, id=deviceId)
-        
-        # Marcar como vendido
-        device.sold = True
-        device.sold_at = timezone.now()
-        device.save()
-        
-        serializer = MobileDeviceSerializer(device)
-        return Response(serializer.data)
+    def get_queryset(self):
+        device_id = self.kwargs['deviceId']
+        device = get_object_or_404(Device, id=device_id)
+        return device.events.all()
 
 
 @extend_schema(

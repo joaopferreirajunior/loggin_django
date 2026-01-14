@@ -5,8 +5,8 @@ urlpatterns = [
     # Device endpoints (mobile format with camelCase)
     path('devices/', views.MobileDeviceCreateView.as_view(), name='mobile_device_create'),
     path('devices/<uuid:deviceId>/', views.MobileDeviceDetailView.as_view(), name='mobile_device_detail'),
-    path('devices/<uuid:deviceId>/tested/', views.MobileDeviceTestView.as_view(), name='mobile_device_test'),
-    path('devices/<uuid:deviceId>/sold/', views.MobileDeviceSoldView.as_view(), name='mobile_device_sell'),
+    path('devices/<uuid:deviceId>/events/', views.MobileDeviceEventCreateView.as_view(), name='mobile_device_event_create'),
+    path('devices/<uuid:deviceId>/events/list/', views.MobileDeviceEventListView.as_view(), name='mobile_device_event_list'),
     
     # Device Location endpoints (mobile)
     path('devices/locations/', views.MobileDeviceLocationCreateView.as_view(), name='mobile_device_location_create'),

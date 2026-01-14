@@ -586,3 +586,23 @@ curl -X GET http://3.236.36.55:8000/patients/api/web/v0/image/3e9a04e5-a149-4ef4
 # Mobile
 curl -X GET http://3.236.36.55:8000/patients/api/mobile/v0/image/3e9a04e5-a149-4ef4-be38-a120155f9907/ \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzY1ODkxMjkwLCJpYXQiOjE3NjU4OTA5OTAsImp0aSI6Ijc2NGI5Y2ZiNzM3MTRjZmI4ZmQ3OTY3OTI5MjM4ODA3IiwidXNlcl9pZCI6IjIifQ.KhuQY2Vg-OEIB1fBFW0CydSoq1WHDnb3K27civ3Lh58"
+
+
+# Teste - Remover
+
+# Login
+curl -X POST http://3.236.36.55:8000/users/api/mobile/v0/login/ \
+  -H "Content-Type: application/json" \
+  -d '{"username": "joaopferreirajunior", "password": "ju33257194ju"}'
+
+# Device 1
+curl -X POST http://3.236.36.55:8000/devices/api/mobile/v0/devices/ \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer SEU_TOKEN_AQUI" \
+  -d '{"serial": "TESTE-WEBER-USA", "model": "Hakon - USA"}'
+
+# Device 2
+curl -X POST http://3.236.36.55:8000/devices/api/mobile/v0/devices/ \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer SEU_TOKEN_AQUI" \
+  -d '{"serial": "TEST-WEBER", "model": "Ultramed MPT"}'

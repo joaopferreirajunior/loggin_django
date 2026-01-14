@@ -5,12 +5,13 @@ from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema, OpenApiResponse
-from devices.models import Device, TelemetryModule, DeviceTelemetryModule, DeviceLocation
+from devices.models import Device, TelemetryModule, DeviceTelemetryModule, DeviceLocation, DeviceEvent
 from .serializers import (
     DeviceSerializer, DeviceCreateSerializer, TelemetryModuleSerializer, 
     TelemetryModuleCreateSerializer, DeviceTelemetryModuleSerializer,
     DeviceTelemetryModuleLinkSerializer, DeviceLocationCreateSerializer,
-    DeviceLocationSerializer, DeviceGlobalLocationSerializer
+    DeviceLocationSerializer, DeviceGlobalLocationSerializer,
+    DeviceEventCreateSerializer, DeviceEventSerializer
 )
 
 
@@ -45,55 +46,55 @@ class DeviceCreateView(generics.CreateAPIView):
 
 
 @extend_schema(
-    operation_id="test_device",
-    summary="Marcar device como testado",
-    description="Marca um device como testado, definindo tested=True e tested_at com timestamp atual",
+    operation_id="create_device_event",
+    summary="Criar evento de device",
+    description="Cria um evento de device (sold, sent, tested, locked, unlocked) e atualiza automaticamente o status do device",
+    request=DeviceEventCreateSerializer,
     responses={
-        200: DeviceSerializer,
+        201: DeviceEventSerializer,
+        400: OpenApiResponse(description="Dados inválidos"),
         404: OpenApiResponse(description="Device não encontrado")
     },
     tags=["Web - Devices"]
 )
-class DeviceTestView(APIView):
-    """Marca um device como testado"""
+class DeviceEventCreateView(APIView):
+    """Cria eventos de device"""
     permission_classes = [IsAuthenticated]
 
-    def patch(self, request, device_id):
+    def post(self, request, device_id):
         device = get_object_or_404(Device, id=device_id)
         
-        # Marcar como testado
-        device.tested = True
-        device.tested_at = timezone.now()
-        device.save()
+        serializer = DeviceEventCreateSerializer(data=request.data)
+        if serializer.is_valid():
+            # Criar evento vinculado ao device e ao usuário
+            event = serializer.save(device=device, user=request.user)
+            
+            # Retornar evento criado
+            response_serializer = DeviceEventSerializer(event)
+            return Response(response_serializer.data, status=status.HTTP_201_CREATED)
         
-        serializer = DeviceSerializer(device)
-        return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @extend_schema(
-    operation_id="sell_device",
-    summary="Marcar device como vendido",
-    description="Marca um device como vendido, definindo sold=True e sold_at com timestamp atual",
+    operation_id="list_device_events",
+    summary="Listar eventos de device",
+    description="Lista todos os eventos de um device específico ordenados por data (mais recente primeiro)",
     responses={
-        200: DeviceSerializer,
+        200: DeviceEventSerializer(many=True),
         404: OpenApiResponse(description="Device não encontrado")
     },
     tags=["Web - Devices"]
 )
-class DeviceSoldView(APIView):
-    """Marca um device como vendido"""
+class DeviceEventListView(generics.ListAPIView):
+    """Lista eventos de um device"""
+    serializer_class = DeviceEventSerializer
     permission_classes = [IsAuthenticated]
 
-    def patch(self, request, device_id):
+    def get_queryset(self):
+        device_id = self.kwargs['device_id']
         device = get_object_or_404(Device, id=device_id)
-        
-        # Marcar como vendido
-        device.sold = True
-        device.sold_at = timezone.now()
-        device.save()
-        
-        serializer = DeviceSerializer(device)
-        return Response(serializer.data)
+        return device.events.all()
 
 
 @extend_schema(

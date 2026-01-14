@@ -1,4 +1,7 @@
 from django.db import models
+from django.conf import settings
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from app.utils import AuditModel  # created, modified, is_active
 
 class Device(AuditModel):
@@ -7,20 +10,19 @@ class Device(AuditModel):
     serial = models.CharField(max_length=22, db_index=True, default="")
     model = models.CharField(max_length=24, db_index=True, default="undefined")
     locked = models.BooleanField(default=False)
-    locked_at = models.DateTimeField(null=True, blank=True)
     tested = models.BooleanField(default=False)
-    tested_at = models.DateTimeField(null=True, blank=True)
+    sent = models.BooleanField(default=False)
     sold = models.BooleanField(default=False)
-    sold_at = models.DateTimeField(null=True, blank=True)
     
     class Meta:
         indexes = [
             models.Index(fields=["is_active"]),
             models.Index(fields=["serial"]),
             models.Index(fields=["model"]),
-            models.Index(fields=["sold", "sold_at"]),
+            models.Index(fields=["sold"]),
             models.Index(fields=["locked"]),
             models.Index(fields=["tested"]),
+            models.Index(fields=["sent"]),
             models.Index(fields=["created"]),
         ]
     
@@ -261,6 +263,76 @@ class DeviceNfeHistory(AuditModel):
 
     def __str__(self):
         return f"{self.device_id} · {self.nfe} · {self.nfe_date:%Y-%m-%d}"
+
+
+class DeviceEvent(models.Model):
+    """Registra eventos de auditoria de devices"""
+    EVENT_CHOICES = [
+        ('sold', 'Sold'),
+        ('sent', 'Sent'),
+        ('tested', 'Tested'),
+        ('locked', 'Locked'),
+        ('unlocked', 'Unlocked'),
+    ]
+    
+    device = models.ForeignKey(
+        Device,
+        on_delete=models.CASCADE,
+        related_name="events",
+        help_text="Device relacionado ao evento"
+    )
+    event = models.CharField(
+        max_length=20,
+        choices=EVENT_CHOICES,
+        db_index=True,
+        help_text="Tipo de evento: sold, sent, tested, locked, unlocked"
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        db_index=True,
+        help_text="Data e hora da ocorrência do evento"
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="device_events",
+        help_text="Usuário que criou o evento"
+    )
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['device', '-created_at']),
+            models.Index(fields=['event', '-created_at']),
+            models.Index(fields=['device', 'event', '-created_at']),
+        ]
+        verbose_name = "Device Event"
+        verbose_name_plural = "Device Events"
+    
+    def __str__(self):
+        return f"{self.device.serial} - {self.event} ({self.created_at:%Y-%m-%d %H:%M:%S})"
+
+
+@receiver(post_save, sender=DeviceEvent)
+def update_device_status(sender, instance, created, **kwargs):
+    """Atualiza o status do device quando um evento é criado"""
+    if created:
+        device = instance.device
+        event_type = instance.event
+        
+        if event_type == 'sold':
+            device.sold = True
+        elif event_type == 'sent':
+            device.sent = True
+        elif event_type == 'tested':
+            device.tested = True
+        elif event_type == 'locked':
+            device.locked = True
+        elif event_type == 'unlocked':
+            device.locked = False
+        
+        device.save(update_fields=['sold', 'sent', 'tested', 'locked'])
     
 # Mais recente de um device (eficiente com o índice composto)
 #latest = DeviceNfeHistory.objects.filter(device=dev).order_by("-nfe_date").first()

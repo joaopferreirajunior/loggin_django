@@ -1,11 +1,11 @@
 from django.contrib import admin
-from .models import Device, DeviceLocation, DeviceNfeHistory, TelemetryModule, DeviceTelemetryModule
+from .models import Device, DeviceLocation, DeviceNfeHistory, TelemetryModule, DeviceTelemetryModule, DeviceEvent
 
 
 @admin.register(Device)
 class DeviceAdmin(admin.ModelAdmin):
-    list_display = ('serial', 'model', 'sold', 'sold_at', 'is_active', 'created')
-    list_filter = ('model', 'sold', 'tested', 'is_active', 'created')
+    list_display = ('serial', 'model', 'sold', 'sent', 'tested', 'locked', 'is_active', 'created')
+    list_filter = ('model', 'sold', 'sent', 'tested', 'locked', 'is_active', 'created')
     search_fields = ('serial', 'model')
     ordering = ('-created',)
     readonly_fields = ('created', 'modified')
@@ -15,13 +15,33 @@ class DeviceAdmin(admin.ModelAdmin):
             'fields': ('serial', 'model')
         }),
         ('Status', {
-            'fields': ('sold', 'sold_at', 'tested', 'tested_at', 'locked', 'locked_at')
+            'fields': ('sold', 'sent', 'tested', 'locked')
         }),
         ('System', {
             'fields': ('is_active', 'created', 'modified'),
             'classes': ('collapse',)
         }),
     )
+
+
+@admin.register(DeviceEvent)
+class DeviceEventAdmin(admin.ModelAdmin):
+    list_display = ('device', 'event', 'user', 'created_at')
+    list_filter = ('event', 'created_at')
+    search_fields = ('device__serial', 'user__email', 'user__username')
+    ordering = ('-created_at',)
+    readonly_fields = ('created_at',)
+    raw_id_fields = ('device', 'user')
+    
+    fieldsets = (
+        (None, {
+            'fields': ('device', 'event', 'user')
+        }),
+        ('Timestamp', {
+            'fields': ('created_at',)
+        }),
+    )
+
 
 
 @admin.register(DeviceLocation)
