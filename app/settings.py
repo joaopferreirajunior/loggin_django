@@ -34,6 +34,28 @@ USE_TZ = True
 SECRET_KEY = os.getenv("SECRET_KEY", "unsafe-default-key")
 DEBUG = os.getenv("DEBUG", "False") == "True"
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "*").split(",")
+CSRF_TRUSTED_ORIGINS = ["https://api.loggin.app"]
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# ============================
+# CONFIGURAÇÕES DE SEGURANÇA HTTPS (apenas em produção)
+# ============================
+if not DEBUG:
+    # Cookies seguros - só transmitidos via HTTPS
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    
+    # Redireciona HTTP para HTTPS
+    SECURE_SSL_REDIRECT = True
+    
+    # Proteções adicionais do navegador
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    
+    # HSTS - força HTTPS por 1 ano (descomente quando tiver certeza do HTTPS)
+    # SECURE_HSTS_SECONDS = 31536000
+    # SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    # SECURE_HSTS_PRELOAD = True
 
 INSTALLED_APPS = [
     'corsheaders',
