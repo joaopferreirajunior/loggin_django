@@ -10,6 +10,7 @@ urlpatterns = [
     path('devices/<uuid:device_id>/events/list/', views.DeviceEventListView.as_view(), name='device_event_list'),
     
     # Device Location endpoints
+    path('locations/', views.DeviceLocationsView.as_view(), name='device_all_locations'),
     path('devices/locations/', views.DeviceLocationCreateView.as_view(), name='device_location_create'),
     path('devices/locations/global/', views.DeviceGlobalLocationsView.as_view(), name='device_global_locations'),
     path('devices/locations/<uuid:device_id>/', views.DeviceLocationsListView.as_view(), name='device_locations_list'),

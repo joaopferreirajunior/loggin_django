@@ -12,7 +12,8 @@ from .serializers import (
     DeviceTelemetryModuleLinkSerializer, DeviceLocationCreateSerializer,
     DeviceLocationSerializer, DeviceGlobalLocationSerializer,
     DeviceEventCreateSerializer, DeviceEventSerializer,
-    DeviceWithTelemetryCreateSerializer, DeviceWithTelemetryResponseSerializer
+    DeviceWithTelemetryCreateSerializer, DeviceWithTelemetryResponseSerializer,
+    LocationsResponseSerializer
 )
 
 
@@ -304,13 +305,21 @@ class DeviceLocationCreateView(APIView):
             device = module.get_current_device()
         
         # Criar localização
-        location = DeviceLocation.objects.create(
-            device=device,
-            module=module,
-            latitude=latitude,
-            longitude=longitude,
-            read_at=read_at
-        )
+        location_data = {
+            'device': device,
+            'module': module,
+            'latitude': latitude,
+            'longitude': longitude,
+            'read_at': read_at
+        }
+        
+        # Adicionar campos opcionais se fornecidos
+        optional_fields = ['speed', 'accuracy', 'is_moving', 'course', 'altitude', 'battery', 'signal_strength']
+        for field in optional_fields:
+            if field in serializer.validated_data:
+                location_data[field] = serializer.validated_data[field]
+        
+        location = DeviceLocation.objects.create(**location_data)
         
         response_serializer = DeviceLocationSerializer(location)
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
@@ -474,3 +483,118 @@ class DeviceWithTelemetryCreateView(APIView):
             return Response(response_serializer.data, status=status.HTTP_201_CREATED)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@extend_schema(
+    operation_id="get_all_locations",
+    summary="Listar todas as localizações de devices",
+    description="""
+    Retorna a última localização de todos os devices com seus dados de telemetria.
+    
+    **Formato de resposta:**
+    - `success`: Indica se a requisição foi bem-sucedida
+    - `data`: Array com as localizações e dados dos devices
+    - `meta`: Metadados da resposta (timestamp, contadores)
+    
+    **Dados retornados para cada localização:**
+    - Informações de posição (latitude, longitude, speed, etc)
+    - Dados do device (serial, model, locked status)
+    - Dados do módulo GPS (IMEI, modelo)
+    - Dados de telemetria (bateria, sinal, altitude, etc)
+    """,
+    responses={
+        200: LocationsResponseSerializer,
+    },
+    tags=["Web - Devices"]
+)
+class DeviceLocationsView(APIView):
+    """Lista todas as localizações de devices"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from django.utils import timezone
+        from django.db.models import Prefetch
+        
+        # Buscar devices ativos com suas últimas localizações
+        devices = Device.objects.filter(is_active=True).prefetch_related(
+            Prefetch(
+                'locations',
+                queryset=DeviceLocation.objects.select_related('module').order_by('-read_at')[:1],
+                to_attr='latest_location_list'
+            ),
+            Prefetch(
+                'telemetry_links',
+                queryset=DeviceTelemetryModule.objects.filter(is_linked=True).select_related('module'),
+                to_attr='active_telemetry_links'
+            )
+        )
+        
+        data = []
+        
+        for device in devices:
+            # Pegar a última localização
+            if not device.latest_location_list:
+                continue
+                
+            location = device.latest_location_list[0]
+            
+            # Pegar módulo linkado
+            module = None
+            if device.active_telemetry_links:
+                module = device.active_telemetry_links[0].module
+            elif location.module:
+                module = location.module
+            
+            # Se não tem módulo, pular
+            if not module:
+                continue
+            
+            # Montar device_metadata
+            device_metadata = {
+                'name': None,
+                'brand': None,
+                'model': device.model,
+                'serial': device.serial,
+                'imei': module.imei,
+                'locked': device.locked,
+                'state': None,
+                'city': None
+            }
+            
+            # Montar dados da localização
+            location_data = {
+                'id': f'pos_{location.id}',
+                'device_id': module.imei,
+                'latitude': location.latitude,
+                'longitude': location.longitude,
+                'speed': location.speed,
+                'accuracy': location.accuracy,
+                'is_moving': location.is_moving,
+                'created_at': device.created,
+                'inserted_at': location.read_at,
+                'kind': module.modelo,
+                'device_metadata': device_metadata,
+                'course': location.course,
+                'altitude': location.altitude,
+                'battery': location.battery,
+                'signal_strength': location.signal_strength
+            }
+            
+            data.append(location_data)
+        
+        # Calcular metadados
+        total_devices = Device.objects.filter(is_active=True).count()
+        active_devices = Device.objects.filter(is_active=True, locked=False).count()
+        
+        response_data = {
+            'success': True,
+            'data': data,
+            'meta': {
+                'last_updated': timezone.now(),
+                'active_devices': active_devices,
+                'total_devices': total_devices
+            }
+        }
+        
+        serializer = LocationsResponseSerializer(response_data)
+        return Response(serializer.data)

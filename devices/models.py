@@ -211,9 +211,46 @@ class DeviceLocation(models.Model):
         help_text="Módulo de telemetria que enviou esta localização"
     )
     read_at  = models.DateTimeField(db_index=True)
-    # 6 casas decimais ≈ ~0,11 m — suficiente para limiar de 100 m
-    latitude  = models.DecimalField(max_digits=9, decimal_places=6)
-    longitude = models.DecimalField(max_digits=9, decimal_places=6)
+    # 15 casas decimais para máxima precisão GPS
+    latitude  = models.DecimalField(max_digits=18, decimal_places=15)
+    longitude = models.DecimalField(max_digits=18, decimal_places=15)
+    
+    # Campos opcionais de telemetria
+    speed = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Velocidade em km/h"
+    )
+    accuracy = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Precisão da localização em metros"
+    )
+    is_moving = models.BooleanField(
+        null=True,
+        blank=True,
+        help_text="Indica se o device está em movimento"
+    )
+    course = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Direção do movimento em graus (0-360)"
+    )
+    altitude = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Altitude em metros"
+    )
+    battery = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Nível de bateria em porcentagem (0-100)"
+    )
+    signal_strength = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Força do sinal (0-100)"
+    )
 
     class Meta:
         # consultas do tipo: WHERE device = ? ORDER BY read_at DESC LIMIT 1

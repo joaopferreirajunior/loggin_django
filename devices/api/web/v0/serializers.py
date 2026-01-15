@@ -179,9 +179,18 @@ class DeviceLocationCreateSerializer(serializers.Serializer):
     """Serializer para criação de localização de device"""
     serial = serializers.CharField(required=False, allow_blank=True, help_text="Serial do device (opcional)")
     imei = serializers.CharField(required=False, allow_blank=True, help_text="IMEI do módulo de telemetria (opcional)")
-    latitude = serializers.DecimalField(max_digits=9, decimal_places=6, required=True)
-    longitude = serializers.DecimalField(max_digits=9, decimal_places=6, required=True)
+    latitude = serializers.DecimalField(max_digits=18, decimal_places=15, required=True)
+    longitude = serializers.DecimalField(max_digits=18, decimal_places=15, required=True)
     read_at = serializers.DateTimeField(required=True, help_text="Timestamp da leitura (obrigatório)")
+    
+    # Campos opcionais de telemetria
+    speed = serializers.FloatField(required=False, allow_null=True, help_text="Velocidade em km/h")
+    accuracy = serializers.IntegerField(required=False, allow_null=True, help_text="Precisão da localização em metros")
+    is_moving = serializers.BooleanField(required=False, allow_null=True, help_text="Indica se o device está em movimento")
+    course = serializers.IntegerField(required=False, allow_null=True, help_text="Direção do movimento em graus (0-360)")
+    altitude = serializers.IntegerField(required=False, allow_null=True, help_text="Altitude em metros")
+    battery = serializers.IntegerField(required=False, allow_null=True, help_text="Nível de bateria em porcentagem (0-100)")
+    signal_strength = serializers.IntegerField(required=False, allow_null=True, help_text="Força do sinal (0-100)")
     
     def validate(self, data):
         """Validar que pelo menos serial ou imei foi informado"""
@@ -216,7 +225,11 @@ class DeviceLocationSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = DeviceLocation
-        fields = ['id', 'device', 'device_serial', 'module', 'module_imei', 'latitude', 'longitude', 'read_at']
+        fields = [
+            'id', 'device', 'device_serial', 'module', 'module_imei', 
+            'latitude', 'longitude', 'read_at',
+            'speed', 'accuracy', 'is_moving', 'course', 'altitude', 'battery', 'signal_strength'
+        ]
 
 @extend_schema_serializer(component_name="WebDeviceGlobalLocation")
 class DeviceGlobalLocationSerializer(serializers.Serializer):
@@ -224,8 +237,8 @@ class DeviceGlobalLocationSerializer(serializers.Serializer):
     serial = serializers.CharField()
     model = serializers.CharField()
     imei = serializers.CharField(allow_null=True)
-    latitude = serializers.DecimalField(max_digits=9, decimal_places=6)
-    longitude = serializers.DecimalField(max_digits=9, decimal_places=6)
+    latitude = serializers.DecimalField(max_digits=18, decimal_places=15)
+    longitude = serializers.DecimalField(max_digits=18, decimal_places=15)
     last_online_at = serializers.DateTimeField(allow_null=True)
     locked = serializers.BooleanField()
     tested = serializers.BooleanField()
@@ -413,3 +426,52 @@ class DeviceWithTelemetryResponseSerializer(serializers.Serializer):
     link_id = serializers.IntegerField(
         help_text="ID da associação entre device e módulo de telemetria"
     )
+
+
+@extend_schema_serializer(component_name="WebDeviceMetadata")
+class DeviceMetadataSerializer(serializers.Serializer):
+    """Serializer para metadados do device"""
+    name = serializers.CharField(allow_null=True)
+    brand = serializers.CharField(allow_null=True)
+    model = serializers.CharField()
+    serial = serializers.CharField()
+    imei = serializers.CharField()
+    locked = serializers.BooleanField()
+    state = serializers.CharField(allow_null=True)
+    city = serializers.CharField(allow_null=True)
+
+
+@extend_schema_serializer(component_name="WebLocationData")
+class LocationDataSerializer(serializers.Serializer):
+    """Serializer para dados de localização no formato positions.json"""
+    id = serializers.CharField()
+    device_id = serializers.CharField(help_text="IMEI do módulo de telemetria")
+    latitude = serializers.DecimalField(max_digits=18, decimal_places=15)
+    longitude = serializers.DecimalField(max_digits=18, decimal_places=15)
+    speed = serializers.FloatField(allow_null=True)
+    accuracy = serializers.IntegerField(allow_null=True)
+    is_moving = serializers.BooleanField(allow_null=True)
+    created_at = serializers.DateTimeField()
+    inserted_at = serializers.DateTimeField(help_text="Data da leitura (read_at)")
+    kind = serializers.CharField(help_text="Modelo do módulo GPS")
+    device_metadata = DeviceMetadataSerializer()
+    course = serializers.IntegerField(allow_null=True)
+    altitude = serializers.IntegerField(allow_null=True)
+    battery = serializers.IntegerField(allow_null=True)
+    signal_strength = serializers.IntegerField(allow_null=True)
+
+
+@extend_schema_serializer(component_name="WebLocationsMeta")
+class LocationsMetaSerializer(serializers.Serializer):
+    """Serializer para metadados da resposta de locations"""
+    last_updated = serializers.DateTimeField(help_text="Timestamp da requisição")
+    active_devices = serializers.IntegerField(help_text="Quantidade de devices não locked")
+    total_devices = serializers.IntegerField(help_text="Total de devices (locked + unlocked)")
+
+
+@extend_schema_serializer(component_name="WebLocationsResponse")
+class LocationsResponseSerializer(serializers.Serializer):
+    """Serializer para resposta do endpoint locations"""
+    success = serializers.BooleanField(default=True)
+    data = LocationDataSerializer(many=True)
+    meta = LocationsMetaSerializer()
