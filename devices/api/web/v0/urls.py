@@ -4,6 +4,7 @@ from . import views
 urlpatterns = [
     # Device endpoints
     path('devices/', views.DeviceCreateView.as_view(), name='device_create'),
+    path('devices/with-telemetry/', views.DeviceWithTelemetryCreateView.as_view(), name='device_with_telemetry_create'),
     path('devices/<uuid:device_id>/', views.DeviceDetailView.as_view(), name='device_detail'),
     path('devices/<uuid:device_id>/events/', views.DeviceEventCreateView.as_view(), name='device_event_create'),
     path('devices/<uuid:device_id>/events/list/', views.DeviceEventListView.as_view(), name='device_event_list'),

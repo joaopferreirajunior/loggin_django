@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from devices.models import Device, TelemetryModule, DeviceTelemetryModule, DeviceLocation, DeviceEvent
+from devices.models import Device, TelemetryModule, DeviceTelemetryModule, DeviceLocation
 from drf_spectacular.utils import extend_schema_serializer
 
 
@@ -8,10 +8,9 @@ class MobileDeviceSerializer(serializers.ModelSerializer):
     """Serializer simplificado para Device mobile"""
     createdAt = serializers.DateTimeField(source='created', read_only=True)
     updatedAt = serializers.DateTimeField(source='modified', read_only=True)
-    lockedAt = serializers.SerializerMethodField()
-    testedAt = serializers.SerializerMethodField()
-    sentAt = serializers.SerializerMethodField()
-    soldAt = serializers.SerializerMethodField()
+    lockedAt = serializers.DateTimeField(source='locked_at', read_only=True)
+    testedAt = serializers.DateTimeField(source='tested_at', read_only=True)
+    soldAt = serializers.DateTimeField(source='sold_at', read_only=True)
     isActive = serializers.BooleanField(source='is_active', read_only=True)
     telemetryModule = serializers.SerializerMethodField()
     
@@ -19,29 +18,9 @@ class MobileDeviceSerializer(serializers.ModelSerializer):
         model = Device
         fields = [
             'id', 'serial', 'model', 'locked', 'lockedAt', 
-            'tested', 'testedAt', 'sent', 'sentAt', 'sold', 'soldAt', 
+            'tested', 'testedAt', 'sold', 'soldAt', 
             'isActive', 'createdAt', 'updatedAt', 'telemetryModule'
         ]
-    
-    def get_lockedAt(self, obj):
-        """Retorna created_at do último evento de locked"""
-        event = obj.events.filter(event='locked').first()
-        return event.created_at if event else None
-    
-    def get_testedAt(self, obj):
-        """Retorna created_at do último evento de tested"""
-        event = obj.events.filter(event='tested').first()
-        return event.created_at if event else None
-    
-    def get_sentAt(self, obj):
-        """Retorna created_at do último evento de sent"""
-        event = obj.events.filter(event='sent').first()
-        return event.created_at if event else None
-    
-    def get_soldAt(self, obj):
-        """Retorna created_at do último evento de sold"""
-        event = obj.events.filter(event='sold').first()
-        return event.created_at if event else None
     
     def get_telemetryModule(self, obj):
         """Retorna informações do módulo de telemetria vinculado"""
@@ -243,34 +222,5 @@ class MobileDeviceGlobalLocationSerializer(serializers.Serializer):
     lastOnlineAt = serializers.DateTimeField(source="last_online_at", allow_null=True)
     locked = serializers.BooleanField()
     tested = serializers.BooleanField()
+    sold = serializers.BooleanField()
 
-
-@extend_schema_serializer(component_name="MobileDeviceEventCreate")
-class MobileDeviceEventCreateSerializer(serializers.ModelSerializer):
-    """Serializer para criação de eventos de device (mobile)"""
-    
-    class Meta:
-        model = DeviceEvent
-        fields = ['event']
-    
-    def validate_event(self, value):
-        """Valida se o tipo de evento é permitido"""
-        allowed_events = ['sold', 'sent', 'tested', 'locked', 'unlocked']
-        if value not in allowed_events:
-            raise serializers.ValidationError(
-                f"Evento inválido. Valores permitidos: {', '.join(allowed_events)}"
-            )
-        return value
-
-
-@extend_schema_serializer(component_name="MobileDeviceEvent")
-class MobileDeviceEventSerializer(serializers.ModelSerializer):
-    """Serializer para resposta de DeviceEvent (mobile)"""
-    createdAt = serializers.DateTimeField(source='created_at', read_only=True)
-    userEmail = serializers.CharField(source='user.email', read_only=True, allow_null=True)
-    deviceSerial = serializers.CharField(source='device.serial', read_only=True)
-    
-    class Meta:
-        model = DeviceEvent
-        fields = ['id', 'device', 'deviceSerial', 'event', 'createdAt', 'userEmail']
-        read_only_fields = ['id', 'device', 'deviceSerial', 'createdAt', 'userEmail']

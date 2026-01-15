@@ -11,7 +11,8 @@ from .serializers import (
     TelemetryModuleCreateSerializer, DeviceTelemetryModuleSerializer,
     DeviceTelemetryModuleLinkSerializer, DeviceLocationCreateSerializer,
     DeviceLocationSerializer, DeviceGlobalLocationSerializer,
-    DeviceEventCreateSerializer, DeviceEventSerializer
+    DeviceEventCreateSerializer, DeviceEventSerializer,
+    DeviceWithTelemetryCreateSerializer, DeviceWithTelemetryResponseSerializer
 )
 
 
@@ -408,3 +409,68 @@ class DeviceLocationsListView(APIView):
         
         serializer = DeviceLocationSerializer(locations, many=True)
         return Response(serializer.data)
+
+
+@extend_schema(
+    operation_id="create_device_with_telemetry",
+    summary="Criar device com módulo de telemetria",
+    description="""
+    Cria ou recupera um device e módulo de telemetria GPS, criando automaticamente a associação entre eles.
+    
+    **Comportamento:**
+    - Se o `serial` já existir no sistema, usa o device existente (não cria novo)
+    - Se o `imei` já existir no sistema, usa o módulo existente (não cria novo)
+    - Desvincula qualquer associação anterior do device com outros módulos
+    - Desvincula qualquer associação anterior do módulo com outros devices
+    - Cria uma nova associação ativa entre o device e o módulo
+    
+    **Casos de uso:**
+    1. Registrar um novo device com novo módulo GPS
+    2. Vincular um módulo GPS existente a um device existente
+    3. Trocar o módulo GPS de um device
+    4. Reatribuir um módulo GPS para outro device
+    
+    **Campos obrigatórios:**
+    - `serial`: Número de série único do device
+    - `imei`: IMEI do módulo GPS (15 dígitos)
+    - `icc_id`: ICCID do chip SIM do módulo
+    - `gps_model`: Modelo do módulo GPS
+    
+    **Campos opcionais:**
+    - `model`: Modelo do device (padrão: "undefined")
+    
+    **Resposta:**
+    - `device_created`: Indica se um novo device foi criado (true) ou se já existia (false)
+    - `module_created`: Indica se um novo módulo foi criado (true) ou se já existia (false)
+    - `link_id`: ID da nova associação criada entre device e módulo
+    """,
+    request=DeviceWithTelemetryCreateSerializer,
+    responses={
+        201: DeviceWithTelemetryResponseSerializer,
+        400: OpenApiResponse(description="Dados inválidos - verifique os campos obrigatórios e formatos")
+    },
+    tags=["Web - Devices"]
+)
+class DeviceWithTelemetryCreateView(APIView):
+    """Cria device + telemetry module + associação em uma única requisição"""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = DeviceWithTelemetryCreateSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            result = serializer.save()
+            
+            # Preparar resposta
+            response_data = {
+                'device': result['device'],
+                'module': result['module'],
+                'device_created': result['device_created'],
+                'module_created': result['module_created'],
+                'link_id': result['link'].id
+            }
+            
+            response_serializer = DeviceWithTelemetryResponseSerializer(response_data)
+            return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

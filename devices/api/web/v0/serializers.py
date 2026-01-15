@@ -261,3 +261,155 @@ class DeviceEventSerializer(serializers.ModelSerializer):
         model = DeviceEvent
         fields = ['id', 'device', 'device_serial', 'event', 'created_at', 'user_email']
         read_only_fields = ['id', 'device', 'device_serial', 'created_at', 'user_email']
+
+
+@extend_schema_serializer(
+    component_name="WebDeviceWithTelemetryCreate",
+    examples=[
+        {
+            "serial": "ABC123XYZ456",
+            "model": "Model X Pro",
+            "imei": "123456789012345",
+            "icc_id": "12345678901234567890",
+            "gps_model": "GPS-V1"
+        }
+    ]
+)
+class DeviceWithTelemetryCreateSerializer(serializers.Serializer):
+    """Serializer para criar device + telemetry module + associação em uma única requisição"""
+    
+    # Campos do Device
+    serial = serializers.CharField(
+        max_length=22,
+        help_text="Número de série do device. Se já existir, usa o device existente."
+    )
+    model = serializers.CharField(
+        max_length=24,
+        default="undefined",
+        help_text="Modelo do device (ex: Model X Pro, Device V2)"
+    )
+    
+    # Campos do TelemetryModule
+    imei = serializers.CharField(
+        max_length=16,
+        help_text="IMEI do módulo de telemetria (15 dígitos). Se já existir, usa o módulo existente."
+    )
+    icc_id = serializers.CharField(
+        max_length=20,
+        help_text="Identificador ICC do chip SIM (ICCID - até 20 dígitos)"
+    )
+    gps_model = serializers.CharField(
+        max_length=12,
+        help_text="Modelo do módulo GPS/telemetria (ex: GPS-V1, Tracker-X)"
+    )
+    
+    def create(self, validated_data):
+        """Cria ou recupera device e module, e cria a associação"""
+        from django.utils import timezone
+        
+        # Extrai dados do device
+        device_data = {
+            'serial': validated_data['serial'],
+            'model': validated_data.get('model', 'undefined')
+        }
+        
+        # Extrai dados do module
+        module_data = {
+            'imei': validated_data['imei'],
+            'icc_id': validated_data['icc_id'],
+            'modelo': validated_data['gps_model']  # API usa 'gps_model', model usa 'modelo'
+        }
+        
+        # Cria ou recupera device pelo serial
+        device, device_created = Device.objects.get_or_create(
+            serial=device_data['serial'],
+            defaults=device_data
+        )
+        
+        # Cria ou recupera module pelo imei
+        module, module_created = TelemetryModule.objects.get_or_create(
+            imei=module_data['imei'],
+            defaults=module_data
+        )
+        
+        # Verifica se já existe uma associação ativa
+        existing_link = DeviceTelemetryModule.objects.filter(
+            device=device,
+            module=module,
+            is_linked=True
+        ).first()
+        
+        if not existing_link:
+            # Desativa qualquer link anterior do device
+            DeviceTelemetryModule.objects.filter(
+                device=device,
+                is_linked=True
+            ).update(is_linked=False, unlinked_at=timezone.now())
+            
+            # Desativa qualquer link anterior do module
+            DeviceTelemetryModule.objects.filter(
+                module=module,
+                is_linked=True
+            ).update(is_linked=False, unlinked_at=timezone.now())
+            
+            # Cria nova associação
+            link = DeviceTelemetryModule.objects.create(
+                device=device,
+                module=module,
+                linked_at=timezone.now(),
+                is_linked=True
+            )
+        else:
+            link = existing_link
+        
+        return {
+            'device': device,
+            'module': module,
+            'link': link,
+            'device_created': device_created,
+            'module_created': module_created
+        }
+
+
+@extend_schema_serializer(
+    component_name="WebDeviceWithTelemetryResponse",
+    examples=[
+        {
+            "device": {
+                "id": 1,
+                "serial": "ABC123XYZ456",
+                "model": "Model X Pro",
+                "locked": False,
+                "tested": False,
+                "sent": False,
+                "sold": False
+            },
+            "module": {
+                "id": 1,
+                "imei": "123456789012345",
+                "icc_id": "12345678901234567890",
+                "modelo": "GPS-V1"
+            },
+            "device_created": True,
+            "module_created": True,
+            "link_id": 1
+        }
+    ]
+)
+class DeviceWithTelemetryResponseSerializer(serializers.Serializer):
+    """Serializer para resposta da criação de device + telemetry module"""
+    device = DeviceSerializer(
+        help_text="Dados completos do device criado ou recuperado"
+    )
+    module = TelemetryModuleSerializer(
+        help_text="Dados completos do módulo de telemetria criado ou recuperado"
+    )
+    device_created = serializers.BooleanField(
+        help_text="True se o device foi criado, False se já existia"
+    )
+    module_created = serializers.BooleanField(
+        help_text="True se o módulo foi criado, False se já existia"
+    )
+    link_id = serializers.IntegerField(
+        help_text="ID da associação entre device e módulo de telemetria"
+    )
