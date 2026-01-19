@@ -25,13 +25,13 @@ class ProfileSerializer(serializers.ModelSerializer):
             "email_confirmed", "email_confirmed_at", "invited_at",
             "confirmation_token", "confirmation_sent_at", 
             "recovery_token", "recovery_token_sent_at", "clickhouse_id",
-            "profile_image_url"
+            "factory_mode", "profile_image_url"
         )
         read_only_fields = (
             "email_confirmed", "email_confirmed_at", "invited_at",
             "confirmation_token", "confirmation_sent_at", 
             "recovery_token", "recovery_token_sent_at", "clickhouse_id",
-            "profile_image_url"
+            "factory_mode", "profile_image_url"
         )
     
     def get_profile_image_url(self, obj) -> str:
