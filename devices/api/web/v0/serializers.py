@@ -387,7 +387,11 @@ class DeviceWithTelemetryCreateSerializer(serializers.Serializer):
             'module_created': module_created
         }
 
-OpenApiExample(
+
+@extend_schema_serializer(
+    component_name="WebDeviceWithTelemetryResponse",
+    examples=[
+        OpenApiExample(
             "Exemplo de resposta",
             value={
                 "device": {
@@ -410,11 +414,7 @@ OpenApiExample(
                 "link_id": 1
             },
             response_only=True
-        )   },
-            "device_created": True,
-            "module_created": True,
-            "link_id": 1
-        }
+        )
     ]
 )
 class DeviceWithTelemetryResponseSerializer(serializers.Serializer):
