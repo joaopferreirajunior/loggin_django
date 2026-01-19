@@ -83,7 +83,9 @@
             {% csrf_token %}
             <input type="text" name="username" placeholder="Usuário" required>
             <input type="email" name="email" placeholder="E-mail" required>
-            <input type="text" name="cpf" placeholder="CPF (ex: 000.000.000-00)">
+            <input type="text" name="first_name" placeholder="Nome" required>
+            <input type="text" name="last_name" placeholder="Sobrenome" required>
+            <input type="text" name="cpf" placeholder="CPF (ex: 000.000.000-00)" required>
             <input type="date" name="birth" placeholder="Data de nascimento">
             <input type="tel" name="phone" placeholder="(xx) xxxxx-xxxx">
             <input type="password" id="password" name="password" placeholder="Senha" required>
