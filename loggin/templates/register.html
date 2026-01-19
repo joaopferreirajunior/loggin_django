@@ -45,6 +45,13 @@
             text-align: center;
         }
 
+        .field-error {
+            font-size: 12px;
+            margin-top: -8px;
+            margin-bottom: 8px;
+            text-align: left;
+        }
+
         button {
             background-color: #5cb85c;
             color: white;
@@ -81,16 +88,34 @@
 
         <form id="registerForm" method="post">
             {% csrf_token %}
-            <input type="text" name="username" placeholder="Usuário" required>
-            <input type="email" name="email" placeholder="E-mail" required>
-            <input type="text" name="first_name" placeholder="Nome" required>
-            <input type="text" name="last_name" placeholder="Sobrenome" required>
-            <input type="text" name="cpf" placeholder="CPF (ex: 000.000.000-00)" required>
-            <input type="date" name="birth" placeholder="Data de nascimento">
-            <input type="tel" name="phone" placeholder="(xx) xxxxx-xxxx">
+            
+            <input type="text" name="username" placeholder="Usuário" value="{{ form_data.username|default:'' }}" required>
+            {% if errors.username %}<div class="error field-error">{{ errors.username }}</div>{% endif %}
+            
+            <input type="email" name="email" placeholder="E-mail" value="{{ form_data.email|default:'' }}" required>
+            {% if errors.email %}<div class="error field-error">{{ errors.email }}</div>{% endif %}
+            
+            <input type="text" name="first_name" placeholder="Nome" value="{{ form_data.first_name|default:'' }}" required>
+            {% if errors.first_name %}<div class="error field-error">{{ errors.first_name }}</div>{% endif %}
+            
+            <input type="text" name="last_name" placeholder="Sobrenome" value="{{ form_data.last_name|default:'' }}" required>
+            {% if errors.last_name %}<div class="error field-error">{{ errors.last_name }}</div>{% endif %}
+            
+            <input type="text" name="cpf" placeholder="CPF (ex: 000.000.000-00)" value="{{ form_data.cpf|default:'' }}" required>
+            {% if errors.cpf %}<div class="error field-error">{{ errors.cpf }}</div>{% endif %}
+            
+            <input type="date" name="birth" value="{{ form_data.birth|default:'' }}">
+            {% if errors.birth %}<div class="error field-error">{{ errors.birth }}</div>{% endif %}
+            
+            <input type="tel" name="phone" placeholder="(xx) xxxxx-xxxx" value="{{ form_data.phone|default:'' }}">
+            {% if errors.phone %}<div class="error field-error">{{ errors.phone }}</div>{% endif %}
+            
             <input type="password" id="password" name="password" placeholder="Senha" required>
+            {% if errors.password %}<div class="error field-error">{{ errors.password }}</div>{% endif %}
+            
             <input type="password" id="confirm_password" placeholder="Confirmar Senha" required>
             <div class="error" id="passwordError" style="display:none;">As senhas não coincidem.</div>
+            
             <button type="submit">Cadastrar</button>
         </form>
 

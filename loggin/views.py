@@ -59,6 +59,8 @@ def register_page(request):
         username = request.POST.get("username")
         email = request.POST.get("email")
         password = request.POST.get("password")
+        first_name = request.POST.get("first_name")
+        last_name = request.POST.get("last_name")
         cpf = request.POST.get("cpf")
         birth = request.POST.get("birth")
         phone = request.POST.get("phone")
@@ -71,10 +73,15 @@ def register_page(request):
             api_url = request.build_absolute_uri("/users/api/web/v0/register/")
 
         try:
-            payload = {"username": username, "email": email, "password": password}
+            payload = {
+                "username": username, 
+                "email": email, 
+                "password": password,
+                "first_name": first_name,
+                "last_name": last_name,
+                "cpf": cpf
+            }
             # adiciona campos opcionais se presentes
-            if cpf:
-                payload["cpf"] = cpf
             if birth:
                 payload["birth"] = birth
             if phone:
@@ -107,15 +114,31 @@ def register_page(request):
                     login(request, user)
                 return redirect("home")
 
-            # montar mensagem de erro vinda da API
-            error_msg = (
-                (isinstance(data.get("username"), list) and data["username"][0]) or data.get("username") or
-                (isinstance(data.get("email"), list) and data["email"][0]) or data.get("email") or
-                (isinstance(data.get("password"), list) and data["password"][0]) or data.get("password") or
-                data.get("detail") or
-                f"Erro HTTP {resp.status_code}"
-            )
-            return render(request, "register.html", {"error": str(error_msg)})
+            # Processar erros específicos de cada campo
+            errors = {}
+            if isinstance(data, dict):
+                for field, messages in data.items():
+                    if isinstance(messages, list):
+                        errors[field] = messages[0]
+                    else:
+                        errors[field] = str(messages)
+            
+            # Manter valores preenchidos
+            form_data = {
+                "username": username,
+                "email": email,
+                "first_name": first_name,
+                "last_name": last_name,
+                "cpf": cpf,
+                "birth": birth,
+                "phone": phone
+            }
+            
+            return render(request, "register.html", {
+                "errors": errors,
+                "form_data": form_data,
+                "error": errors.get("detail") or "Corrija os erros abaixo."
+            })
 
         except requests.RequestException as e:
             return render(request, "register.html", {"error": f"Erro de conexão com a API: {e}"})
