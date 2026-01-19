@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from devices.models import Device, TelemetryModule, DeviceTelemetryModule, DeviceLocation, DeviceEvent
-from drf_spectacular.utils import extend_schema_serializer
+from drf_spectacular.utils import extend_schema_serializer, OpenApiExample
 
 
 @extend_schema_serializer(component_name="WebDevice")
@@ -279,13 +279,17 @@ class DeviceEventSerializer(serializers.ModelSerializer):
 @extend_schema_serializer(
     component_name="WebDeviceWithTelemetryCreate",
     examples=[
-        {
-            "serial": "ABC123XYZ456",
-            "model": "Model X Pro",
-            "imei": "123456789012345",
-            "icc_id": "12345678901234567890",
-            "gps_model": "GPS-V1"
-        }
+        OpenApiExample(
+            "Exemplo de criação",
+            value={
+                "serial": "ABC123XYZ456",
+                "model": "Model X Pro",
+                "imei": "123456789012345",
+                "icc_id": "12345678901234567890",
+                "gps_model": "GPS-V1"
+            },
+            request_only=True
+        )
     ]
 )
 class DeviceWithTelemetryCreateSerializer(serializers.Serializer):
@@ -383,26 +387,30 @@ class DeviceWithTelemetryCreateSerializer(serializers.Serializer):
             'module_created': module_created
         }
 
-
-@extend_schema_serializer(
-    component_name="WebDeviceWithTelemetryResponse",
-    examples=[
-        {
-            "device": {
-                "id": 1,
-                "serial": "ABC123XYZ456",
-                "model": "Model X Pro",
-                "locked": False,
-                "tested": False,
-                "sent": False,
-                "sold": False
+OpenApiExample(
+            "Exemplo de resposta",
+            value={
+                "device": {
+                    "id": 1,
+                    "serial": "ABC123XYZ456",
+                    "model": "Model X Pro",
+                    "locked": False,
+                    "tested": False,
+                    "sent": False,
+                    "sold": False
+                },
+                "module": {
+                    "id": 1,
+                    "imei": "123456789012345",
+                    "icc_id": "12345678901234567890",
+                    "modelo": "GPS-V1"
+                },
+                "device_created": True,
+                "module_created": True,
+                "link_id": 1
             },
-            "module": {
-                "id": 1,
-                "imei": "123456789012345",
-                "icc_id": "12345678901234567890",
-                "modelo": "GPS-V1"
-            },
+            response_only=True
+        )   },
             "device_created": True,
             "module_created": True,
             "link_id": 1
