@@ -45,7 +45,7 @@ class Profile(AuditModel):
     confirmation_sent_at   = models.DateTimeField(null=True, blank=True)
     recovery_token         = models.TextField(null=True, blank=True)
     recovery_token_sent_at = models.DateTimeField(null=True, blank=True)
-    clickhouse_id = models.UUIDField(null=True, blank=True, db_index=True, help_text="UUID do usuário no ClickHouse")
+    legacy_id = models.UUIDField(null=True, blank=True, db_index=True, help_text="UUID do usuário no sistema legado")
     factory_mode = models.BooleanField(default=False, help_text="Indica se o usuário pode acessar o modo fábrica")
     
     # Imagem de perfil - armazena apenas o path/key do S3
