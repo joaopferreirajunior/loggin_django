@@ -386,7 +386,7 @@ class DeviceGlobalLocationsView(APIView):
             
             result.append({
                 'serial': device.serial,
-                'model': device.model,
+                'model': device.device_model.name if device.device_model else None,
                 'imei': imei,
                 'latitude': latest_location.latitude,
                 'longitude': latest_location.longitude,
@@ -559,7 +559,7 @@ class DeviceLocationsView(APIView):
             device_metadata = {
                 'name': None,
                 'brand': None,
-                'model': device.model,
+                'model': device.device_model.name if device.device_model else None,
                 'serial': device.serial,
                 'imei': module.imei,
                 'locked': device.locked,
