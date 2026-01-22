@@ -606,3 +606,7 @@ curl -X POST http://3.236.36.55:8000/devices/api/mobile/v0/devices/ \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer SEU_TOKEN_AQUI" \
   -d '{"serial": "TEST-WEBER", "model": "Ultramed MPT"}'
+
+  curl -X GET "http://3.236.36.55:8000/devices/api/web/v0/locations/" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzY4NTA4MDU0LCJpYXQiOjE3Njg1MDc3NTQsImp0aSI6IjQyNjdjN2NlMDA0ZjRiNDJhYjI1NTlhMjM4YTU0NmE1IiwidXNlcl9pZCI6IjQifQ.1qmIgMkGwAO7Rx3yw8a7VCAo2-_yaq1b61Am77ug7rc" \
+  -H "Content-Type: application/json"

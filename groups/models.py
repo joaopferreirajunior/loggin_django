@@ -48,6 +48,11 @@ class Clinic(AuditModel):
         related_name="clinics",
         help_text="Grupo ao qual a clínica pertence"
     )
+    address = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Endereço da clínica"
+    )
     
     # ClinicData - Campos obrigatórios da clínica
     cpf_cnpj = models.CharField(

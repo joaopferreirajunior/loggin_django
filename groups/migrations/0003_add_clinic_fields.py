@@ -74,7 +74,11 @@ class Migration(migrations.Migration):
             name='time_zone',
             field=models.CharField(blank=True, default='America/Sao_Paulo', help_text='Fuso horário (ex: America/Sao_Paulo)', max_length=50, null=True),
         ),
-        
+        migrations.AddField(
+            model_name='clinic',
+            name='clinic_image',
+            field=models.CharField(blank=True, help_text='Path da imagem da clínica no bucket S3 (ex: clinics/clinic_123/image.jpg)', max_length=500, null=True),
+        ),
         # BankData - Campos opcionais
         migrations.AddField(
             model_name='clinic',
@@ -106,7 +110,5 @@ class Migration(migrations.Migration):
             name='account_type',
             field=models.CharField(blank=True, choices=[('CHECKING', 'Conta Corrente'), ('SAVINGS', 'Conta Poupança')], help_text='Tipo da conta bancária', max_length=10, null=True),
         ),
-        
-        # clinic_image já existe, então não adicionar
-        # Apenas garantir que está com as especificações corretas se necessário
+       
     ]
