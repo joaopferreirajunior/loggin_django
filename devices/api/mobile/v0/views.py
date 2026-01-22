@@ -1,16 +1,23 @@
-from rest_framework import generics, status
+from rest_framework import generics, status, viewsets
 from rest_framework.views import APIView
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.db import models
 from drf_spectacular.utils import extend_schema, OpenApiResponse
-from devices.models import Device, TelemetryModule, DeviceTelemetryModule, DeviceLocation
+from devices.models import (
+    Device, TelemetryModule, DeviceTelemetryModule, DeviceLocation,
+    DeviceModel, DeviceFeatures, DeviceLease
+)
 from .serializers import (
-    MobileDeviceSerializer, MobileDeviceCreateSerializer, MobileTelemetryModuleSerializer,
-    MobileTelemetryModuleCreateSerializer, MobileDeviceTelemetryModuleSerializer,
-    MobileDeviceTelemetryModuleLinkSerializer, MobileDeviceLocationCreateSerializer,
-    MobileDeviceLocationSerializer, MobileDeviceGlobalLocationSerializer
+    MobileDeviceSerializer, MobileDeviceDetailSerializer, MobileDeviceCreateSerializer,
+    MobileTelemetryModuleSerializer, MobileTelemetryModuleCreateSerializer,
+    MobileDeviceTelemetryModuleSerializer, MobileDeviceTelemetryModuleLinkSerializer,
+    MobileDeviceLocationCreateSerializer, MobileDeviceLocationSerializer,
+    MobileDeviceGlobalLocationSerializer, MobileDeviceModelSerializer,
+    MobileDeviceFeaturesSerializer, MobileDeviceLeaseSerializer
 )
 
 
@@ -401,3 +408,110 @@ class MobileDeviceLocationsListView(APIView):
         
         serializer = MobileDeviceLocationSerializer(locations, many=True)
         return Response(serializer.data)
+
+
+# ============================================
+# VIEWSETS MOBILE PARA NOVOS MODELOS
+# ============================================
+
+class MobileDeviceViewSet(viewsets.ModelViewSet):
+    """ViewSet mobile para CRUD de Device"""
+    queryset = Device.objects.filter(is_active=True).select_related('device_model')
+    serializer_class = MobileDeviceSerializer
+    permission_classes = [IsAuthenticated]
+    
+    @extend_schema(
+        operation_id="mobile_device_details",
+        summary="Detalhes completos do device (Mobile)",
+        description="Retorna informações completas do device incluindo files no deviceFeatures",
+        responses={200: MobileDeviceDetailSerializer},
+        tags=["Mobile - Devices"]
+    )
+    @action(detail=True, methods=['get'])
+    def details(self, request, pk=None):
+        """Retorna detalhes completos do device COM files"""
+        device = self.get_object()
+        serializer = MobileDeviceDetailSerializer(device)
+        return Response(serializer.data)
+    
+    @extend_schema(
+        operation_id="mobile_device_lease",
+        summary="Lease ativo do device (Mobile)",
+        description="Retorna o lease atualmente ativo do device (se houver)",
+        responses={
+            200: MobileDeviceLeaseSerializer,
+            404: OpenApiResponse(description="Nenhum lease ativo encontrado")
+        },
+        tags=["Mobile - Devices"]
+    )
+    @action(detail=True, methods=['get'])
+    def lease(self, request, pk=None):
+        """Retorna o lease ativo do device"""
+        device = self.get_object()
+        active_lease = device.leases.filter(
+            is_active=True,
+            start_date__lte=timezone.now()
+        ).filter(
+            models.Q(end_date__isnull=True) | models.Q(end_date__gte=timezone.now())
+        ).first()
+        
+        if not active_lease:
+            return Response(
+                {"detail": "Nenhum lease ativo encontrado para este device"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        serializer = MobileDeviceLeaseSerializer(active_lease)
+        return Response(serializer.data)
+
+
+class MobileDeviceModelViewSet(viewsets.ModelViewSet):
+    """ViewSet mobile para CRUD de DeviceModel"""
+    queryset = DeviceModel.objects.filter(is_active=True)
+    serializer_class = MobileDeviceModelSerializer
+    permission_classes = [IsAuthenticated]
+    
+    @extend_schema(
+        operation_id="mobile_device_model_features",
+        summary="Features do modelo (Mobile)",
+        description="Lista todos os DeviceFeatures (arquivos/documentos) de um modelo específico",
+        responses={200: MobileDeviceFeaturesSerializer(many=True)},
+        tags=["Mobile - Device Models"]
+    )
+    @action(detail=True, methods=['get'])
+    def features(self, request, pk=None):
+        """Lista todas as features do modelo"""
+        device_model = self.get_object()
+        features = device_model.features.filter(is_active=True).order_by('order', 'title')
+        serializer = MobileDeviceFeaturesSerializer(features, many=True)
+        return Response(serializer.data)
+
+
+class MobileDeviceFeaturesViewSet(viewsets.ModelViewSet):
+    """ViewSet mobile para CRUD de DeviceFeatures"""
+    queryset = DeviceFeatures.objects.filter(is_active=True).select_related('device_model')
+    serializer_class = MobileDeviceFeaturesSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        """Permite filtrar por deviceModel via query param"""
+        queryset = super().get_queryset()
+        device_model_id = self.request.query_params.get('deviceModel', None)
+        if device_model_id:
+            queryset = queryset.filter(device_model_id=device_model_id)
+        return queryset.order_by('order', 'title')
+
+
+class MobileDeviceLeaseViewSet(viewsets.ModelViewSet):
+    """ViewSet mobile para CRUD de DeviceLease"""
+    queryset = DeviceLease.objects.filter(is_active=True).select_related('device', 'user')
+    serializer_class = MobileDeviceLeaseSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        """Permite filtrar por device via query param"""
+        queryset = super().get_queryset()
+        device_id = self.request.query_params.get('device', None)
+        if device_id:
+            queryset = queryset.filter(device_id=device_id)
+        return queryset.order_by('-start_date')

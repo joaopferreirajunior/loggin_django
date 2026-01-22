@@ -1,26 +1,139 @@
 from rest_framework import serializers
-from devices.models import Device, TelemetryModule, DeviceTelemetryModule, DeviceLocation
+from devices.models import (
+    Device, TelemetryModule, DeviceTelemetryModule, DeviceLocation,
+    DeviceModel, DeviceFeatures, DeviceLease
+)
 from drf_spectacular.utils import extend_schema_serializer
 
 
-@extend_schema_serializer(component_name="MobileDevice")
-class MobileDeviceSerializer(serializers.ModelSerializer):
-    """Serializer simplificado para Device mobile"""
+# ============================================
+# NOVOS SERIALIZERS MOBILE - DeviceModel, DeviceFeatures, DeviceLease
+# ============================================
+
+@extend_schema_serializer(component_name="MobileDeviceModel")
+class MobileDeviceModelSerializer(serializers.ModelSerializer):
+    """Serializer mobile para DeviceModel (catálogo de modelos)"""
+    iconUrl = serializers.SerializerMethodField()
+    isActive = serializers.BooleanField(source='is_active', read_only=True)
     createdAt = serializers.DateTimeField(source='created', read_only=True)
     updatedAt = serializers.DateTimeField(source='modified', read_only=True)
-    lockedAt = serializers.DateTimeField(source='locked_at', read_only=True)
-    testedAt = serializers.DateTimeField(source='tested_at', read_only=True)
-    soldAt = serializers.DateTimeField(source='sold_at', read_only=True)
+    
+    class Meta:
+        model = DeviceModel
+        fields = ['id', 'name', 'slug', 'iconUrl', 'description', 'isActive', 'createdAt', 'updatedAt']
+        read_only_fields = ['id', 'slug', 'iconUrl', 'createdAt', 'updatedAt']
+    
+    def get_iconUrl(self, obj):
+        """Retorna URL assinada temporária do ícone no S3"""
+        return obj.get_icon_url()
+
+
+@extend_schema_serializer(component_name="MobileDeviceFeatures")
+class MobileDeviceFeaturesSerializer(serializers.ModelSerializer):
+    """Serializer mobile para DeviceFeatures (arquivos e documentação dos modelos)"""
+    fileUrl = serializers.SerializerMethodField()
+    deviceModelName = serializers.CharField(source='device_model.name', read_only=True)
+    deviceModel = serializers.PrimaryKeyRelatedField(source='device_model', queryset=DeviceModel.objects.all())
+    isActive = serializers.BooleanField(source='is_active', read_only=True)
+    createdAt = serializers.DateTimeField(source='created', read_only=True)
+    updatedAt = serializers.DateTimeField(source='modified', read_only=True)
+    
+    class Meta:
+        model = DeviceFeatures
+        fields = [
+            'id', 'deviceModel', 'deviceModelName', 'title', 'description',
+            'fileUrl', 'kind', 'icon', 'order', 'isActive', 'createdAt', 'updatedAt'
+        ]
+        read_only_fields = ['id', 'fileUrl', 'deviceModelName', 'createdAt', 'updatedAt']
+    
+    def get_fileUrl(self, obj):
+        """Retorna URL assinada temporária do arquivo no S3"""
+        return obj.get_file_url()
+
+
+@extend_schema_serializer(component_name="MobileDeviceLease")
+class MobileDeviceLeaseSerializer(serializers.ModelSerializer):
+    """Serializer mobile para DeviceLease (controle de aluguel)"""
+    deviceSerial = serializers.CharField(source='device.serial', read_only=True)
+    userEmail = serializers.CharField(source='user.email', read_only=True, allow_null=True)
+    leaseId = serializers.UUIDField(source='lease_id', read_only=True)
+    startDate = serializers.DateTimeField(source='start_date')
+    endDate = serializers.DateTimeField(source='end_date', allow_null=True, required=False)
+    ratingDelivery = serializers.IntegerField(source='rating_delivery', allow_null=True, required=False)
+    ratingBuy = serializers.IntegerField(source='rating_buy', allow_null=True, required=False)
+    isActive = serializers.BooleanField(source='is_active', read_only=True)
+    createdAt = serializers.DateTimeField(source='created', read_only=True)
+    updatedAt = serializers.DateTimeField(source='modified', read_only=True)
+    
+    class Meta:
+        model = DeviceLease
+        fields = [
+            'id', 'device', 'deviceSerial', 'leaseId', 'startDate', 'endDate',
+            'user', 'userEmail', 'ratingDelivery', 'ratingBuy',
+            'isActive', 'createdAt', 'updatedAt'
+        ]
+        read_only_fields = ['id', 'leaseId', 'deviceSerial', 'userEmail', 'createdAt', 'updatedAt']
+
+
+# ============================================
+# SERIALIZERS DEVICE MOBILE ATUALIZADOS
+# ============================================
+
+@extend_schema_serializer(component_name="MobileDevice")
+class MobileDeviceSerializer(serializers.ModelSerializer):
+    """Serializer simplificado para Device mobile - SEM files no deviceFeatures e SEM lease details"""
+    createdAt = serializers.DateTimeField(source='created', read_only=True)
+    updatedAt = serializers.DateTimeField(source='modified', read_only=True)
+    lockedAt = serializers.SerializerMethodField()
+    testedAt = serializers.SerializerMethodField()
+    soldAt = serializers.SerializerMethodField()
+    sentAt = serializers.SerializerMethodField()
     isActive = serializers.BooleanField(source='is_active', read_only=True)
     telemetryModule = serializers.SerializerMethodField()
+    deviceFeatures = serializers.SerializerMethodField()
+    deviceModelName = serializers.CharField(source='device_model.name', read_only=True, allow_null=True)
+    deviceModel = serializers.PrimaryKeyRelatedField(source='device_model', queryset=DeviceModel.objects.all(), allow_null=True, required=False)
+    ratingDelivery = serializers.IntegerField(source='rating_delivery', allow_null=True, required=False)
+    ratingBuy = serializers.IntegerField(source='rating_buy', allow_null=True, required=False)
     
     class Meta:
         model = Device
         fields = [
-            'id', 'serial', 'model', 'locked', 'lockedAt', 
-            'tested', 'testedAt', 'sold', 'soldAt', 
-            'isActive', 'createdAt', 'updatedAt', 'telemetryModule'
+            'id', 'serial', 'deviceModel', 'deviceModelName', 'name', 'token', 'description',
+            'lease', 'ratingDelivery', 'ratingBuy',
+            'locked', 'lockedAt', 'tested', 'testedAt', 'sent', 'sentAt', 'sold', 'soldAt',
+            'isActive', 'createdAt', 'updatedAt', 'telemetryModule', 'deviceFeatures'
         ]
+        read_only_fields = ['id', 'deviceModelName', 'createdAt', 'updatedAt']
+    
+    def get_deviceFeatures(self, obj):
+        """Retorna model e icon - SEM files"""
+        if obj.device_model:
+            return {
+                "model": obj.device_model.name,
+                "icon": obj.device_model.get_icon_url()
+            }
+        return None
+    
+    def get_lockedAt(self, obj):
+        """Retorna created_at do último evento de locked"""
+        event = obj.events.filter(event='locked').first()
+        return event.created_at if event else None
+    
+    def get_testedAt(self, obj):
+        """Retorna created_at do último evento de tested"""
+        event = obj.events.filter(event='tested').first()
+        return event.created_at if event else None
+    
+    def get_sentAt(self, obj):
+        """Retorna created_at do último evento de sent"""
+        event = obj.events.filter(event='sent').first()
+        return event.created_at if event else None
+    
+    def get_soldAt(self, obj):
+        """Retorna created_at do último evento de sold"""
+        event = obj.events.filter(event='sold').first()
+        return event.created_at if event else None
     
     def get_telemetryModule(self, obj):
         """Retorna informações do módulo de telemetria vinculado"""
@@ -33,6 +146,49 @@ class MobileDeviceSerializer(serializers.ModelSerializer):
                 'modelo': module.modelo
             }
         return None
+
+
+@extend_schema_serializer(component_name="MobileDeviceDetail")
+class MobileDeviceDetailSerializer(MobileDeviceSerializer):
+    """Serializer completo para Device mobile - COM files no deviceFeatures e COM lease details"""
+    leaseStart = serializers.SerializerMethodField()
+    leaseEnd = serializers.SerializerMethodField()
+    
+    class Meta(MobileDeviceSerializer.Meta):
+        fields = MobileDeviceSerializer.Meta.fields + ['leaseStart', 'leaseEnd']
+    
+    def get_leaseStart(self, obj):
+        """Retorna start_date do lease ativo (se houver)"""
+        if obj.lease:
+            return obj.lease.start_date
+        return None
+    
+    def get_leaseEnd(self, obj):
+        """Retorna end_date do lease ativo (se houver)"""
+        if obj.lease:
+            return obj.lease.end_date
+        return None
+    
+    def get_deviceFeatures(self, obj):
+        """Retorna model, icon E files (informações expandidas)"""
+        if obj.device_model:
+            # Serializa todas as features do modelo
+            features_list = MobileDeviceFeaturesSerializer(
+                obj.device_model.features.filter(is_active=True),
+                many=True
+            ).data
+            
+            return {
+                "model": obj.device_model.name,
+                "icon": obj.device_model.get_icon_url(),
+                "files": features_list
+            }
+        return None
+
+
+# ============================================
+# SERIALIZERS EXISTENTES (TelemetryModule, etc)
+# ============================================
 
 
 @extend_schema_serializer(component_name="MobileTelemetryModule")
@@ -59,7 +215,7 @@ class MobileTelemetryModuleSerializer(serializers.ModelSerializer):
             return {
                 'id': device.id,
                 'serial': device.serial,
-                'model': device.model
+                'deviceModelName': device.device_model.name if device.device_model else None
             }
         return None
 
@@ -85,7 +241,7 @@ class MobileDeviceTelemetryModuleSerializer(serializers.ModelSerializer):
         return {
             'id': obj.device.id,
             'serial': obj.device.serial,
-            'model': obj.device.model
+            'deviceModelName': obj.device.device_model.name if obj.device.device_model else None
         }
     
     def get_moduleInfo(self, obj):
@@ -100,10 +256,11 @@ class MobileDeviceTelemetryModuleSerializer(serializers.ModelSerializer):
 @extend_schema_serializer(component_name="MobileDeviceCreate")
 class MobileDeviceCreateSerializer(serializers.ModelSerializer):
     """Serializer mobile para criação de Device"""
+    deviceModel = serializers.PrimaryKeyRelatedField(source='device_model', queryset=DeviceModel.objects.all(), allow_null=True, required=False)
     
     class Meta:
         model = Device
-        fields = ['serial', 'model']
+        fields = ['serial', 'deviceModel', 'name', 'token', 'secret', 'description']
     
     def validate_serial(self, value):
         """Validação customizada para serial único"""

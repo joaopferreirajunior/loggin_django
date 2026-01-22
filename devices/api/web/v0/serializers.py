@@ -1,12 +1,75 @@
 from rest_framework import serializers
-from devices.models import Device, TelemetryModule, DeviceTelemetryModule, DeviceLocation, DeviceEvent
+from devices.models import (
+    Device, TelemetryModule, DeviceTelemetryModule, DeviceLocation, 
+    DeviceEvent, DeviceModel, DeviceFeatures, DeviceLease
+)
 from drf_spectacular.utils import extend_schema_serializer, OpenApiExample
 
 
+# ============================================
+# NOVOS SERIALIZERS - DeviceModel, DeviceFeatures, DeviceLease
+# ============================================
+
+@extend_schema_serializer(component_name="WebDeviceModel")
+class DeviceModelSerializer(serializers.ModelSerializer):
+    """Serializer para DeviceModel (catálogo de modelos)"""
+    icon_url = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = DeviceModel
+        fields = ['id', 'name', 'slug', 'icon_url', 'description', 'is_active', 'created', 'modified']
+        read_only_fields = ['id', 'slug', 'icon_url', 'created', 'modified']
+    
+    def get_icon_url(self, obj):
+        """Retorna URL assinada temporária do ícone no S3"""
+        return obj.get_icon_url()
+
+
+@extend_schema_serializer(component_name="WebDeviceFeatures")
+class DeviceFeaturesSerializer(serializers.ModelSerializer):
+    """Serializer para DeviceFeatures (arquivos e documentação dos modelos)"""
+    file_url = serializers.SerializerMethodField()
+    device_model_name = serializers.CharField(source='device_model.name', read_only=True)
+    
+    class Meta:
+        model = DeviceFeatures
+        fields = [
+            'id', 'device_model', 'device_model_name', 'title', 'description', 
+            'file_url', 'kind', 'icon', 'order', 'is_active', 'created', 'modified'
+        ]
+        read_only_fields = ['id', 'file_url', 'device_model_name', 'created', 'modified']
+    
+    def get_file_url(self, obj):
+        """Retorna URL assinada temporária do arquivo no S3"""
+        return obj.get_file_url()
+
+
+@extend_schema_serializer(component_name="WebDeviceLease")
+class DeviceLeaseSerializer(serializers.ModelSerializer):
+    """Serializer para DeviceLease (controle de aluguel)"""
+    device_serial = serializers.CharField(source='device.serial', read_only=True)
+    user_email = serializers.CharField(source='user.email', read_only=True, allow_null=True)
+    
+    class Meta:
+        model = DeviceLease
+        fields = [
+            'id', 'device', 'device_serial', 'lease_id', 'start_date', 'end_date',
+            'user', 'user_email', 'rating_delivery', 'rating_buy',
+            'is_active', 'created', 'modified'
+        ]
+        read_only_fields = ['id', 'lease_id', 'device_serial', 'user_email', 'created', 'modified']
+
+
+# ============================================
+# SERIALIZERS DEVICE ATUALIZADOS
+# ============================================
+
 @extend_schema_serializer(component_name="WebDevice")
 class DeviceSerializer(serializers.ModelSerializer):
-    """Serializer básico para Device"""
+    """Serializer básico para Device - SEM files no deviceFeatures e SEM lease details"""
     telemetry_module = serializers.SerializerMethodField()
+    deviceFeatures = serializers.SerializerMethodField()
+    device_model_name = serializers.CharField(source='device_model.name', read_only=True, allow_null=True)
     locked_at = serializers.SerializerMethodField()
     tested_at = serializers.SerializerMethodField()
     sent_at = serializers.SerializerMethodField()
@@ -15,10 +78,21 @@ class DeviceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Device
         fields = [
-            'id', 'serial', 'model', 'locked', 'locked_at', 
-            'tested', 'tested_at', 'sent', 'sent_at', 'sold', 'sold_at', 
-            'is_active', 'created', 'modified', 'telemetry_module'
+            'id', 'serial', 'device_model', 'device_model_name', 'name', 'token', 'description',
+            'lease', 'rating_delivery', 'rating_buy',
+            'locked', 'locked_at', 'tested', 'tested_at', 'sent', 'sent_at', 'sold', 'sold_at',
+            'is_active', 'created', 'modified', 'telemetry_module', 'deviceFeatures'
         ]
+        read_only_fields = ['id', 'device_model_name', 'created', 'modified']
+    
+    def get_deviceFeatures(self, obj):
+        """Retorna model e icon - SEM files"""
+        if obj.device_model:
+            return {
+                "model": obj.device_model.name,
+                "icon": obj.device_model.get_icon_url()
+            }
+        return None
     
     def get_locked_at(self, obj):
         """Retorna created_at do último evento de locked"""
@@ -53,6 +127,48 @@ class DeviceSerializer(serializers.ModelSerializer):
         return None
 
 
+@extend_schema_serializer(component_name="WebDeviceDetail")
+class DeviceDetailSerializer(DeviceSerializer):
+    """Serializer completo para Device - COM files no deviceFeatures e COM lease details"""
+    lease_start = serializers.SerializerMethodField()
+    lease_end = serializers.SerializerMethodField()
+    
+    class Meta(DeviceSerializer.Meta):
+        fields = DeviceSerializer.Meta.fields + ['lease_start', 'lease_end']
+    
+    def get_lease_start(self, obj):
+        """Retorna start_date do lease ativo (se houver)"""
+        if obj.lease:
+            return obj.lease.start_date
+        return None
+    
+    def get_lease_end(self, obj):
+        """Retorna end_date do lease ativo (se houver)"""
+        if obj.lease:
+            return obj.lease.end_date
+        return None
+    
+    def get_deviceFeatures(self, obj):
+        """Retorna model, icon E files (informações expandidas)"""
+        if obj.device_model:
+            # Serializa todas as features do modelo
+            features_list = DeviceFeaturesSerializer(
+                obj.device_model.features.filter(is_active=True),
+                many=True
+            ).data
+            
+            return {
+                "model": obj.device_model.name,
+                "icon": obj.device_model.get_icon_url(),
+                "files": features_list
+            }
+        return None
+
+
+# ============================================
+# SERIALIZERS EXISTENTES (TelemetryModule, etc)
+# ============================================
+
 @extend_schema_serializer(component_name="WebTelemetryModule")
 class TelemetryModuleSerializer(serializers.ModelSerializer):
     """Serializer para TelemetryModule"""
@@ -72,7 +188,7 @@ class TelemetryModuleSerializer(serializers.ModelSerializer):
             return {
                 'id': device.id,
                 'serial': device.serial,
-                'model': device.model
+                'device_model_name': device.device_model.name if device.device_model else None
             }
         return None
 
@@ -95,7 +211,7 @@ class DeviceTelemetryModuleSerializer(serializers.ModelSerializer):
         return {
             'id': obj.device.id,
             'serial': obj.device.serial,
-            'model': obj.device.model
+            'device_model_name': obj.device.device_model.name if obj.device.device_model else None
         }
     
     def get_module_info(self, obj):
@@ -113,7 +229,7 @@ class DeviceCreateSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Device
-        fields = ['serial', 'model']
+        fields = ['serial', 'device_model', 'name', 'token', 'secret', 'description']
     
     def validate_serial(self, value):
         """Validação customizada para serial único"""
@@ -283,7 +399,7 @@ class DeviceEventSerializer(serializers.ModelSerializer):
             "Exemplo de criação",
             value={
                 "serial": "ABC123XYZ456",
-                "model": "Model X Pro",
+                "device_model_id": 1,
                 "imei": "123456789012345",
                 "icc_id": "12345678901234567890",
                 "gps_model": "GPS-V1"
@@ -300,10 +416,10 @@ class DeviceWithTelemetryCreateSerializer(serializers.Serializer):
         max_length=22,
         help_text="Número de série do device. Se já existir, usa o device existente."
     )
-    model = serializers.CharField(
-        max_length=24,
-        default="undefined",
-        help_text="Modelo do device (ex: Model X Pro, Device V2)"
+    device_model_id = serializers.IntegerField(
+        required=False,
+        allow_null=True,
+        help_text="ID do DeviceModel (opcional)"
     )
     
     # Campos do TelemetryModule
@@ -327,8 +443,15 @@ class DeviceWithTelemetryCreateSerializer(serializers.Serializer):
         # Extrai dados do device
         device_data = {
             'serial': validated_data['serial'],
-            'model': validated_data.get('model', 'undefined')
         }
+        
+        device_model_id = validated_data.get('device_model_id')
+        if device_model_id:
+            try:
+                device_model = DeviceModel.objects.get(id=device_model_id)
+                device_data['device_model'] = device_model
+            except DeviceModel.DoesNotExist:
+                pass
         
         # Extrai dados do module
         module_data = {
@@ -397,7 +520,7 @@ class DeviceWithTelemetryCreateSerializer(serializers.Serializer):
                 "device": {
                     "id": 1,
                     "serial": "ABC123XYZ456",
-                    "model": "Model X Pro",
+                    "device_model": 1,
                     "locked": False,
                     "tested": False,
                     "sent": False,
@@ -441,7 +564,7 @@ class DeviceMetadataSerializer(serializers.Serializer):
     """Serializer para metadados do device"""
     name = serializers.CharField(allow_null=True)
     brand = serializers.CharField(allow_null=True)
-    model = serializers.CharField()
+    device_model_name = serializers.CharField(allow_null=True)
     serial = serializers.CharField()
     imei = serializers.CharField()
     locked = serializers.BooleanField()

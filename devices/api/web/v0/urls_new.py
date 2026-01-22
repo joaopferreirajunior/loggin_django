@@ -2,7 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
 
-# Router para ViewSets (REST padrão)
+# Router para ViewSets REST
 router = DefaultRouter()
 router.register(r'devices', views.DeviceViewSet, basename='device')
 router.register(r'device-models', views.DeviceModelViewSet, basename='devicemodel')
@@ -10,10 +10,10 @@ router.register(r'device-features', views.DeviceFeaturesViewSet, basename='devic
 router.register(r'device-leases', views.DeviceLeaseViewSet, basename='devicelease')
 
 urlpatterns = [
-    # ViewSets - inclui rotas automáticas REST
+    # ViewSets registrados no router (gera endpoints REST automaticamente)
     path('', include(router.urls)),
     
-    # Device endpoints - Views customizadas (mantidas para compatibilidade)
+    # Device endpoints (views antigas - manter compatibilidade se necessário)
     path('devices/with-telemetry/', views.DeviceWithTelemetryCreateView.as_view(), name='device_with_telemetry_create'),
     path('devices/<uuid:device_id>/events/', views.DeviceEventCreateView.as_view(), name='device_event_create'),
     path('devices/<uuid:device_id>/events/list/', views.DeviceEventListView.as_view(), name='device_event_list'),

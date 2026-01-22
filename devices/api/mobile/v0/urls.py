@@ -1,10 +1,19 @@
-from django.urls import path
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
 from . import views
 
+# Router para ViewSets mobile (REST padrão)
+router = DefaultRouter()
+router.register(r'devices', views.MobileDeviceViewSet, basename='mobile_device')
+router.register(r'device-models', views.MobileDeviceModelViewSet, basename='mobile_devicemodel')
+router.register(r'device-features', views.MobileDeviceFeaturesViewSet, basename='mobile_devicefeatures')
+router.register(r'device-leases', views.MobileDeviceLeaseViewSet, basename='mobile_devicelease')
+
 urlpatterns = [
-    # Device endpoints (mobile format with camelCase)
-    path('devices/', views.MobileDeviceCreateView.as_view(), name='mobile_device_create'),
-    path('devices/<uuid:deviceId>/', views.MobileDeviceDetailView.as_view(), name='mobile_device_detail'),
+    # ViewSets - inclui rotas automáticas REST
+    path('', include(router.urls)),
+    
+    # Device endpoints - Views customizadas mobile (mantidas para compatibilidade)
     path('devices/<uuid:deviceId>/tested/', views.MobileDeviceTestView.as_view(), name='mobile_device_test'),
     path('devices/<uuid:deviceId>/sold/', views.MobileDeviceSoldView.as_view(), name='mobile_device_sell'),
     

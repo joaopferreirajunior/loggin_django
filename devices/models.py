@@ -2,13 +2,282 @@ from django.db import models
 from django.conf import settings
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils.text import slugify
 from app.utils import AuditModel  # created, modified, is_active
+import uuid
+
+
+class DeviceModel(AuditModel):
+    """Catálogo de modelos de dispositivos (ex: Medidor de Glicose XYZ)"""
+    id = models.AutoField(primary_key=True)
+    name = models.CharField(
+        max_length=200,
+        help_text="Nome do modelo (ex: Medidor de Glicose XYZ)"
+    )
+    slug = models.SlugField(
+        max_length=200,
+        unique=True,
+        db_index=True,
+        help_text="Slug único para URLs (gerado automaticamente do nome)"
+    )
+    icon_url = models.CharField(
+        max_length=500,
+        null=True,
+        blank=True,
+        help_text="Path do ícone no bucket S3 (ex: device-models/slug/icon.png)"
+    )
+    description = models.TextField(
+        null=True,
+        blank=True,
+        help_text="Descrição do modelo"
+    )
+    
+    class Meta:
+        indexes = [
+            models.Index(fields=["slug"]),
+            models.Index(fields=["is_active"]),
+        ]
+        verbose_name = "Device Model"
+        verbose_name_plural = "Device Models"
+    
+    def __str__(self):
+        return self.name
+    
+    def save(self, *args, **kwargs):
+        """Gera slug automaticamente se não existir"""
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+    
+    def get_icon_url(self) -> str:
+        """Retorna URL assinada temporária do ícone no S3"""
+        if self.icon_url:
+            try:
+                from devices.services import S3DeviceFileService
+                s3_service = S3DeviceFileService()
+                presigned_url = s3_service.generate_presigned_url(self.icon_url)
+                return presigned_url
+            except Exception as e:
+                print(f"Erro ao gerar presigned URL para ícone: {e}")
+                return None
+        return None
+    
+    def delete_icon(self):
+        """Remove o ícone do S3 e limpa o campo no banco"""
+        if self.icon_url:
+            try:
+                from devices.services import S3DeviceFileService
+                s3_service = S3DeviceFileService()
+                success, message = s3_service.delete_file(self.icon_url)
+                if success:
+                    self.icon_url = None
+                    self.save()
+                return success
+            except Exception as e:
+                print(f"Erro ao deletar ícone do S3: {e}")
+                return False
+        return True
+
+
+class DeviceFeatures(AuditModel):
+    """Arquivos e documentação dos modelos de dispositivos (manuais, datasheets, firmware, etc)"""
+    id = models.AutoField(primary_key=True)
+    device_model = models.ForeignKey(
+        DeviceModel,
+        on_delete=models.CASCADE,
+        related_name="features",
+        help_text="Modelo de dispositivo ao qual este recurso pertence"
+    )
+    title = models.CharField(
+        max_length=200,
+        help_text="Título do recurso (ex: Manual do Usuário)"
+    )
+    description = models.TextField(
+        null=True,
+        blank=True,
+        help_text="Descrição do recurso"
+    )
+    file_url = models.CharField(
+        max_length=500,
+        null=True,
+        blank=True,
+        help_text="Path do arquivo no bucket S3 (ex: device-features/feature_id/manual.pdf)"
+    )
+    kind = models.CharField(
+        max_length=50,
+        db_index=True,
+        help_text="Tipo do recurso (ex: manual, datasheet, firmware, video)"
+    )
+    icon = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+        help_text="Nome do ícone ou URL"
+    )
+    order = models.IntegerField(
+        default=0,
+        db_index=True,
+        help_text="Ordem de exibição"
+    )
+    
+    class Meta:
+        ordering = ['order', 'title']
+        indexes = [
+            models.Index(fields=["device_model", "order"]),
+            models.Index(fields=["kind"]),
+            models.Index(fields=["is_active"]),
+        ]
+        verbose_name = "Device Feature"
+        verbose_name_plural = "Device Features"
+    
+    def __str__(self):
+        return f"{self.device_model.name} - {self.title}"
+    
+    def get_file_url(self) -> str:
+        """Retorna URL assinada temporária do arquivo no S3"""
+        if self.file_url:
+            try:
+                from devices.services import S3DeviceFileService
+                s3_service = S3DeviceFileService()
+                presigned_url = s3_service.generate_presigned_url(self.file_url)
+                return presigned_url
+            except Exception as e:
+                print(f"Erro ao gerar presigned URL para arquivo: {e}")
+                return None
+        return None
+    
+    def delete_file(self):
+        """Remove o arquivo do S3 e limpa o campo no banco"""
+        if self.file_url:
+            try:
+                from devices.services import S3DeviceFileService
+                s3_service = S3DeviceFileService()
+                success, message = s3_service.delete_file(self.file_url)
+                if success:
+                    self.file_url = None
+                    self.save()
+                return success
+            except Exception as e:
+                print(f"Erro ao deletar arquivo do S3: {e}")
+                return False
+        return True
+
+
+class DeviceLease(AuditModel):
+    """Controle de aluguel/leasing de dispositivos"""
+    id = models.AutoField(primary_key=True)
+    device = models.ForeignKey(
+        'Device',
+        on_delete=models.CASCADE,
+        related_name="leases",
+        help_text="Dispositivo alugado"
+    )
+    lease_id = models.UUIDField(
+        unique=True,
+        default=uuid.uuid4,
+        editable=False,
+        db_index=True,
+        help_text="Identificador único do contrato de aluguel"
+    )
+    start_date = models.DateTimeField(
+        db_index=True,
+        help_text="Data de início do aluguel"
+    )
+    end_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="Data de término do aluguel"
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="device_leases",
+        help_text="Usuário que alugou o dispositivo"
+    )
+    rating_delivery = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Avaliação da entrega (1-5)"
+    )
+    rating_buy = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Avaliação da compra (1-5)"
+    )
+    
+    class Meta:
+        ordering = ['-start_date']
+        indexes = [
+            models.Index(fields=["device", "-start_date"]),
+            models.Index(fields=["lease_id"]),
+            models.Index(fields=["user", "-start_date"]),
+            models.Index(fields=["is_active"]),
+        ]
+        verbose_name = "Device Lease"
+        verbose_name_plural = "Device Leases"
+    
+    def __str__(self):
+        return f"Lease {self.lease_id} - Device {self.device.serial}"
+
 
 class Device(AuditModel):
     """Modelo Device com os campos especificados"""
     id = models.AutoField(primary_key=True)
     serial = models.CharField(max_length=22, db_index=True, default="")
-    model = models.CharField(max_length=24, db_index=True, default="undefined")
+    device_model = models.ForeignKey(
+        DeviceModel,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="devices",
+        db_index=True,
+        help_text="Modelo do dispositivo"
+    )
+    name = models.CharField(
+        max_length=200,
+        null=True,
+        blank=True,
+        help_text="Nome customizado do dispositivo"
+    )
+    token = models.UUIDField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="Token de autenticação do dispositivo"
+    )
+    secret = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        help_text="Chave secreta do dispositivo"
+    )
+    description = models.TextField(
+        null=True,
+        blank=True,
+        help_text="Descrição do dispositivo"
+    )
+    lease = models.ForeignKey(
+        'DeviceLease',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="active_devices",
+        db_index=True,
+        help_text="Contrato de aluguel ativo (se houver)"
+    )
+    rating_delivery = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Avaliação da entrega (1-5)"
+    )
+    rating_buy = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Avaliação da compra (1-5)"
+    )
     locked = models.BooleanField(default=False)
     tested = models.BooleanField(default=False)
     sent = models.BooleanField(default=False)
@@ -18,16 +287,18 @@ class Device(AuditModel):
         indexes = [
             models.Index(fields=["is_active"]),
             models.Index(fields=["serial"]),
-            models.Index(fields=["model"]),
+            models.Index(fields=["device_model"]),
             models.Index(fields=["sold"]),
             models.Index(fields=["locked"]),
             models.Index(fields=["tested"]),
             models.Index(fields=["sent"]),
+            models.Index(fields=["token"]),
+            models.Index(fields=["lease"]),
             models.Index(fields=["created"]),
         ]
     
     def __str__(self):
-        return f"Device {self.serial or self.id} ({self.model})"
+        return f"Device {self.serial or self.id} ({self.device_model.name if self.device_model else 'No Model'})"
     
     def get_current_clinic(self):
         """Retorna a clínica atual do device (se houver)"""

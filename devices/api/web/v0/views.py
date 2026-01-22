@@ -1,19 +1,25 @@
-from rest_framework import generics, status
+from rest_framework import generics, status, viewsets
 from rest_framework.views import APIView
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.db import models
 from drf_spectacular.utils import extend_schema, OpenApiResponse
-from devices.models import Device, TelemetryModule, DeviceTelemetryModule, DeviceLocation, DeviceEvent
+from devices.models import (
+    Device, TelemetryModule, DeviceTelemetryModule, DeviceLocation, 
+    DeviceEvent, DeviceModel, DeviceFeatures, DeviceLease
+)
 from .serializers import (
-    DeviceSerializer, DeviceCreateSerializer, TelemetryModuleSerializer, 
-    TelemetryModuleCreateSerializer, DeviceTelemetryModuleSerializer,
-    DeviceTelemetryModuleLinkSerializer, DeviceLocationCreateSerializer,
-    DeviceLocationSerializer, DeviceGlobalLocationSerializer,
-    DeviceEventCreateSerializer, DeviceEventSerializer,
-    DeviceWithTelemetryCreateSerializer, DeviceWithTelemetryResponseSerializer,
-    LocationsResponseSerializer
+    DeviceSerializer, DeviceDetailSerializer, DeviceCreateSerializer, 
+    TelemetryModuleSerializer, TelemetryModuleCreateSerializer, 
+    DeviceTelemetryModuleSerializer, DeviceTelemetryModuleLinkSerializer,
+    DeviceLocationCreateSerializer, DeviceLocationSerializer, 
+    DeviceGlobalLocationSerializer, DeviceEventCreateSerializer, 
+    DeviceEventSerializer, DeviceWithTelemetryCreateSerializer, 
+    DeviceWithTelemetryResponseSerializer, LocationsResponseSerializer,
+    DeviceModelSerializer, DeviceFeaturesSerializer, DeviceLeaseSerializer
 )
 
 
@@ -598,3 +604,156 @@ class DeviceLocationsView(APIView):
         
         serializer = LocationsResponseSerializer(response_data)
         return Response(serializer.data)
+
+
+# ============================================
+# VIEWSETS REST - DeviceModel, DeviceFeatures, DeviceLease, Device
+# ============================================
+
+class DeviceViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para CRUD de Device
+    
+    list: GET /api/web/v0/devices/ - Lista todos os devices
+    retrieve: GET /api/web/v0/devices/{id}/ - Detalhes de um device (básico - SEM files)
+    create: POST /api/web/v0/devices/ - Criar novo device
+    update: PUT /api/web/v0/devices/{id}/ - Atualizar device completo
+    partial_update: PATCH /api/web/v0/devices/{id}/ - Atualizar device parcial
+    destroy: DELETE /api/web/v0/devices/{id}/ - Deletar device
+    details: GET /api/web/v0/devices/{id}/details/ - Detalhes completos (COM files do deviceFeatures)
+    lease: GET /api/web/v0/devices/{id}/lease/ - Retorna lease ativo do device
+    """
+    queryset = Device.objects.filter(is_active=True).select_related('device_model')
+    serializer_class = DeviceSerializer
+    permission_classes = [IsAuthenticated]
+    
+    @extend_schema(
+        operation_id="device_details",
+        summary="Detalhes completos do device",
+        description="Retorna informações completas do device incluindo files no deviceFeatures",
+        responses={200: DeviceDetailSerializer},
+        tags=["Web - Devices"]
+    )
+    @action(detail=True, methods=['get'])
+    def details(self, request, pk=None):
+        """Retorna detalhes completos do device COM files"""
+        device = self.get_object()
+        serializer = DeviceDetailSerializer(device)
+        return Response(serializer.data)
+    
+    @extend_schema(
+        operation_id="device_lease",
+        summary="Lease ativo do device",
+        description="Retorna o lease atualmente ativo do device (se houver)",
+        responses={
+            200: DeviceLeaseSerializer,
+            404: OpenApiResponse(description="Nenhum lease ativo encontrado")
+        },
+        tags=["Web - Devices"]
+    )
+    @action(detail=True, methods=['get'])
+    def lease(self, request, pk=None):
+        """Retorna o lease ativo do device"""
+        device = self.get_object()
+        active_lease = device.leases.filter(
+            is_active=True,
+            start_date__lte=timezone.now()
+        ).filter(
+            models.Q(end_date__isnull=True) | models.Q(end_date__gte=timezone.now())
+        ).first()
+        
+        if not active_lease:
+            return Response(
+                {"detail": "Nenhum lease ativo encontrado para este device"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        serializer = DeviceLeaseSerializer(active_lease)
+        return Response(serializer.data)
+
+
+# ============================================
+# VIEWSETS PARA NOVOS MODELOS
+# ============================================
+
+class DeviceModelViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para CRUD de DeviceModel (catálogo de modelos)
+    
+    list: GET /api/web/v0/device-models/ - Lista todos os modelos
+    retrieve: GET /api/web/v0/device-models/{id}/ - Detalhes de um modelo
+    create: POST /api/web/v0/device-models/ - Criar novo modelo
+    update: PUT /api/web/v0/device-models/{id}/ - Atualizar modelo completo
+    partial_update: PATCH /api/web/v0/device-models/{id}/ - Atualizar modelo parcial
+    destroy: DELETE /api/web/v0/device-models/{id}/ - Deletar modelo
+    features: GET /api/web/v0/device-models/{id}/features/ - Lista DeviceFeatures do modelo
+    """
+    queryset = DeviceModel.objects.filter(is_active=True)
+    serializer_class = DeviceModelSerializer
+    permission_classes = [IsAuthenticated]
+    
+    @extend_schema(
+        operation_id="device_model_features",
+        summary="Features do modelo",
+        description="Lista todos os DeviceFeatures (arquivos/documentos) de um modelo específico",
+        responses={200: DeviceFeaturesSerializer(many=True)},
+        tags=["Web - Device Models"]
+    )
+    @action(detail=True, methods=['get'])
+    def features(self, request, pk=None):
+        """Lista todas as features do modelo"""
+        device_model = self.get_object()
+        features = device_model.features.filter(is_active=True).order_by('order', 'title')
+        serializer = DeviceFeaturesSerializer(features, many=True)
+        return Response(serializer.data)
+
+
+class DeviceFeaturesViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para CRUD de DeviceFeatures (arquivos/documentos dos modelos)
+    
+    list: GET /api/web/v0/device-features/ - Lista todas as features
+    retrieve: GET /api/web/v0/device-features/{id}/ - Detalhes de uma feature
+    create: POST /api/web/v0/device-features/ - Criar nova feature
+    update: PUT /api/web/v0/device-features/{id}/ - Atualizar feature completo
+    partial_update: PATCH /api/web/v0/device-features/{id}/ - Atualizar feature parcial
+    destroy: DELETE /api/web/v0/device-features/{id}/ - Deletar feature
+    """
+    queryset = DeviceFeatures.objects.filter(is_active=True).select_related('device_model')
+    serializer_class = DeviceFeaturesSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        """Permite filtrar por device_model via query param"""
+        queryset = super().get_queryset()
+        device_model_id = self.request.query_params.get('device_model', None)
+        if device_model_id:
+            queryset = queryset.filter(device_model_id=device_model_id)
+        return queryset.order_by('order', 'title')
+
+
+class DeviceLeaseViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para CRUD de DeviceLease (controle de aluguel)
+    
+    list: GET /api/web/v0/device-leases/ - Lista todos os leases
+    retrieve: GET /api/web/v0/device-leases/{id}/ - Detalhes de um lease
+    create: POST /api/web/v0/device-leases/ - Criar novo lease
+    update: PUT /api/web/v0/device-leases/{id}/ - Atualizar lease completo
+    partial_update: PATCH /api/web/v0/device-leases/{id}/ - Atualizar lease parcial
+    destroy: DELETE /api/web/v0/device-leases/{id}/ - Deletar lease
+    
+    Filtros disponíveis:
+    - device: filtra por ID do device (ex: ?device=1)
+    """
+    queryset = DeviceLease.objects.filter(is_active=True).select_related('device', 'user')
+    serializer_class = DeviceLeaseSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        """Permite filtrar por device via query param"""
+        queryset = super().get_queryset()
+        device_id = self.request.query_params.get('device', None)
+        if device_id:
+            queryset = queryset.filter(device_id=device_id)
+        return queryset.order_by('-start_date')
