@@ -610,6 +610,7 @@ class DeviceLocationsView(APIView):
 # VIEWSETS REST - DeviceModel, DeviceFeatures, DeviceLease, Device
 # ============================================
 
+@extend_schema(tags=["Web - Devices"])
 class DeviceViewSet(viewsets.ModelViewSet):
     """
     ViewSet para CRUD de Device

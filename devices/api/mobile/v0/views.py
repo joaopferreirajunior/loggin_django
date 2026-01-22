@@ -414,6 +414,7 @@ class MobileDeviceLocationsListView(APIView):
 # VIEWSETS MOBILE PARA NOVOS MODELOS
 # ============================================
 
+@extend_schema(tags=["Mobile - Devices"])
 class MobileDeviceViewSet(viewsets.ModelViewSet):
     """ViewSet mobile para CRUD de Device"""
     queryset = Device.objects.filter(is_active=True).select_related('device_model')
