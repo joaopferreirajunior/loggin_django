@@ -465,6 +465,7 @@ class MobileDeviceViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
+@extend_schema(tags=["Mobile - Device Models"])
 class MobileDeviceModelViewSet(viewsets.ModelViewSet):
     """ViewSet mobile para CRUD de DeviceModel"""
     queryset = DeviceModel.objects.filter(is_active=True)
@@ -487,6 +488,7 @@ class MobileDeviceModelViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
+@extend_schema(tags=["Mobile - Device Features"])
 class MobileDeviceFeaturesViewSet(viewsets.ModelViewSet):
     """ViewSet mobile para CRUD de DeviceFeatures"""
     queryset = DeviceFeatures.objects.filter(is_active=True).select_related('device_model')
@@ -502,6 +504,7 @@ class MobileDeviceFeaturesViewSet(viewsets.ModelViewSet):
         return queryset.order_by('order', 'title')
 
 
+@extend_schema(tags=["Mobile - Device Leases"])
 class MobileDeviceLeaseViewSet(viewsets.ModelViewSet):
     """ViewSet mobile para CRUD de DeviceLease"""
     queryset = DeviceLease.objects.filter(is_active=True).select_related('device', 'user')

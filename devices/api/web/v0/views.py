@@ -676,6 +676,7 @@ class DeviceViewSet(viewsets.ModelViewSet):
 # VIEWSETS PARA NOVOS MODELOS
 # ============================================
 
+@extend_schema(tags=["Web - Device Models"])
 class DeviceModelViewSet(viewsets.ModelViewSet):
     """
     ViewSet para CRUD de DeviceModel (catálogo de modelos)
@@ -708,6 +709,7 @@ class DeviceModelViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
+@extend_schema(tags=["Web - Device Features"])
 class DeviceFeaturesViewSet(viewsets.ModelViewSet):
     """
     ViewSet para CRUD de DeviceFeatures (arquivos/documentos dos modelos)
@@ -732,6 +734,7 @@ class DeviceFeaturesViewSet(viewsets.ModelViewSet):
         return queryset.order_by('order', 'title')
 
 
+@extend_schema(tags=["Web - Device Leases"])
 class DeviceLeaseViewSet(viewsets.ModelViewSet):
     """
     ViewSet para CRUD de DeviceLease (controle de aluguel)
