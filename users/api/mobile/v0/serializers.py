@@ -24,13 +24,13 @@ class ProfileSerializer(serializers.ModelSerializer):
             "first_name", "last_name", "cpf", "birth", "phone", "email",
             "email_confirmed", "email_confirmed_at", "invited_at",
             "confirmation_token", "confirmation_sent_at", 
-            "recovery_token", "recovery_token_sent_at", "clickhouse_id",
+            "recovery_token", "recovery_token_sent_at", "legacy_id",
             "factory_mode", "profile_image_url"
         )
         read_only_fields = (
             "email_confirmed", "email_confirmed_at", "invited_at",
             "confirmation_token", "confirmation_sent_at", 
-            "recovery_token", "recovery_token_sent_at", "clickhouse_id",
+            "recovery_token", "recovery_token_sent_at", "legacy_id",
             "factory_mode", "profile_image_url"
         )
     

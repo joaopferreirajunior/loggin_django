@@ -92,11 +92,11 @@ class ProfileSerializer(serializers.ModelSerializer):
         model = Profile
         fields = ('first_name', 'last_name', 'cpf', 'birth', 'phone', 'email',
                  'email_confirmed', 'email_confirmed_at', 'invited_at', 
-                 'confirmation_sent_at', 'clickhouse_id', 'factory_mode',
+                 'confirmation_sent_at', 'legacy_id', 'factory_mode',
                  'profile_image_url')
         read_only_fields = (
             'email_confirmed', 'email_confirmed_at', 'invited_at',
-            'confirmation_sent_at', 'clickhouse_id', 'factory_mode',
+            'confirmation_sent_at', 'legacy_id', 'factory_mode',
             'profile_image_url'
         )
     
