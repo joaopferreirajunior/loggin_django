@@ -278,4 +278,9 @@ PROFILE_IMAGE_MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB em bytes
 AWS_S3_FILE_OVERWRITE = False  # Não sobrescrever arquivos com mesmo nome
 
 # Tempo de expiração das presigned URLs (em segundos)
+
+# ============================
+# Legacy API Token
+# ============================
+LEGACY_API_TOKEN = os.getenv('LEGACY_API_TOKEN')
 S3_PRESIGNED_URL_EXPIRATION = int(os.getenv('S3_PRESIGNED_URL_EXPIRATION', 3600))  # 1 hora por padrão
