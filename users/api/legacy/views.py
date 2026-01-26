@@ -1,6 +1,6 @@
 # users/api/legacy/views.py
 
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
@@ -172,6 +172,7 @@ def create_or_update_user(user_data):
                 "Recebe um array de usuários e cria ou atualiza cada um com base no email.",
 )
 @api_view(['POST'])
+@authentication_classes([])
 @permission_classes([AllowAny])
 def legacy_sync_users(request):
     """
@@ -256,6 +257,7 @@ def legacy_sync_users(request):
                 "Identifica o usuário pelo email e cria se não existir ou atualiza se já existir.",
 )
 @api_view(['POST'])
+@authentication_classes([])
 @permission_classes([AllowAny])
 def legacy_upsert_user(request):
     """
