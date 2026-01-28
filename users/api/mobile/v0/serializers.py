@@ -13,6 +13,7 @@ User = get_user_model()
 @extend_schema_serializer(component_name="MobileProfile")
 class ProfileSerializer(serializers.ModelSerializer):
     profile_image_url = serializers.SerializerMethodField()
+    needs_password_reset = serializers.SerializerMethodField()
     # Campos do User para permitir edição junto com o profile
     email = serializers.EmailField(source='user.email', help_text="Email do usuário")
     first_name = serializers.CharField(source='user.first_name', help_text="Nome do usuário", max_length=150, allow_blank=True)
@@ -25,7 +26,7 @@ class ProfileSerializer(serializers.ModelSerializer):
             "email_confirmed", "email_confirmed_at", "invited_at",
             "confirmation_token", "confirmation_sent_at", 
             "recovery_token", "recovery_token_sent_at", "legacy_id",
-            "factory_mode", "profile_image_url"
+            "factory_mode", "profile_image_url", "needs_password_reset"
         )
         read_only_fields = (
             "email_confirmed", "email_confirmed_at", "invited_at",
@@ -37,6 +38,10 @@ class ProfileSerializer(serializers.ModelSerializer):
     def get_profile_image_url(self, obj) -> str:
         """Retorna URL completa da imagem de perfil do S3"""
         return obj.get_profile_image_url()
+
+    def get_needs_password_reset(self, obj) -> bool:
+        """Retorna True se o usuário não possui senha utilizável"""
+        return not obj.user.has_usable_password()
     
     def update(self, instance, validated_data):
         """Atualiza tanto o Profile quanto os campos do User"""
@@ -80,10 +85,11 @@ class UserSerializer(serializers.ModelSerializer):
     # Campos adicionais para exibição
     full_name = serializers.SerializerMethodField()
     permissions = serializers.SerializerMethodField()
+    needs_password_reset = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ("id", "username", "email", "first_name", "last_name", "full_name", "profile", "permissions")
+        fields = ("id", "username", "email", "first_name", "last_name", "full_name", "profile", "permissions", "needs_password_reset")
     
     def get_full_name(self, obj):
         """Retorna nome completo baseado nos campos first_name e last_name do User"""
@@ -103,6 +109,10 @@ class UserSerializer(serializers.ModelSerializer):
             'can_view_all_users': profile.can_view_all_users(),
             'can_access_admin': profile.can_access_admin(),
         }
+
+    def get_needs_password_reset(self, obj) -> bool:
+        """Retorna True se o usuário não possui senha utilizável"""
+        return not obj.has_usable_password()
 
 
 @extend_schema_serializer(component_name="MobileUserRegisterRequest")
@@ -332,10 +342,11 @@ class MobileUserWithImageSerializer(serializers.ModelSerializer):
     Serializer do usuário mobile incluindo URL da imagem de perfil
     """
     profile = serializers.SerializerMethodField()
+    needs_password_reset = serializers.SerializerMethodField()
     
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'profile')
+        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'profile', 'needs_password_reset')
     
     def get_profile(self, obj) -> dict:
         """Retorna dados do perfil incluindo URL da imagem"""
@@ -357,3 +368,7 @@ class MobileUserWithImageSerializer(serializers.ModelSerializer):
                 'email_confirmed': False,
                 'profile_image_url': None
             }
+
+    def get_needs_password_reset(self, obj) -> bool:
+        """Retorna True se o usuário não possui senha utilizável"""
+        return not obj.has_usable_password()
